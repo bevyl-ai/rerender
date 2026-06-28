@@ -26,7 +26,7 @@ function main(): void {
 
   // remover: render the registered composition, frame-exact, via the studio page.
   const mp4 = join(OUTDIR, `studio-${ID}-remover.mp4`);
-  execFileSync('npx', ['tsx', 'render/render.ts', '1', ID, mp4], { stdio: 'ignore', env: { ...process.env, EXACT: '1', STUDIO: '1' } });
+  execFileSync('npx', ['tsx', 'render/render.ts', '1', ID, mp4], { stdio: 'ignore', env: { ...process.env, STUDIO: '1' } });
   const removerPng = join(OUTDIR, `studio-${ID}-remover.png`);
   execFileSync('ffmpeg', ['-y', '-i', mp4, '-vf', `select='eq(n\\,${FRAME})'`, '-frames:v', '1', removerPng], { stdio: 'ignore' });
 

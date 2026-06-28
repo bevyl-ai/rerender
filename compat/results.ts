@@ -31,9 +31,9 @@ function main(): void {
 
   for (const id of EXAMPLES) {
     try {
-      // remover: render the example (frame-exact mode), extract the frame.
+      // remover: render the example, extract the frame.
       const mp4 = join(OUTDIR, `${id}-remover.mp4`);
-      execFileSync('npx', ['tsx', 'render/render.ts', '1', id, mp4], { stdio: 'ignore', env: { ...process.env, EXACT: '1' } });
+      execFileSync('npx', ['tsx', 'render/render.ts', '1', id, mp4], { stdio: 'ignore' });
       const removerPng = join(OUTDIR, `${id}-remover.png`);
       sh('ffmpeg', ['-y', '-i', mp4, '-vf', `select='eq(n\\,${FRAME})'`, '-frames:v', '1', removerPng]);
 
