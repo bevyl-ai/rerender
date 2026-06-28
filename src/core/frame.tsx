@@ -70,3 +70,37 @@ export function Series({ children }: { children: ReactNode }): ReactNode {
 }
 Series.Sequence = (_props: SeriesSequenceProps): null => null; // marker; <Series> reads its props
 
+/** <Freeze> pins everything inside it to a single frame. Remotion-compatible. */
+export function Freeze({
+  frame,
+  active = true,
+  children,
+}: {
+  frame: number;
+  active?: boolean;
+  children: ReactNode;
+}): JSX.Element {
+  const current = useCurrentFrame();
+  return <FrameContext.Provider value={active ? frame : current}>{children}</FrameContext.Provider>;
+}
+
+/** <Loop> repeats its children every durationInFrames (up to `times`). The frame
+ *  seen inside resets to 0 each iteration. Remotion-compatible. */
+export function Loop({
+  durationInFrames,
+  times,
+  layout = 'absolute-fill',
+  children,
+}: {
+  durationInFrames: number;
+  times?: number;
+  layout?: 'absolute-fill' | 'none';
+  children: ReactNode;
+}): JSX.Element | null {
+  const frame = useCurrentFrame();
+  if (times !== undefined && frame >= durationInFrames * times) return null;
+  const local = ((frame % durationInFrames) + durationInFrames) % durationInFrames;
+  const content = layout === 'absolute-fill' ? <AbsoluteFill>{children}</AbsoluteFill> : children;
+  return <FrameContext.Provider value={local}>{content}</FrameContext.Provider>;
+}
+

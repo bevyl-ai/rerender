@@ -75,3 +75,7 @@ export function Audio(props: { src: string; startFrom?: number }): JSX.Element {
 
   return <audio ref={ref} src={props.src} />;
 }
+
+// OffthreadVideo — Remotion renders this frame-accurately off the main thread; in
+// remover the frame-synced <Video> already seeks exactly, so it's the same thing.
+export const OffthreadVideo = Video;

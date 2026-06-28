@@ -11,7 +11,12 @@
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "remotion": ["./src/remotion.ts"]
+      "remotion": ["./src/remotion.ts"],
+      "@remotion/transitions": ["./src/transitions/index.ts"],
+      "@remotion/transitions/slide": ["./src/transitions/presentations/slide.tsx"],
+      "@remotion/transitions/fade": ["./src/transitions/presentations/fade.tsx"],
+      "@remotion/transitions/wipe": ["./src/transitions/presentations/wipe.tsx"],
+      "@remotion/media-utils": ["./src/media-utils/index.ts"]
     },
     "noEmit": true
   },
