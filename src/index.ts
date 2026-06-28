@@ -28,5 +28,8 @@ export type { RemotionEnvironment } from './core/env';
 
 export { AbsoluteFill, Img, Video, Audio, OffthreadVideo } from './core/primitives';
 
+export { registerRoot, Composition, Still, Folder, getRoot, getCompositions, getComposition } from './core/registry';
+export type { CompositionMeta, CompositionProps } from './core/registry';
+
 export { Player } from './core/player';
 export type { PlayerProps } from './core/player';

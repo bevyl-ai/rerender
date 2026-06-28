@@ -13,6 +13,7 @@
     "render": "tsx render/render.ts",
     "compat": "tsx compat/check.ts",
     "compat:results": "tsx compat/results.ts",
+    "compat:studio": "tsx compat/studio.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
