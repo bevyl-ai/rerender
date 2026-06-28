@@ -27,22 +27,39 @@ const ff = (args: string[]): void => {
 };
 
 let executablePath = '';
-// Match Remotion's deterministic rasterization so curved/rotated edges anti-alias
-// identically: swangle (software ANGLE) + no font hinting + sRGB. Without these,
-// the same binary rasterizes transformed curves differently.
+// Mirror Remotion's render flags EXACTLY (with ignoreDefaultArgs, so puppeteer's
+// own defaults — e.g. --headless=new — don't override the GPU/raster path). GPU
+// compositing on, rasterization via SwiftShader ANGLE (deterministic), no font
+// hinting, sRGB, pinned device scale factor → transformed/curved layers anti-alias
+// the same as Remotion.
 const ARGS = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--no-first-run',
+  '--no-default-browser-check',
+  '--disable-dev-shm-usage',
+  '--hide-scrollbars',
+  '--mute-audio',
+  '--enable-gpu',
+  '--ignore-gpu-blocklist',
+  '--force-gpu-mem-available-mb=4096',
+  '--disable-vulkan-surface',
+  '--disable-vulkan-fallback-to-gl-for-testing',
   '--use-gl=angle',
   '--use-angle=swiftshader',
   '--font-render-hinting=none',
   '--force-color-profile=srgb',
-  '--hide-scrollbars',
+  '--force-device-scale-factor=1',
   '--autoplay-policy=no-user-gesture-required',
 ];
+
+const launchBrowser = (): ReturnType<typeof puppeteer.launch> =>
+  puppeteer.launch({ executablePath, headless: 'shell', args: ARGS });
 
 // Read the composition's config (dims/fps/duration) from the render page itself,
 // so the renderer works for any composition — including a registered-Root one.
 async function readConfig(): Promise<StageConfig> {
-  const browser = await puppeteer.launch({ executablePath, headless: true, args: ARGS });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
     await page.goto(stepUrl(), { waitUntil: 'load' });
@@ -59,7 +76,7 @@ async function readConfig(): Promise<StageConfig> {
  *  == composition-frame N by construction. Each browser owns a frame range and
  *  writes globally-numbered PNGs into a shared dir. */
 async function captureExact(lo: number, hi: number, dir: string, cfg: StageConfig): Promise<void> {
-  const browser = await puppeteer.launch({ executablePath, headless: true, args: ARGS });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: cfg.width, height: cfg.height, deviceScaleFactor: 1 });
@@ -67,7 +84,13 @@ async function captureExact(lo: number, hi: number, dir: string, cfg: StageConfi
     await page.waitForFunction(() => window.__ready === true, { timeout: 60_000 });
     for (let f = lo; f < hi; f++) {
       await page.evaluate((fr) => window.__setFrame!(fr), f);
-      await page.screenshot({ path: join(dir, `f-${String(f).padStart(5, '0')}.png`), clip: { x: 0, y: 0, width: cfg.width, height: cfg.height } });
+      await page.screenshot({
+        path: join(dir, `f-${String(f).padStart(5, '0')}.png`),
+        clip: { x: 0, y: 0, width: cfg.width, height: cfg.height },
+        captureBeyondViewport: true, // match Remotion's capture surface
+        fromSurface: true,
+        optimizeForSpeed: true,
+      });
     }
     console.log(`  slice ${lo}–${hi} captured`);
   } finally {

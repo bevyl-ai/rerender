@@ -3,6 +3,9 @@
 // records — preview and render are the same DOM, by construction.
 import { useEffect, useRef, useState, type ComponentType, type CSSProperties } from 'react';
 import { ConfigContext, FrameContext, PlayingContext, type VideoConfig } from './frame';
+import { injectRemoverCSS } from './default-css';
+
+injectRemoverCSS(); // match Remotion's global reset so preview == render == Remotion
 
 export interface PlayerProps extends VideoConfig {
   composition: ComponentType;

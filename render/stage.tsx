@@ -6,6 +6,9 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { ConfigContext, FrameContext, PlayingContext } from '../src/core/frame';
 import { getPendingDelays } from '../src/core/delay-render';
+import { injectRemoverCSS } from '../src/core/default-css';
+
+injectRemoverCSS(); // match Remotion's global reset (box-sizing: border-box)
 
 export interface StageConfig {
   width: number;

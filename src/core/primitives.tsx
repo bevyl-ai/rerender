@@ -10,8 +10,15 @@ export function AbsoluteFill(props: {
   return (
     <div
       style={{
+        // exact Remotion AbsoluteFill defaults — an abs-positioned child's static
+        // position depends on these, so they must match for pixel parity.
         position: 'absolute',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         ...props.style,
