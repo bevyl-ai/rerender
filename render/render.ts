@@ -43,7 +43,9 @@ async function recordSlice(from: number, to: number, dir: string, idx: number): 
   return { from, to, webm, idx };
 }
 
-const ff = (args: string[]): void => execFileSync('ffmpeg', ['-y', ...args], { stdio: 'ignore' });
+const ff = (args: string[]): void => {
+  execFileSync('ffmpeg', ['-y', ...args], { stdio: 'ignore' });
+};
 
 /** Convert a slice recording to CFR mp4 and keep exactly its played frames
  *  (the play happens at the END of the recording, after the page-load lead-in). */
