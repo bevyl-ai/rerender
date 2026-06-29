@@ -17,6 +17,7 @@
       "@remotion/transitions/fade": ["./src/transitions/presentations/fade.tsx"],
       "@remotion/transitions/wipe": ["./src/transitions/presentations/wipe.tsx"],
       "@remotion/media-utils": ["./src/media-utils/index.ts"],
+      "@remotion/media-parser": ["./src/media-parser/index.ts"],
       "@remotion/player": ["./src/core/player.tsx"]
     },
     "noEmit": true

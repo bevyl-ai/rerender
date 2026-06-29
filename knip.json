@@ -9,6 +9,7 @@
     "studio/main.tsx",
     "src/transitions/index.ts",
     "src/media-utils/index.ts",
+    "src/media-parser/index.ts",
     "templates/*/src/index.ts"
   ],
   "project": ["**/*.{ts,tsx,mjs}"],
