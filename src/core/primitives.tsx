@@ -1,7 +1,26 @@
 // The primitive vocabulary — real DOM, Remotion-compatible. These are thin wrappers
 // over <div>/<img>/<video>/<audio>, so arbitrary CSS in a composition just works.
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { useCurrentFrame, useIsPlaying, useVideoConfig } from './frame';
+import { useCurrentFrame, useIsPlaying, useTimelinePosition, useVideoConfig } from './frame';
+import { registerRenderAsset } from './assets';
+
+// During render, register a media asset for the audio mix (one entry per frame the
+// element is mounted). No-op in the player.
+function useRenderAsset(type: 'audio' | 'video', src: string, startFrom: number, volume: number): void {
+  const frame = useCurrentFrame();
+  const timeline = useTimelinePosition();
+  if (typeof window !== 'undefined' && window.__removerEnv === 'rendering') {
+    registerRenderAsset({
+      type,
+      src: new URL(src, location.href).href,
+      id: `${type}-${src}`,
+      frame: timeline,
+      volume,
+      mediaFrame: frame + startFrom,
+      playbackRate: 1,
+    });
+  }
+}
 
 export function AbsoluteFill(props: {
   style?: CSSProperties;
@@ -38,12 +57,14 @@ export function Img(props: React.ImgHTMLAttributes<HTMLImageElement>): JSX.Eleme
 export function Video(props: {
   src: string;
   startFrom?: number;
+  volume?: number;
   style?: CSSProperties;
 }): JSX.Element {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const playing = useIsPlaying();
   const ref = useRef<HTMLVideoElement>(null);
+  useRenderAsset('video', props.src, props.startFrom ?? 0, props.volume ?? 1);
 
   useEffect(() => {
     const v = ref.current;
@@ -61,11 +82,12 @@ export function Video(props: {
   return <video ref={ref} src={props.src} muted playsInline style={props.style} />;
 }
 
-export function Audio(props: { src: string; startFrom?: number }): JSX.Element {
+export function Audio(props: { src: string; startFrom?: number; volume?: number }): JSX.Element {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const playing = useIsPlaying();
   const ref = useRef<HTMLAudioElement>(null);
+  useRenderAsset('audio', props.src, props.startFrom ?? 0, props.volume ?? 1);
 
   useEffect(() => {
     const a = ref.current;

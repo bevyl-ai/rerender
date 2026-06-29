@@ -21,10 +21,14 @@ export const ConfigContext = createContext<VideoConfig>({
 /** True while the player is playing (vs scrubbing) — lets <Video>/<Audio> play
  *  natively instead of seeking every frame. */
 export const PlayingContext = createContext<boolean>(false);
+/** The absolute composition frame — NOT shifted by <Sequence> (unlike FrameContext).
+ *  Audio/Video assets use it to place themselves on the render timeline. */
+export const TimelineContext = createContext<number>(0);
 
 export const useCurrentFrame = (): number => useContext(FrameContext);
 export const useVideoConfig = (): VideoConfig => useContext(ConfigContext);
 export const useIsPlaying = (): boolean => useContext(PlayingContext);
+export const useTimelinePosition = (): number => useContext(TimelineContext);
 
 export function Sequence({
   from = 0,

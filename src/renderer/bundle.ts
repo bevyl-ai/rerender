@@ -5,7 +5,7 @@
 // resolves to remover exactly as the dev server does.
 import { createServer, type ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { removerAliases } from '../../render/aliases';
 
@@ -22,7 +22,9 @@ export interface RemoverBundle {
 
 export async function bundle(entryPoint: string, options: { port?: number } = {}): Promise<RemoverBundle> {
   const entry = resolve(entryPoint);
-  const userRoot = dirname(entry);
+  // Serve from the project root (parent of src/) so public/ assets resolve like Remotion.
+  let userRoot = dirname(entry);
+  if (basename(userRoot) === 'src') userRoot = dirname(userRoot);
   let props: Record<string, unknown> = {};
 
   const renderPage = (): string =>

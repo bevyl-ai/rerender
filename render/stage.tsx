@@ -4,7 +4,7 @@
 //              recorded-frame N == composition-frame N exactly.
 // Used by both the examples render page and the studio (registered-Root) page.
 import { useEffect, useState, type ComponentType } from 'react';
-import { ConfigContext, FrameContext, PlayingContext } from '../src/core/frame';
+import { ConfigContext, FrameContext, PlayingContext, TimelineContext } from '../src/core/frame';
 import { getPendingDelays } from '../src/core/delay-render';
 import { injectRemoverCSS } from '../src/core/default-css';
 
@@ -61,9 +61,11 @@ function Frame({ Component, props, config, playing, frame }: FrameProps): JSX.El
     <div style={{ width: config.width, height: config.height, position: 'relative', overflow: 'hidden' }}>
       <ConfigContext.Provider value={config}>
         <PlayingContext.Provider value={playing}>
-          <FrameContext.Provider value={frame}>
-            <Component {...props} />
-          </FrameContext.Provider>
+          <TimelineContext.Provider value={frame}>
+            <FrameContext.Provider value={frame}>
+              <Component {...props} />
+            </FrameContext.Provider>
+          </TimelineContext.Provider>
         </PlayingContext.Provider>
       </ConfigContext.Provider>
     </div>
