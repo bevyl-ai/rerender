@@ -4,6 +4,7 @@
 // composition-frame N by construction. The browser flags mirror Remotion's so
 // transformed/curved layers anti-alias identically.
 import puppeteer, { type Browser } from 'puppeteer-core';
+import { renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { StageConfig } from '../../render/stage';
 import type { CollectedAsset } from '../core/assets';
@@ -80,9 +81,12 @@ export async function captureFrames(
       await page.evaluate((fr) => window.__setFrame!(fr), f);
       // screenshot and asset-collection are independent CDP calls — issue them
       // concurrently (mirrors Remotion's Promise.all(takeFrame, collectAssets)).
+      // Write to a .part file then rename, so a concurrent reader (the streaming
+      // encoder) only ever sees a complete frame.
+      const final = join(dir, `f-${String(f).padStart(5, '0')}.${jpeg ? 'jpg' : 'png'}`);
       const [, a] = await Promise.all([
         page.screenshot({
-          path: join(dir, `f-${String(f).padStart(5, '0')}.${jpeg ? 'jpg' : 'png'}`),
+          path: `${final}.part`,
           clip: { x: 0, y: 0, width: cfg.width, height: cfg.height },
           captureBeyondViewport: true,
           fromSurface: true,
@@ -91,6 +95,7 @@ export async function captureFrames(
         }),
         opts.collectAudio ? page.evaluate(() => window.remotion_collectAssets?.() ?? []) : Promise.resolve([]),
       ]);
+      renameSync(`${final}.part`, final);
       if (a.length) assets.set(f, a);
     }
   } finally {

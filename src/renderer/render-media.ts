@@ -1,6 +1,6 @@
 // renderMedia — match @remotion/renderer. Frame-step capture across N parallel
-// browsers → h264 mp4, with the composition's <Audio>/<Video> mixed + muxed in.
-import { execFileSync } from 'node:child_process';
+// browsers, encoded to mp4 in-browser (WebCodecs + mediabunny, no ffmpeg) overlapped
+// with capture, then the composition's <Audio>/<Video> mixed + muxed in.
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { cpus, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -8,6 +8,7 @@ import { chromeExecutable } from '../../render/browser';
 import type { CollectedAsset } from '../core/assets';
 import { calculateAssetPositions, muxAudio } from './audio';
 import { captureFrames, type CaptureOptions } from './capture';
+import { concatSegments, startEncoder, type VideoCodec } from './encode';
 import type { VideoConfig } from './types';
 
 export interface RenderMediaOptions {
@@ -16,6 +17,8 @@ export interface RenderMediaOptions {
   outputLocation: string;
   inputProps?: Record<string, unknown>;
   codec?: 'h264';
+  /** Video codec for the in-browser WebCodecs encoder (default avc/h264). */
+  videoCodec?: VideoCodec;
   crf?: number;
   scale?: number;
   concurrency?: number;
@@ -32,7 +35,6 @@ export async function renderMedia(
 ): Promise<{ buffer: null; slowestFrames: never[]; contentType: string }> {
   const { composition: c, serveUrl, outputLocation } = opts;
   const exe = await chromeExecutable();
-  const crf = opts.crf ?? 18;
   const [from, to] = Array.isArray(opts.frameRange)
     ? opts.frameRange
     : typeof opts.frameRange === 'number'
@@ -50,16 +52,27 @@ export async function renderMedia(
   try {
     const per = Math.ceil(totalFrames / concurrency);
     const ranges = Array.from({ length: concurrency }, (_, i) => [from + i * per, Math.min(from + (i + 1) * per, to + 1)] as const).filter(([a, b]) => a < b);
-    const maps = await Promise.all(ranges.map(([a, b]) => captureFrames(exe, stepUrl, a, b, dir, c, captureOpts)));
-    opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.9 });
-
+    const codec = opts.videoCodec ?? 'avc';
     const silent = join(dir, 'silent.mp4');
-    execFileSync(
-      'ffmpeg',
-      ['-y', '-framerate', String(c.fps), '-start_number', String(from), '-i', join(dir, `f-%05d.${ext}`),
-        '-c:v', 'libx264', '-pix_fmt', opts.pixelFormat ?? 'yuv420p', '-crf', String(crf), '-r', String(c.fps), '-movflags', '+faststart', silent],
-      { stdio: 'ignore' },
-    );
+    const frameFiles = Array.from({ length: totalFrames }, (_, i) => `f-${String(from + i).padStart(5, '0')}.${ext}`);
+
+    // No ffmpeg. Three in-process phases:
+    // 1. Capture every slice in parallel (N browsers screenshot their frame range).
+    const maps = await Promise.all(ranges.map(([a, b]) => captureFrames(exe, stepUrl, a, b, dir, c, captureOpts)));
+    opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.7 });
+
+    // 2. Encode each slice in parallel — one WebCodecs+mediabunny encoder per slice over
+    //    its own frames (local indices 0..n-1, forced keyframe at 0) → segment-i.mp4.
+    //    Fans out like capture, so encode is ~total/concurrency, not one serial pass.
+    const segmentPaths = ranges.map((_, i) => join(dir, `segment-${i}.mp4`));
+    const encoders = await Promise.all(ranges.map(([a, b]) => startEncoder({ exe, frameDir: dir, frameFiles: frameFiles.slice(a - from, b - from) })));
+    await Promise.all(encoders.map((enc, i) => enc.encode(segmentPaths[i]!, c.fps, codec, ranges[i]![1] - ranges[i]![0])));
+    await Promise.all(encoders.map((enc) => enc.close()));
+    opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.85 });
+
+    // 3. Concat segments → silent.mp4 (Node, mediabunny packet-copy, no re-encode, ~10ms).
+    await concatSegments(segmentPaths, codec, c.fps, silent);
+    opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.9 });
 
     if (collectAudio) {
       const frames = new Map<number, CollectedAsset[]>();
