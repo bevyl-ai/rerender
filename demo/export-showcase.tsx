@@ -207,6 +207,65 @@ function CompatMatrix(): JSX.Element {
   );
 }
 
+// ── us vs them ──
+const VS: { label: string; remotion: string; remover: string }[] = [
+  { label: 'Cost per render', remotion: '~1¢ cloud usage fee', remover: '$0' },
+  { label: 'Infrastructure', remotion: 'AWS Lambda, tightly coupled', remover: 'your browser — or any static host' },
+  { label: 'Video encoder', remotion: 'bundled ffmpeg — a native binary per OS/arch', remover: 'WebCodecs + WASM, no binary' },
+  { label: 'To render a video', remotion: 'deploy + run a cloud render farm', remover: 'click a button' },
+  { label: 'Works offline', remotion: 'no — needs the cloud function', remover: 'yes (encode is fully local)' },
+  { label: 'License', remotion: 'per-seat, with no-compete clauses', remover: 'MIT' },
+];
+
+function VsTable(): JSX.Element {
+  return (
+    <div style={{ marginTop: 30 }}>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>
+        remover <span style={{ color: '#6a6a76' }}>vs</span> Remotion
+      </div>
+      <div style={{ ...card, overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14, minWidth: 560 }}>
+          <thead>
+            <tr>
+              <th style={{ width: '24%', padding: '14px 16px', borderBottom: '1px solid #1d1d25' }} />
+              <th style={{ textAlign: 'left', padding: '14px 16px', color: '#9a9aa6', fontWeight: 700, borderBottom: '1px solid #1d1d25' }}>
+                Remotion
+              </th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  padding: '14px 16px',
+                  color: ACCENT,
+                  fontWeight: 800,
+                  borderBottom: `2px solid ${ACCENT}`,
+                  background: 'rgba(255,94,138,0.06)',
+                }}
+              >
+                remover
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {VS.map((r) => (
+              <tr key={r.label}>
+                <td style={{ padding: '13px 16px', color: '#8a8a99', fontWeight: 600, borderBottom: '1px solid #16161d' }}>{r.label}</td>
+                <td style={{ padding: '13px 16px', color: '#9a9aa6', borderBottom: '1px solid #16161d' }}>
+                  <span style={{ color: '#ff8080', marginRight: 8 }}>✕</span>
+                  {r.remotion}
+                </td>
+                <td style={{ padding: '13px 16px', color: '#fff', borderBottom: '1px solid #16161d', background: 'rgba(255,94,138,0.06)' }}>
+                  <span style={{ color: '#7fdca0', marginRight: 8 }}>✓</span>
+                  {r.remover}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function ExportShowcase(): JSX.Element {
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [pct, setPct] = useState(0);
@@ -217,6 +276,7 @@ export function ExportShowcase(): JSX.Element {
   const [err, setErr] = useState('');
   const liveCanvas = useRef<HTMLCanvasElement>(null);
   const player = useRef<PlayerRef>(null);
+  const exported = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     player.current?.play();
@@ -227,6 +287,20 @@ export function ExportShowcase(): JSX.Element {
     },
     [url],
   );
+
+  // Once exported, drive the live preview FROM the exported mp4 so the two play in perfect
+  // lockstep (same frame, same loop) — they start together and never drift apart.
+  useEffect(() => {
+    if (status !== 'done' || !url) return;
+    let raf = 0;
+    const sync = (): void => {
+      const v = exported.current;
+      if (v) player.current?.seekTo(Math.round(v.currentTime * FPS));
+      raf = requestAnimationFrame(sync);
+    };
+    raf = requestAnimationFrame(sync);
+    return () => cancelAnimationFrame(raf);
+  }, [status, url]);
 
   async function run(): Promise<void> {
     setStatus('running');
@@ -341,6 +415,7 @@ export function ExportShowcase(): JSX.Element {
             {status === 'done' && url && (
               // biome-ignore lint/a11y/useMediaCaption: a generated demo clip, no captions
               <video
+                ref={exported}
                 src={url}
                 autoPlay
                 loop
@@ -447,22 +522,7 @@ export function ExportShowcase(): JSX.Element {
 
       <CssReveal />
       <CompatMatrix />
-
-      {/* the contrast */}
-      <div style={{ marginTop: 30, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 280, ...card, padding: 18 }}>
-          <div style={{ fontSize: 13, color: '#6a6a76', marginBottom: 6 }}>Remotion exports like this:</div>
-          <div style={{ fontSize: 15, color: '#cfcfd8', lineHeight: 1.5 }}>
-            spin up AWS Lambda · bundle a per-platform ffmpeg binary · render off in the cloud
-          </div>
-        </div>
-        <div style={{ flex: 1, minWidth: 280, background: '#1a1320', border: `1px solid ${ACCENT}`, borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 13, color: ACCENT, marginBottom: 6 }}>remover just did it:</div>
-          <div style={{ fontSize: 15, color: '#fff', lineHeight: 1.5 }}>
-            ↑ all of that — real footage and all — in the browser tab you're reading this in.
-          </div>
-        </div>
-      </div>
+      <VsTable />
     </div>
   );
 }

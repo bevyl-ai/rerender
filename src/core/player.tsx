@@ -240,6 +240,10 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
             position: 'absolute',
             top: 0,
             left: 0,
+            // Promote the composition to its own GPU layer so it's rasterized at native
+            // resolution and scaled continuously — without this the down-scale re-rasterizes
+            // every frame and quantizes motion (esp. the <Video>) to device pixels: visible shake.
+            willChange: 'transform',
           }}
         >
           <ConfigContext.Provider value={config}>
