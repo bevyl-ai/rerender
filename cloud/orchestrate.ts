@@ -10,7 +10,7 @@ import { bundle } from '../src/renderer/bundle';
 import { selectComposition } from '../src/renderer/select-composition';
 import type { VideoCodec, CompositionConfig } from '../src/renderer/types';
 
-export interface SegmentJob {
+interface SegmentJob {
   /** the orchestrator-resolved composition, so the worker can skip selectComposition. */
   composition: CompositionConfig;
   props: Record<string, unknown>;

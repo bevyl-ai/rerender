@@ -26,7 +26,7 @@ export function registerRenderAsset(asset: CollectedAsset): void {
   pending.push(asset);
 }
 
-export function collectAssets(): CollectedAsset[] {
+function collectAssets(): CollectedAsset[] {
   const out = pending;
   pending = [];
   return out;

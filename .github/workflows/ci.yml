@@ -25,6 +25,10 @@ jobs:
         run: npm run typecheck
       - name: Format + lint (biome)
         run: npm run check
+      - name: Dead code / unused deps (knip)
+        run: npm run knip
+      - name: Package publish surface (publint)
+        run: npm run publint
 
   # Proof the renderer actually works end to end: bundle -> headless chrome ->
   # frame-step capture -> WebCodecs encode -> mediabunny concat (no ffmpeg). Renders a

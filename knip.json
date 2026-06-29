@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "cloud/handler.mjs",
+    "render/studio-render-core.tsx",
+    "render/studio-main.tsx",
+    "render/encode-worker.ts",
+    "render/mux-worker.ts",
+    "studio/main.tsx",
+    "src/transitions/index.ts",
+    "src/media-utils/index.ts",
+    "templates/*/src/index.ts"
+  ],
+  "project": ["**/*.{ts,tsx,mjs}"]
+}

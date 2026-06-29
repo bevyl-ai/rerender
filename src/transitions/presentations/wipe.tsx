@@ -1,7 +1,7 @@
 import { AbsoluteFill } from '../../core/primitives';
 import { makePresentation, type TransitionPresentation, type TransitionPresentationComponentProps } from '../types';
 
-export type WipeDirection = 'from-left' | 'from-right' | 'from-top' | 'from-bottom';
+type WipeDirection = 'from-left' | 'from-right' | 'from-top' | 'from-bottom';
 
 interface WipeProps {
   direction: WipeDirection;
