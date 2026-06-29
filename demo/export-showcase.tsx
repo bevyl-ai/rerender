@@ -376,8 +376,8 @@ export function ExportShowcase(): JSX.Element {
         </button>
 
         {status === 'done' && meta && (
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ color: '#8a8a99', fontSize: 14 }}>rendered in</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ color: '#8a8a99', fontSize: 14 }}>Pixel-perfect render, created in</span>
             <span
               style={{
                 fontSize: 40,

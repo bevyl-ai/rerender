@@ -132,7 +132,7 @@ async function paintFrame(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  sinks: Map<string, VideoSampleSink>,
+  frames: Map<HTMLVideoElement, AsyncGenerator<VideoSample | null>>,
 ): Promise<void> {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, w, h);
@@ -147,9 +147,9 @@ async function paintFrame(
     const dw = r.width * sx;
     const dh = r.height * sy;
     const fit = getComputedStyle(v).objectFit || 'fill';
-    const sink = sinks.get(v.src);
-    if (sink) {
-      const sample = await sink.getSample(v.currentTime); // the source time remover seeked this <video> to
+    const gen = frames.get(v);
+    if (gen) {
+      const sample = (await gen.next()).value; // next decoded frame, in order
       if (sample) {
         drawSample(ctx, sample, dx, dy, dw, dh, fit);
         sample.close();
@@ -203,18 +203,29 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
   output.addVideoTrack(source, { frameRate: fps });
   await output.start();
 
-  // Open a deterministic decoder per <video> source up front (so footage frames are always
-  // present, even when the offscreen element wouldn't paint them).
+  // Decode footage SEQUENTIALLY (one forward pass per <video>, no per-frame re-seeking, which
+  // is ~10× faster). Pass 1: frame-step once to record the source time each <video> is at on
+  // each frame — cheap, no raster/decode (flushSync flushes remover's <Video> effect, which
+  // sets currentTime synchronously). Pass 2 (the main loop) pulls decoded frames in order.
   const sinks = await openVideoSinks(stage);
+  const videoEls = Array.from(stage.querySelectorAll('video'));
+  const timelines = new Map<HTMLVideoElement, number[]>(videoEls.map((v) => [v, []]));
+  for (let f = 0; f < durationInFrames; f++) {
+    flushSync(() => setFrameRef.current(f));
+    for (const v of videoEls) timelines.get(v)?.push(v.currentTime);
+  }
+  const frames = new Map<HTMLVideoElement, AsyncGenerator<VideoSample | null>>();
+  for (const v of videoEls) {
+    const sink = sinks.get(v.src);
+    if (sink) frames.set(v, sink.samplesAtTimestamps(timelines.get(v) ?? []));
+  }
 
   try {
     await document.fonts.ready;
     for (let f = 0; f < durationInFrames; f++) {
       if (signal?.aborted) throw new Error('export aborted');
-      // flushSync commits the render AND flushes remover's <Video> effect, which sets each
-      // element's currentTime synchronously — that's the source time we decode below.
       flushSync(() => setFrameRef.current(f));
-      await paintFrame(stage, ctx, width, height, sinks);
+      await paintFrame(stage, ctx, width, height, frames);
       onFrame?.(canvas, f);
       await source.add(f / fps, 1 / fps, f === 0 ? { keyFrame: true } : undefined);
       onProgress?.(f + 1, durationInFrames);
