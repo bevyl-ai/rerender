@@ -1,7 +1,7 @@
 // Client-side export demos — the same compositions play in the Player AND export to mp4
 // entirely in the browser (no server, no ffmpeg) via src/client/export. One pure
 // motion-graphics comp, one with REAL FOOTAGE (a <Video> baked into the capture).
-import { type ComponentType, useState } from 'react';
+import { type ComponentType, useEffect, useState } from 'react';
 import { AbsoluteFill, Player, Video, interpolate, staticFile, useCurrentFrame, useVideoConfig } from '../src';
 import { exportToMp4 } from '../src/client/export';
 
@@ -83,6 +83,14 @@ function ExportPanel({ Component, title, blurb }: { Component: ComponentType; ti
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
   const [meta, setMeta] = useState('');
+
+  // revoke the previous object URL when it's replaced or the panel unmounts
+  useEffect(
+    () => () => {
+      if (url) URL.revokeObjectURL(url);
+    },
+    [url],
+  );
 
   async function run(): Promise<void> {
     setStatus('running');

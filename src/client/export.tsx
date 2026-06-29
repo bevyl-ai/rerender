@@ -10,7 +10,7 @@ import { type ComponentType, type ReactElement, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
-import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from '../core/frame';
+import { CompositionFrame, type VideoConfig } from '../core/frame';
 import type { VideoCodec } from '../renderer/types';
 
 export interface ClientExportOptions {
@@ -58,24 +58,29 @@ function drawVideo(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, dx: numbe
   ctx.drawImage(v, (vw - sw) / 2, (vh - sh) / 2, sw, sh, dx, dy, dw, dh);
 }
 
-/** Wait for every <video> in the stage to finish seeking to the current frame — the
- *  client-side equivalent of the headless settle()'s video wait. */
+const once = (el: EventTarget, event: string): Promise<void> =>
+  new Promise((res) => el.addEventListener(event, () => res(), { once: true }));
+
+/** Wait for every <video> to have a decodable frame at the current position — the
+ *  client-side equivalent of the headless settle()'s video wait. Check `seeking` FIRST: a
+ *  seek transiently drops readyState below 2, and `loadeddata` only fires once (initial
+ *  load), so waiting on it mid-seek would hang — `seeked` is the event that fires. (A rAF
+ *  would also hang: a non-foregrounded tab throttles it to ~0; drawImage reads the decoded
+ *  frame directly, so no rAF is needed.) */
 async function settleVideos(stage: HTMLElement): Promise<void> {
-  const videos = Array.from(stage.querySelectorAll('video'));
-  if (!videos.length) return;
   await Promise.all(
-    videos.map((v) =>
-      v.readyState >= 2 && !v.seeking
-        ? Promise.resolve()
-        : new Promise<void>((res) => v.addEventListener('seeked', () => res(), { once: true })),
-    ),
+    Array.from(stage.querySelectorAll('video')).map(async (v) => {
+      if (v.seeking) await once(v, 'seeked');
+      else if (v.readyState < 2) await once(v, 'loadeddata');
+    }),
   );
 }
 
-/** Capture one frame: composite each <video> natively (its laid-out box, object-fit and
- *  transform reflected via getBoundingClientRect), then draw the DOM overlay — everything
- *  except the videos — on top via an SVG foreignObject. Correct for the common structure
- *  of a video background (or mid-stack) with DOM overlays above it. */
+/** Capture one frame: composite each <video> natively (its laid-out box, with object-fit
+ *  and any scale/translate transform reflected via getBoundingClientRect — rotation/skew
+ *  are not), then draw the DOM overlay — everything except the videos — on top via an SVG
+ *  foreignObject. Correct for the common structure of a video background (or mid-stack)
+ *  with DOM overlays above it. */
 async function paintFrame(stage: HTMLElement, ctx: CanvasRenderingContext2D, w: number, h: number): Promise<void> {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, w, h);
@@ -114,29 +119,19 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
   const { Component, props = {}, config, codec = 'avc', onProgress, signal } = opts;
   const { width, height, fps, durationInFrames } = config;
 
+  // Mount the composition offscreen. Drive the frame via a stable setter captured in a ref
+  // (initialised to a no-op, so it's never undefined); flushSync commits each frame
+  // synchronously — like the headless StepStage — so the DOM is ready to capture. Updating
+  // state (rather than re-rendering the root) keeps <video> elements seeking, not remounting.
   const host = document.createElement('div');
   host.style.cssText = `position:fixed;left:-99999px;top:0;width:${width}px;height:${height}px;pointer-events:none;`;
   document.body.appendChild(host);
   const root = createRoot(host);
-
-  // Harness mirrors the headless StepStage: a frame we drive synchronously via flushSync.
-  let drive!: (f: number) => void;
+  const setFrameRef: { current: (f: number) => void } = { current: () => {} };
   function Harness(): ReactElement {
     const [frame, setFrame] = useState(0);
-    drive = setFrame;
-    return (
-      <div style={{ width, height, position: 'relative', overflow: 'hidden' }}>
-        <ConfigContext.Provider value={config}>
-          <PlayingContext.Provider value={false}>
-            <TimelineContext.Provider value={frame}>
-              <FrameContext.Provider value={frame}>
-                <Component {...props} />
-              </FrameContext.Provider>
-            </TimelineContext.Provider>
-          </PlayingContext.Provider>
-        </ConfigContext.Provider>
-      </div>
-    );
+    setFrameRef.current = setFrame;
+    return <CompositionFrame Component={Component} props={props} config={config} frame={frame} playing={false} />;
   }
   flushSync(() => root.render(<Harness />));
   const stage = host.firstElementChild as HTMLElement;
@@ -145,29 +140,25 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d', { alpha: false })!;
-  const out = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+  const target = new BufferTarget();
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
   const source = new CanvasSource(canvas, { codec, bitrate: QUALITY_HIGH });
-  out.addVideoTrack(source, { frameRate: fps });
-  await out.start();
+  output.addVideoTrack(source, { frameRate: fps });
+  await output.start();
 
   try {
     await document.fonts.ready;
-    // wait for any <video> to have decodable data before the first capture
-    await Promise.all(
-      Array.from(stage.querySelectorAll('video')).map((v) =>
-        v.readyState >= 2 ? Promise.resolve() : new Promise<void>((res) => v.addEventListener('loadeddata', () => res(), { once: true })),
-      ),
-    );
     for (let f = 0; f < durationInFrames; f++) {
       if (signal?.aborted) throw new Error('export aborted');
-      flushSync(() => drive(f));
-      await settleVideos(stage); // let <video> elements seek to frame f before capture
+      flushSync(() => setFrameRef.current(f));
+      await settleVideos(stage); // ensure <video>s are decodable + seeked to frame f
       await paintFrame(stage, ctx, width, height);
       await source.add(f / fps, 1 / fps, f === 0 ? { keyFrame: true } : undefined);
       onProgress?.(f + 1, durationInFrames);
     }
-    await out.finalize();
-    return new Blob([(out.target as BufferTarget).buffer!], { type: 'video/mp4' });
+    await output.finalize();
+    if (!target.buffer) throw new Error('mediabunny finalize produced no data');
+    return new Blob([target.buffer], { type: 'video/mp4' });
   } finally {
     root.unmount();
     host.remove();

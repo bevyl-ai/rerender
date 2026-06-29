@@ -5,7 +5,7 @@
 // Used by the examples render page and the studio (registered-Root) page.
 import { useEffect, useState, type ComponentType } from 'react';
 import { flushSync } from 'react-dom';
-import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from '../src/core/frame';
+import { CompositionFrame, type VideoConfig } from '../src/core/frame';
 import { getPendingDelays } from '../src/core/delay-render';
 import { injectRemoverCSS } from '../src/core/default-css';
 
@@ -45,30 +45,6 @@ async function settle(): Promise<void> {
   }
 }
 
-interface FrameProps {
-  Component: ComponentType<Record<string, unknown>>;
-  props: Record<string, unknown>;
-  config: VideoConfig;
-  playing: boolean;
-  frame: number;
-}
-
-function Frame({ Component, props, config, playing, frame }: FrameProps): JSX.Element {
-  return (
-    <div style={{ width: config.width, height: config.height, position: 'relative', overflow: 'hidden' }}>
-      <ConfigContext.Provider value={config}>
-        <PlayingContext.Provider value={playing}>
-          <TimelineContext.Provider value={frame}>
-            <FrameContext.Provider value={frame}>
-              <Component {...props} />
-            </FrameContext.Provider>
-          </TimelineContext.Provider>
-        </PlayingContext.Provider>
-      </ConfigContext.Provider>
-    </div>
-  );
-}
-
 interface StageProps {
   Component: ComponentType<Record<string, unknown>>;
   props: Record<string, unknown>;
@@ -95,7 +71,7 @@ function RealtimeStage({ Component, props, config, from, to }: Omit<StageProps, 
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
   }, []);
-  return <Frame Component={Component} props={props} config={config} playing frame={frame} />;
+  return <CompositionFrame Component={Component} props={props} config={config} playing frame={frame} />;
 }
 
 function StepStage({ Component, props, config, from }: Omit<StageProps, 'stepMode' | 'to'>): JSX.Element {
@@ -108,7 +84,7 @@ function StepStage({ Component, props, config, from }: Omit<StageProps, 'stepMod
       });
     window.__ready = true;
   }, []);
-  return <Frame Component={Component} props={props} config={config} playing={false} frame={frame} />;
+  return <CompositionFrame Component={Component} props={props} config={config} playing={false} frame={frame} />;
 }
 
 export function Stage({ Component, props, config, from, to, stepMode }: StageProps): JSX.Element {

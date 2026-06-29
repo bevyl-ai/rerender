@@ -1,7 +1,7 @@
 // The frame clock + composition config, as React context — Remotion-compatible.
 // Because compositions render to real DOM, useCurrentFrame() just drives a normal
 // React re-render and the browser paints. That's the whole renderer.
-import { Children, createContext, isValidElement, useContext, type ReactNode } from 'react';
+import { Children, createContext, isValidElement, useContext, type ComponentType, type ReactNode } from 'react';
 import { AbsoluteFill } from './primitives';
 
 export interface VideoConfig {
@@ -29,6 +29,36 @@ export const useCurrentFrame = (): number => useContext(FrameContext);
 export const useVideoConfig = (): VideoConfig => useContext(ConfigContext);
 export const useIsPlaying = (): boolean => useContext(PlayingContext);
 export const useTimelinePosition = (): number => useContext(TimelineContext);
+
+/** Render a composition at a single frame, inside the contexts that drive it — the shared
+ *  unit behind the headless Stage (render/stage) and the client-side exporter (client/export). */
+export function CompositionFrame({
+  Component,
+  props,
+  config,
+  frame,
+  playing,
+}: {
+  Component: ComponentType<Record<string, unknown>>;
+  props: Record<string, unknown>;
+  config: VideoConfig;
+  frame: number;
+  playing: boolean;
+}): JSX.Element {
+  return (
+    <div style={{ width: config.width, height: config.height, position: 'relative', overflow: 'hidden' }}>
+      <ConfigContext.Provider value={config}>
+        <PlayingContext.Provider value={playing}>
+          <TimelineContext.Provider value={frame}>
+            <FrameContext.Provider value={frame}>
+              <Component {...props} />
+            </FrameContext.Provider>
+          </TimelineContext.Provider>
+        </PlayingContext.Provider>
+      </ConfigContext.Provider>
+    </div>
+  );
+}
 
 export function Sequence({
   from = 0,
