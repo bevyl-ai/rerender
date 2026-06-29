@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  remover cloud — distributed, ffmpeg-free video render on AWS Lambda. One container
+  function renders a frame-range segment to S3; the `remover cloud render` orchestrator
+  fans out N parallel invocations (one per slice) and concatenates the segments. This is
+  the open, MIT equivalent of @remotion/lambda's deployed function + bucket.
+
+Parameters:
+  MemorySize:
+    Type: Number
+    Default: 3008
+    Description: MB per worker. More memory = more vCPU = faster per-slice capture.
+  Timeout:
+    Type: Number
+    Default: 600
+    Description: Max seconds per slice (10 min). Keep slices small enough to fit.
+  EphemeralStorage:
+    Type: Number
+    Default: 4096
+    Description: /tmp MB — holds the captured frames + the segment for one slice.
+
+Resources:
+  RenderBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-segments
+            Status: Enabled
+            ExpirationInDays: 1 # segments are intermediate; the final mp4 is downloaded by the client
+
+  RemoverWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: !Ref MemorySize
+      Timeout: !Ref Timeout
+      EphemeralStorage:
+        Size: !Ref EphemeralStorage
+      Environment:
+        Variables:
+          REMOVER_BUCKET: !Ref RenderBucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref RenderBucket
+    Metadata:
+      DockerContext: ../
+      Dockerfile: cloud/Dockerfile
+
+Outputs:
+  FunctionName:
+    Description: Pass to `remover cloud render --function`
+    Value: !Ref RemoverWorker
+  BucketName:
+    Description: Pass to `remover cloud render --bucket`
+    Value: !Ref RenderBucket

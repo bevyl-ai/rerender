@@ -5,6 +5,7 @@
 //   remover still  <entry> <comp-id> [output] [--frame N]
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { bundle } from './renderer/bundle';
 import { getCompositions, selectComposition } from './renderer/select-composition';
 import { renderMedia } from './renderer/render-media';
@@ -33,11 +34,55 @@ const str = (v: string | boolean | undefined): string | undefined => (typeof v =
 
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
-  if (cmd !== 'render' && cmd !== 'still' && cmd !== 'studio' && cmd !== 'concat') {
-    console.error('usage: remover render|still|studio <entry> [comp-id] [output] [flags]\n       remover concat --output <out.mp4> <segment0.mp4> <segment1.mp4> …');
+  if (!['render', 'still', 'studio', 'concat', 'cloud'].includes(cmd ?? '')) {
+    console.error('usage: remover render|still|studio <entry> [comp-id] [output] [flags]\n       remover concat --output <out.mp4> <segment0.mp4> …\n       remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <b> …');
     process.exit(1);
   }
   const { positional, flags } = parseArgs(rest);
+
+  // Distributed render on AWS Lambda (the @remotion/lambda equivalent).
+  if (cmd === 'cloud') {
+    const sub = positional[0];
+    if (sub === 'deploy') {
+      const { spawnSync } = await import('node:child_process');
+      const cwd = fileURLToPath(new URL('../cloud', import.meta.url));
+      const build = spawnSync('sam', ['build', '-t', 'template.yaml'], { cwd, stdio: 'inherit' });
+      if (build.status !== 0) { console.error('sam build failed — is the AWS SAM CLI installed (https://docs.aws.amazon.com/serverless-application-model/)?'); process.exit(1); }
+      spawnSync('sam', ['deploy', '--guided'], { cwd, stdio: 'inherit' });
+      return;
+    }
+    if (sub === 'render') {
+      const [, cEntry, cComp] = positional;
+      const fn = str(flags.function);
+      const bucket = str(flags.bucket);
+      if (!cEntry || !cComp || !fn || !bucket) {
+        console.error('usage: remover cloud render <entry> <comp> --function <name> --bucket <bucket> [--workers N] [--region r] [--props json] --output out.mp4');
+        process.exit(1);
+      }
+      let props: Record<string, unknown> = {};
+      const pf = str(flags.props);
+      if (pf) props = JSON.parse(pf.endsWith('.json') ? readFileSync(pf, 'utf8') : pf);
+      const { orchestrateRender } = await import('../cloud/orchestrate');
+      const { awsInvoker } = await import('../cloud/aws');
+      const output = str(flags.output) ?? `out/${cComp}.mp4`;
+      mkdirSync(dirname(resolve(output)), { recursive: true });
+      const t0 = Date.now();
+      const r = await orchestrateRender({
+        entry: resolve(cEntry),
+        comp: cComp,
+        props,
+        workers: num(flags.workers) ?? 8,
+        output: resolve(output),
+        invoke: awsInvoker({ functionName: fn, bucket, keyPrefix: `renders/${cComp}-${Date.now()}`, region: str(flags.region) }),
+        onProgress: (d, total) => process.stdout.write(`\r  ${d}/${total} workers done`),
+      });
+      process.stdout.write('\n');
+      console.log(`✓ cloud render: ${cComp} (${r.durationInFrames}f @ ${r.fps}fps) across ${r.slices} Lambda workers → ${output}  [${((Date.now() - t0) / 1000).toFixed(1)}s]`);
+      return;
+    }
+    console.error('usage: remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <bucket> …');
+    process.exit(1);
+  }
 
   // Coordinator step for distributed renders: stitch the segments produced by N workers
   // (each `remover render <entry> <comp> --frames lo-hi --muted -o segK.mp4`) into one
