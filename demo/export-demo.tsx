@@ -1,7 +1,8 @@
-// Client-side export demo — the same composition plays in the Player AND exports to mp4
-// entirely in the browser (no server, no ffmpeg) via src/client/export.
-import { useState } from 'react';
-import { AbsoluteFill, Player, interpolate, useCurrentFrame, useVideoConfig } from '../src';
+// Client-side export demos — the same compositions play in the Player AND export to mp4
+// entirely in the browser (no server, no ffmpeg) via src/client/export. One pure
+// motion-graphics comp, one with REAL FOOTAGE (a <Video> baked into the capture).
+import { type ComponentType, useState } from 'react';
+import { AbsoluteFill, Player, Video, interpolate, staticFile, useCurrentFrame, useVideoConfig } from '../src';
 import { exportToMp4 } from '../src/client/export';
 
 const W = 1280;
@@ -9,7 +10,7 @@ const H = 720;
 const FPS = 30;
 const DURATION = 60;
 
-function ExportComp(): JSX.Element {
+function MotionComp(): JSX.Element {
   const frame = useCurrentFrame();
   const { width, height, durationInFrames } = useVideoConfig();
   const last = durationInFrames - 1;
@@ -17,7 +18,6 @@ function ExportComp(): JSX.Element {
   const scale = interpolate(frame, [0, last / 2, last], [0.6, 1.25, 0.6]);
   const titleY = interpolate(frame, [0, 14], [44, 0], { extrapolateRight: 'clamp' });
   const titleO = interpolate(frame, [0, 14], [0, 1], { extrapolateRight: 'clamp' });
-  const prog = frame / last;
   return (
     <AbsoluteFill style={{ background: 'linear-gradient(135deg,#0b0b14,#1a1030)', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
       <div
@@ -51,15 +51,34 @@ function ExportComp(): JSX.Element {
           boxShadow: '0 24px 70px rgba(255,94,138,.45)',
         }}
       />
-      <div style={{ position: 'absolute', left: 64, bottom: 76, fontSize: 18, color: '#6a6a80' }}>
-        frame {frame} / {last}
-      </div>
-      <div style={{ position: 'absolute', left: 0, bottom: 0, height: 6, width: `${prog * 100}%`, background: '#ff5e8a' }} />
+      <div style={{ position: 'absolute', left: 0, bottom: 0, height: 6, width: `${(frame / last) * 100}%`, background: '#ff5e8a' }} />
     </AbsoluteFill>
   );
 }
 
-export function ExportDemo(): JSX.Element {
+function FootageComp(): JSX.Element {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const last = durationInFrames - 1;
+  const o = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: 'clamp' });
+  const kenScale = interpolate(frame, [0, last], [1.06, 1.2]);
+  return (
+    <AbsoluteFill style={{ fontFamily: 'system-ui, sans-serif' }}>
+      <Video
+        src={staticFile('demo-clip.mp4')}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${kenScale})` }}
+      />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,0) 48%)' }} />
+      <div style={{ position: 'absolute', left: 56, bottom: 72, opacity: o }}>
+        <div style={{ fontSize: 22, color: '#ff7aa2', fontWeight: 700, letterSpacing: 2 }}>RENDERED IN-BROWSER</div>
+        <div style={{ fontSize: 54, color: '#fff', fontWeight: 800, marginTop: 6 }}>real footage. no server.</div>
+      </div>
+      <div style={{ position: 'absolute', left: 0, bottom: 0, height: 6, width: `${(frame / last) * 100}%`, background: '#ff5e8a' }} />
+    </AbsoluteFill>
+  );
+}
+
+function ExportPanel({ Component, title, blurb }: { Component: ComponentType; title: string; blurb: string }): JSX.Element {
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
@@ -72,7 +91,7 @@ export function ExportDemo(): JSX.Element {
     try {
       const t0 = performance.now();
       const blob = await exportToMp4({
-        Component: ExportComp,
+        Component: Component as ComponentType<Record<string, unknown>>,
         config: { width: W, height: H, fps: FPS, durationInFrames: DURATION },
         onProgress: (done, total) => setPct(Math.round((done / total) * 100)),
       });
@@ -86,14 +105,11 @@ export function ExportDemo(): JSX.Element {
   }
 
   return (
-    <div style={{ marginTop: 40, borderTop: '1px solid #26262e', paddingTop: 28 }}>
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>Client-side export · no server, no ffmpeg</div>
-      <div style={{ color: '#8a8a93', fontSize: 13, marginBottom: 16, maxWidth: 520 }}>
-        The Player preview below <i>is</i> the renderer. The button frame-steps the same composition, captures each frame from the live DOM
-        (<code>foreignObject</code>), and encodes mp4 with WebCodecs + mediabunny — entirely in this tab.
-      </div>
-      <Player composition={ExportComp} width={W} height={H} fps={FPS} durationInFrames={DURATION} displayHeight={300} />
-      <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+    <div style={{ marginTop: 36, borderTop: '1px solid #26262e', paddingTop: 24 }}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{title}</div>
+      <div style={{ color: '#8a8a93', fontSize: 13, marginBottom: 14, maxWidth: 540 }}>{blurb}</div>
+      <Player composition={Component} width={W} height={H} fps={FPS} durationInFrames={DURATION} displayHeight={280} />
+      <div style={{ marginTop: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
         <button
           type="button"
           onClick={run}
@@ -116,18 +132,36 @@ export function ExportDemo(): JSX.Element {
         {status === 'error' && <span style={{ color: '#ff6b6b', fontSize: 13 }}>✗ {meta}</span>}
       </div>
       {url && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 14 }}>
           <div style={{ color: '#8a8a93', fontSize: 12, marginBottom: 6 }}>
             exported file (decoded by the browser — proof it's a real mp4):
           </div>
-          <video src={url} controls style={{ width: 533, borderRadius: 8, background: '#000' }} />
+          <video src={url} controls style={{ width: 480, borderRadius: 8, background: '#000' }} />
           <div style={{ marginTop: 8 }}>
             <a href={url} download="remover-client-export.mp4" style={{ color: '#ff8fb0', fontSize: 13 }}>
-              download remover-client-export.mp4
+              download mp4
             </a>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export function ExportDemo(): JSX.Element {
+  return (
+    <div>
+      <div style={{ marginTop: 40, fontWeight: 700, fontSize: 15 }}>Client-side export · no server, no ffmpeg</div>
+      <ExportPanel
+        Component={MotionComp}
+        title="Motion graphics"
+        blurb="The Player preview is the renderer. The button frame-steps it, captures each frame from the live DOM (foreignObject), and encodes mp4 with WebCodecs + mediabunny — all in this tab."
+      />
+      <ExportPanel
+        Component={FootageComp}
+        title="Real footage"
+        blurb="Same pipeline, but with a <Video>. foreignObject can't paint video, so each frame the live video is drawn to a canvas and baked into the capture as an image — z-order preserved. Real footage, exported with no server."
+      />
     </div>
   );
 }

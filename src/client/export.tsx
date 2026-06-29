@@ -29,18 +29,82 @@ const loadImage = (url: string, w: number, h: number): Promise<HTMLImageElement>
     img.src = url;
   });
 
-/** Serialize the live (inline-styled) DOM subtree into an SVG foreignObject and paint it
- *  onto the canvas — the client-side equivalent of one CDP screenshot. */
+/** Draw a <video>'s current frame into a destination box with object-fit semantics.
+ *  (Chrome's SVG-as-image secure mode won't render nested raster images, so videos can't
+ *  ride inside the foreignObject — they're composited natively underneath it instead.) */
+function drawVideo(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, dx: number, dy: number, dw: number, dh: number, fit: string): void {
+  const vw = v.videoWidth;
+  const vh = v.videoHeight;
+  if (!vw || !vh) return;
+  const boxRatio = dw / dh;
+  const vidRatio = vw / vh;
+  if (fit === 'contain') {
+    let tw = dw;
+    let th = dh;
+    if (vidRatio > boxRatio) th = dw / vidRatio;
+    else tw = dh * vidRatio;
+    ctx.drawImage(v, 0, 0, vw, vh, dx + (dw - tw) / 2, dy + (dh - th) / 2, tw, th);
+    return;
+  }
+  // cover (default): crop the source to the box aspect, centered
+  let sw = vw;
+  let sh = vh;
+  if (vidRatio > boxRatio) {
+    sw = vh * boxRatio;
+  } else {
+    sh = vw / boxRatio;
+  }
+  ctx.drawImage(v, (vw - sw) / 2, (vh - sh) / 2, sw, sh, dx, dy, dw, dh);
+}
+
+/** Wait for every <video> in the stage to finish seeking to the current frame — the
+ *  client-side equivalent of the headless settle()'s video wait. */
+async function settleVideos(stage: HTMLElement): Promise<void> {
+  const videos = Array.from(stage.querySelectorAll('video'));
+  if (!videos.length) return;
+  await Promise.all(
+    videos.map((v) =>
+      v.readyState >= 2 && !v.seeking
+        ? Promise.resolve()
+        : new Promise<void>((res) => v.addEventListener('seeked', () => res(), { once: true })),
+    ),
+  );
+}
+
+/** Capture one frame: composite each <video> natively (its laid-out box, object-fit and
+ *  transform reflected via getBoundingClientRect), then draw the DOM overlay — everything
+ *  except the videos — on top via an SVG foreignObject. Correct for the common structure
+ *  of a video background (or mid-stack) with DOM overlays above it. */
 async function paintFrame(stage: HTMLElement, ctx: CanvasRenderingContext2D, w: number, h: number): Promise<void> {
-  const inner = new XMLSerializer().serializeToString(stage);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  const stageRect = stage.getBoundingClientRect();
+  const sx = w / stageRect.width;
+  const sy = h / stageRect.height;
+  for (const v of Array.from(stage.querySelectorAll('video'))) {
+    if (!v.videoWidth) continue;
+    const r = v.getBoundingClientRect();
+    drawVideo(
+      ctx,
+      v,
+      (r.left - stageRect.left) * sx,
+      (r.top - stageRect.top) * sy,
+      r.width * sx,
+      r.height * sy,
+      getComputedStyle(v).objectFit || 'fill',
+    );
+  }
+
+  const clone = stage.cloneNode(true) as HTMLElement;
+  for (const el of Array.from(clone.querySelectorAll('video'))) el.remove();
+  const inner = new XMLSerializer().serializeToString(clone);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
     `<foreignObject x="0" y="0" width="${w}" height="${h}">` +
     `<div xmlns="http://www.w3.org/1999/xhtml"><style>*{box-sizing:border-box}</style>${inner}</div>` +
     `</foreignObject></svg>`;
   const img = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, w, h);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
 }
 
@@ -87,9 +151,16 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
 
   try {
     await document.fonts.ready;
+    // wait for any <video> to have decodable data before the first capture
+    await Promise.all(
+      Array.from(stage.querySelectorAll('video')).map((v) =>
+        v.readyState >= 2 ? Promise.resolve() : new Promise<void>((res) => v.addEventListener('loadeddata', () => res(), { once: true })),
+      ),
+    );
     for (let f = 0; f < durationInFrames; f++) {
       if (signal?.aborted) throw new Error('export aborted');
       flushSync(() => drive(f));
+      await settleVideos(stage); // let <video> elements seek to frame f before capture
       await paintFrame(stage, ctx, width, height);
       await source.add(f / fps, 1 / fps, f === 0 ? { keyFrame: true } : undefined);
       onProgress?.(f + 1, durationInFrames);
