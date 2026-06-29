@@ -4,6 +4,7 @@
 //              recorded-frame N == composition-frame N exactly.
 // Used by both the examples render page and the studio (registered-Root) page.
 import { useEffect, useState, type ComponentType } from 'react';
+import { flushSync } from 'react-dom';
 import { ConfigContext, FrameContext, PlayingContext, TimelineContext } from '../src/core/frame';
 import { getPendingDelays } from '../src/core/delay-render';
 import { injectRemoverCSS } from '../src/core/default-css';
@@ -30,22 +31,25 @@ const raf = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => 
 
 // Resolves once React has committed + painted the frame, any delayRender() holds
 // (e.g. async audio decode) have cleared, and every <video> has finished seeking.
+// Fast path (no delays, no <video>) is 2 rAFs — commit then paint — instead of the
+// old fixed 5; the delay loop and video-seek wait only run when actually present.
 async function settle(): Promise<void> {
-  await raf();
-  await raf();
+  // The frame is already committed synchronously (flushSync in __setFrame), and the
+  // CDP screenshot rasters the committed DOM — so the fast path needs no rAF at all.
+  // Only genuinely-async work waits: delayRender() holds and <video> seeks.
   let guard = 0;
   while (getPendingDelays() > 0 && guard++ < 600) await raf();
-  await raf();
-  await raf();
   const videos = Array.from(document.querySelectorAll('video'));
-  await Promise.all(
-    videos.map((v) =>
-      v.readyState >= 2 && !v.seeking
-        ? Promise.resolve()
-        : new Promise<void>((res) => v.addEventListener('seeked', () => res(), { once: true })),
-    ),
-  );
-  await raf();
+  if (videos.length) {
+    await Promise.all(
+      videos.map((v) =>
+        v.readyState >= 2 && !v.seeking
+          ? Promise.resolve()
+          : new Promise<void>((res) => v.addEventListener('seeked', () => res(), { once: true })),
+      ),
+    );
+    await raf(); // let the newly-seeked video frame composite before capture
+  }
 }
 
 interface FrameProps {
@@ -107,7 +111,7 @@ function StepStage({ Component, props, config, from }: Omit<StageProps, 'stepMod
   useEffect(() => {
     window.__setFrame = (f: number) =>
       new Promise<void>((resolve) => {
-        setFrame(f);
+        flushSync(() => setFrame(f)); // commit the new frame synchronously — no rAF needed
         void settle().then(resolve);
       });
     window.__ready = true;

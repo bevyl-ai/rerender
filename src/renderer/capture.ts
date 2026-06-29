@@ -78,18 +78,20 @@ export async function captureFrames(
     if (opts.collectAudio) await page.evaluate(() => window.remotion_collectAssets?.()); // drain initial-mount registrations
     for (let f = lo; f < hi; f++) {
       await page.evaluate((fr) => window.__setFrame!(fr), f);
-      await page.screenshot({
-        path: join(dir, `f-${String(f).padStart(5, '0')}.${jpeg ? 'jpg' : 'png'}`),
-        clip: { x: 0, y: 0, width: cfg.width, height: cfg.height },
-        captureBeyondViewport: true,
-        fromSurface: true,
-        optimizeForSpeed: true,
-        ...(jpeg ? { type: 'jpeg' as const, quality: opts.jpegQuality ?? 80 } : { type: 'png' as const }),
-      });
-      if (opts.collectAudio) {
-        const a = await page.evaluate(() => window.remotion_collectAssets?.() ?? []);
-        if (a.length) assets.set(f, a);
-      }
+      // screenshot and asset-collection are independent CDP calls — issue them
+      // concurrently (mirrors Remotion's Promise.all(takeFrame, collectAssets)).
+      const [, a] = await Promise.all([
+        page.screenshot({
+          path: join(dir, `f-${String(f).padStart(5, '0')}.${jpeg ? 'jpg' : 'png'}`),
+          clip: { x: 0, y: 0, width: cfg.width, height: cfg.height },
+          captureBeyondViewport: true,
+          fromSurface: true,
+          optimizeForSpeed: true,
+          ...(jpeg ? { type: 'jpeg' as const, quality: opts.jpegQuality ?? 80 } : { type: 'png' as const }),
+        }),
+        opts.collectAudio ? page.evaluate(() => window.remotion_collectAssets?.() ?? []) : Promise.resolve([]),
+      ]);
+      if (a.length) assets.set(f, a);
     }
   } finally {
     await browser.close();
