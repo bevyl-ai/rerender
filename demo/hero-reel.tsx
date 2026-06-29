@@ -72,7 +72,7 @@ export function HeroReel(): JSX.Element {
           letterSpacing: 1,
         }}
       >
-        frame {String(frame).padStart(3, '0')} / {last}
+        frame {String(Math.floor(frame)).padStart(3, '0')} / {last}
       </div>
 
       <AbsoluteFill style={{ alignItems: 'flex-start', justifyContent: 'center', padding: '0 86px' }}>

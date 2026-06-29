@@ -276,7 +276,6 @@ export function ExportShowcase(): JSX.Element {
   const [err, setErr] = useState('');
   const liveCanvas = useRef<HTMLCanvasElement>(null);
   const player = useRef<PlayerRef>(null);
-  const exported = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     player.current?.play();
@@ -287,20 +286,6 @@ export function ExportShowcase(): JSX.Element {
     },
     [url],
   );
-
-  // Once exported, drive the live preview FROM the exported mp4 so the two play in perfect
-  // lockstep (same frame, same loop) — they start together and never drift apart.
-  useEffect(() => {
-    if (status !== 'done' || !url) return;
-    let raf = 0;
-    const sync = (): void => {
-      const v = exported.current;
-      if (v) player.current?.seekTo(Math.round(v.currentTime * FPS));
-      raf = requestAnimationFrame(sync);
-    };
-    raf = requestAnimationFrame(sync);
-    return () => cancelAnimationFrame(raf);
-  }, [status, url]);
 
   async function run(): Promise<void> {
     setStatus('running');
@@ -415,7 +400,6 @@ export function ExportShowcase(): JSX.Element {
             {status === 'done' && url && (
               // biome-ignore lint/a11y/useMediaCaption: a generated demo clip, no captions
               <video
-                ref={exported}
                 src={url}
                 autoPlay
                 loop

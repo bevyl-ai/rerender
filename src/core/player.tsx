@@ -78,7 +78,9 @@ export interface PlayerProps {
   acknowledgeRemotionLicense?: boolean;
 }
 
-const clampFrame = (f: number, durationInFrames: number): number => Math.max(0, Math.min(durationInFrames - 1, Math.round(f)));
+// Clamp to [0, last] but do NOT round — playback commits a continuous (fractional) frame for
+// smooth motion; seekTo passes an integer, which clamps through unchanged.
+const clampFrame = (f: number, durationInFrames: number): number => Math.max(0, Math.min(durationInFrames - 1, f));
 
 export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, ref): JSX.Element {
   const {
@@ -127,9 +129,10 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
     (f: number, seeked = false): void => {
       const clamped = clampFrame(f, durationInFrames);
       frameRef.current = clamped;
-      setFrameState(clamped);
-      emit('frameupdate', { frame: clamped });
-      if (seeked) emit('seeked', { frame: clamped });
+      setFrameState(clamped); // may be fractional during playback → smooth motion
+      // The imperative API stays integer (consumers like an editor's playhead expect whole frames).
+      emit('frameupdate', { frame: Math.round(clamped) });
+      if (seeked) emit('seeked', { frame: Math.round(clamped) });
     },
     [durationInFrames, emit],
   );
@@ -150,7 +153,11 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
     let anchor = { t: performance.now(), f: frameRef.current >= durationInFrames - 1 ? 0 : frameRef.current };
     const tick = (): void => {
       const elapsed = (performance.now() - anchor.t) / 1000;
-      let f = anchor.f + Math.floor(elapsed * fps * playbackRate);
+      // Continuous (un-floored) frame during live playback: the composition interpolates
+      // smoothly in lockstep with the natively-playing <video>, instead of stepping at fps
+      // while the footage flows (which reads as shake). The renderer still uses integer frames,
+      // so the export stays frame-exact.
+      let f = anchor.f + elapsed * fps * playbackRate;
       if (f >= durationInFrames) {
         if (loop) {
           f = 0;
@@ -177,7 +184,7 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
         setPlaying(false);
         commitFrame(f, true);
       },
-      getCurrentFrame: () => frameRef.current,
+      getCurrentFrame: () => Math.round(frameRef.current),
       play: () => setPlaying(true),
       pause: () => setPlaying(false),
       pauseAndReturnToPlayStart: () => {
