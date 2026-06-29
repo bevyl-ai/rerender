@@ -1,6 +1,6 @@
-// renderMedia — match @remotion/renderer. Frame-step capture across N parallel
-// browsers, encoded to mp4 in-browser (WebCodecs + mediabunny, no ffmpeg) overlapped
-// with capture, then the composition's <Audio>/<Video> mixed + muxed in.
+// renderMedia — match @remotion/renderer. Frame-step capture across N parallel browsers,
+// each slice encoded to mp4 in-browser (WebCodecs + mediabunny, no ffmpeg), the segments
+// concatenated, then the composition's <Audio>/<Video> mixed + muxed in.
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { cpus, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -16,16 +16,13 @@ export interface RenderMediaOptions {
   serveUrl: string;
   outputLocation: string;
   inputProps?: Record<string, unknown>;
-  codec?: 'h264';
   /** Video codec for the in-browser WebCodecs encoder (default avc/h264). */
   videoCodec?: VideoCodec;
-  crf?: number;
   scale?: number;
   concurrency?: number;
   imageFormat?: 'png' | 'jpeg';
   jpegQuality?: number;
   muted?: boolean;
-  pixelFormat?: string;
   frameRange?: number | [number, number];
   onProgress?: (p: { renderedFrames: number; progress: number }) => void;
 }
@@ -88,7 +85,8 @@ export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: n
       const frames = new Map<number, CollectedAsset[]>();
       for (const m of maps) for (const [f, a] of m) frames.set(f, a);
       const positions = calculateAssetPositions(frames);
-      // download dev-server assets to local files — ffmpeg's http reader stalls on Vite streams.
+      // download dev-server assets to local files — the mux worker's http server reads them
+      // off disk (readFileSync), so it needs real paths, not Vite stream URLs.
       const local = new Map<string, string>();
       for (const p of positions) {
         if (local.has(p.src)) continue;

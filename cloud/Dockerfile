@@ -1,10 +1,11 @@
 # remover cloud worker — an AWS Lambda container image that renders one frame-range
-# segment to S3. Built per project (the project is baked in); deployed by `sam deploy`
-# (see cloud/template.yaml). Container Lambda so we can ship chrome-headless-shell + the
+# segment to S3. Built per project (the project is baked in); built + deployed by
+# `remover cloud deploy` (docker build + `aws cloudformation deploy` against
+# cloud/template.yaml, no SAM). Container Lambda so we can ship chrome-headless-shell + the
 # full remover runtime (vite/esbuild/puppeteer/mediabunny), which a zip layer can't hold.
 #
-#   build context is the repo root:  sam build  (uses cloud/Dockerfile)
-#   override the project dir:         --build-arg PROJECT=./my-video
+#   build context is the repo root (deploy.ts runs `docker build -f cloud/Dockerfile .`)
+#   the project dir is passed via   --build-arg PROJECT=<dir relative to repo root>
 FROM public.ecr.aws/lambda/nodejs:20
 
 # unzip/tar/findutils for the chrome-headless-shell download + chrome's shared

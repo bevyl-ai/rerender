@@ -201,13 +201,11 @@ async function main(): Promise<void> {
       serveUrl: b.serveUrl,
       outputLocation: output,
       inputProps,
-      crf: num(flags.crf),
       scale: num(flags.scale),
       concurrency: num(flags.concurrency),
       imageFormat: str(flags['image-format']) as 'png' | 'jpeg' | undefined,
       jpegQuality: num(flags['jpeg-quality']),
       muted: flags.muted === true,
-      pixelFormat: str(flags['pixel-format']),
       frameRange,
       onProgress: ({ progress }) => process.stdout.write(`\r  rendering… ${Math.round(progress * 100)}%`),
     });
