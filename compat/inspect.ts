@@ -41,10 +41,22 @@ function readPng(p: string): PNG {
   return png;
 }
 
-interface Box { x: number; y: number; w: number; h: number; cx: number; cy: number; count: number }
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  cx: number;
+  cy: number;
+  count: number;
+}
 function bbox(png: PNG, pred: (r: number, g: number, b: number) => boolean): Box | null {
   const { width, height, data } = png;
-  let minX = 1e9, minY = 1e9, maxX = -1, maxY = -1, count = 0;
+  let minX = 1e9,
+    minY = 1e9,
+    maxX = -1,
+    maxY = -1,
+    count = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
@@ -76,7 +88,14 @@ async function dumpRemoverDom(selector: string): Promise<void> {
       while (n && n !== document.documentElement) {
         const s = getComputedStyle(n);
         const r = n.getBoundingClientRect();
-        out.push({ tag: n.tagName, pos: s.position, transform: s.transform, boxSizing: s.boxSizing, overflow: s.overflow, rect: [+r.x.toFixed(2), +r.y.toFixed(2), +r.width.toFixed(2), +r.height.toFixed(2)] });
+        out.push({
+          tag: n.tagName,
+          pos: s.position,
+          transform: s.transform,
+          boxSizing: s.boxSizing,
+          overflow: s.overflow,
+          rect: [+r.x.toFixed(2), +r.y.toFixed(2), +r.width.toFixed(2), +r.height.toFixed(2)],
+        });
         n = n.parentElement;
       }
       return out;
@@ -115,8 +134,20 @@ async function main(): Promise<void> {
   const region = bbox(diff, (r, g, bl) => r > 180 && bl < 130);
   if (region) {
     console.log(`  diff concentrated in: x ${region.x}–${region.x + region.w}, y ${region.y}–${region.y + region.h}  (${region.count} px)`);
-    const cx = Math.max(0, region.x - 12), cy = Math.max(0, region.y - 12);
-    execFileSync('ffmpeg', ['-y', '-i', join(OUTDIR, `inspect-${ID}-diff.png`), '-vf', `crop=${Math.min(W - cx, region.w + 24)}:${Math.min(H - cy, region.h + 24)}:${cx}:${cy}`, join(OUTDIR, `inspect-${ID}-diff-crop.png`)], { stdio: 'ignore' });
+    const cx = Math.max(0, region.x - 12),
+      cy = Math.max(0, region.y - 12);
+    execFileSync(
+      'ffmpeg',
+      [
+        '-y',
+        '-i',
+        join(OUTDIR, `inspect-${ID}-diff.png`),
+        '-vf',
+        `crop=${Math.min(W - cx, region.w + 24)}:${Math.min(H - cy, region.h + 24)}:${cx}:${cy}`,
+        join(OUTDIR, `inspect-${ID}-diff-crop.png`),
+      ],
+      { stdio: 'ignore' },
+    );
   } else {
     console.log('  diff concentrated in: (none — pixel-identical)');
   }
@@ -127,14 +158,20 @@ async function main(): Promise<void> {
     // match by the key's DOMINANT channel — robust to a semi-transparent element
     // blended over whatever background (an exact-rgb match misses the blend).
     const near = (r: number, g: number, bl: number): boolean =>
-      maxc === kb ? bl > r + 15 && bl > g + 10 && bl > 70 : maxc === kr ? r > g + 15 && r > bl + 10 && r > 70 : g > r + 10 && g > bl + 10 && g > 70;
+      maxc === kb
+        ? bl > r + 15 && bl > g + 10 && bl > 70
+        : maxc === kr
+          ? r > g + 15 && r > bl + 10 && r > 70
+          : g > r + 10 && g > bl + 10 && g > 70;
     const ra = bbox(a, near);
     const rb = bbox(b, near);
     console.log(`  element ~rgb(${KEY}) geometry:`);
     console.log(`    remover : center (${ra?.cx.toFixed(1)}, ${ra?.cy.toFixed(1)})  size ${ra?.w}x${ra?.h}`);
     console.log(`    remotion: center (${rb?.cx.toFixed(1)}, ${rb?.cy.toFixed(1)})  size ${rb?.w}x${rb?.h}`);
     if (ra && rb) {
-      console.log(`    Δ center (${(ra.cx - rb.cx).toFixed(2)}, ${(ra.cy - rb.cy).toFixed(2)})  ·  Δ size (${ra.w - rb.w}, ${ra.h - rb.h})`);
+      console.log(
+        `    Δ center (${(ra.cx - rb.cx).toFixed(2)}, ${(ra.cy - rb.cy).toFixed(2)})  ·  Δ size (${ra.w - rb.w}, ${ra.h - rb.h})`,
+      );
       console.log(`    → size Δ ⇒ layout bug (box-sizing/units); center Δ ⇒ positioning; ~0 both ⇒ sub-pixel AA only`);
     }
   }

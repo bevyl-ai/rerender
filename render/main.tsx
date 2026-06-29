@@ -17,6 +17,4 @@ const stepMode = p.has('step');
 
 const root = document.getElementById('stage');
 if (!root) throw new Error('no #stage');
-createRoot(root).render(
-  <Stage Component={entry.component as never} props={{}} config={config} from={from} to={to} stepMode={stepMode} />,
-);
+createRoot(root).render(<Stage Component={entry.component as never} props={{}} config={config} from={from} to={to} stepMode={stepMode} />);

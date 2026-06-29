@@ -45,7 +45,8 @@ export async function handler(event: SegmentEvent): Promise<{ bucket: string; ke
   const b = await bundle(ENTRY);
   mark('bundle');
   try {
-    const composition = event.composition ?? (await selectComposition({ serveUrl: b.serveUrl, id: event.comp, inputProps: event.props ?? {} }));
+    const composition =
+      event.composition ?? (await selectComposition({ serveUrl: b.serveUrl, id: event.comp, inputProps: event.props ?? {} }));
     mark('composition');
     const out = `/tmp/seg-${event.frameRange[0]}-${event.frameRange[1]}.mp4`;
     await renderMedia({

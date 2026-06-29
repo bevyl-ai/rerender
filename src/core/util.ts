@@ -16,5 +16,5 @@ export function random(seed: string | number | null): number {
   h ^= h >>> 15;
   h = Math.imul(h, 2246822507);
   h ^= h >>> 13;
-  return (h >>> 0) % 100000 / 100000;
+  return ((h >>> 0) % 100000) / 100000;
 }

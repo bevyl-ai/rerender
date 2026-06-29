@@ -28,8 +28,12 @@ export interface DeployResult {
 }
 
 const out = (cmd: string): string => execSync(cmd, { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
-const run = (cmd: string): void => { execSync(cmd, { cwd: REPO_ROOT, stdio: 'inherit' }); };
-const runFile = (file: string, args: string[]): void => { execFileSync(file, args, { cwd: REPO_ROOT, stdio: 'inherit' }); };
+const run = (cmd: string): void => {
+  execSync(cmd, { cwd: REPO_ROOT, stdio: 'inherit' });
+};
+const runFile = (file: string, args: string[]): void => {
+  execFileSync(file, args, { cwd: REPO_ROOT, stdio: 'inherit' });
+};
 
 export async function deploy(opts: DeployOptions): Promise<DeployResult> {
   const region = opts.region ?? process.env.AWS_REGION ?? (out('aws configure get region') || 'us-east-1');
@@ -54,10 +58,23 @@ export async function deploy(opts: DeployOptions): Promise<DeployResult> {
   } else {
     // PROJECT must be relative to the build context (the repo root), not absolute.
     const projectArg = relative(REPO_ROOT, opts.project);
-    if (projectArg.startsWith('..')) throw new Error(`project must live inside the remover repo for now (got ${opts.project}); copy it under templates/ or a subdir`);
+    if (projectArg.startsWith('..'))
+      throw new Error(`project must live inside the remover repo for now (got ${opts.project}); copy it under templates/ or a subdir`);
     console.log(`• building worker image (linux/amd64 — chrome-headless-shell is x86_64 only), baking ${projectArg}…`);
     // --provenance=false: buildx otherwise emits an attestation manifest list that Lambda rejects.
-    runFile('docker', ['build', '--platform', 'linux/amd64', '--provenance=false', '-f', 'cloud/Dockerfile', '--build-arg', `PROJECT=${projectArg}`, '-t', imageUri, '.']);
+    runFile('docker', [
+      'build',
+      '--platform',
+      'linux/amd64',
+      '--provenance=false',
+      '-f',
+      'cloud/Dockerfile',
+      '--build-arg',
+      `PROJECT=${projectArg}`,
+      '-t',
+      imageUri,
+      '.',
+    ]);
   }
 
   console.log('• pushing image to ECR…');
@@ -65,25 +82,38 @@ export async function deploy(opts: DeployOptions): Promise<DeployResult> {
 
   // A previous failed CREATE leaves the stack in a terminal state that can't be updated.
   try {
-    const status = out(`aws cloudformation describe-stacks --region ${region} --stack-name ${stack} --query "Stacks[0].StackStatus" --output text`);
+    const status = out(
+      `aws cloudformation describe-stacks --region ${region} --stack-name ${stack} --query "Stacks[0].StackStatus" --output text`,
+    );
     if (/ROLLBACK_COMPLETE|ROLLBACK_FAILED|CREATE_FAILED|DELETE_FAILED/.test(status)) {
       console.log(`• deleting un-updatable stack (${status})…`);
       run(`aws cloudformation delete-stack --region ${region} --stack-name ${stack}`);
       run(`aws cloudformation wait stack-delete-complete --region ${region} --stack-name ${stack}`);
     }
-  } catch { /* stack doesn't exist yet — fine */ }
+  } catch {
+    /* stack doesn't exist yet — fine */
+  }
 
   console.log('• deploying CloudFormation stack…');
   runFile('aws', [
-    'cloudformation', 'deploy',
-    '--region', region,
-    '--stack-name', stack,
-    '--template-file', 'cloud/template.yaml',
-    '--parameter-overrides', `ImageUri=${imageUri}`, ...(opts.memory ? [`MemorySize=${opts.memory}`] : []),
-    '--capabilities', 'CAPABILITY_IAM',
+    'cloudformation',
+    'deploy',
+    '--region',
+    region,
+    '--stack-name',
+    stack,
+    '--template-file',
+    'cloud/template.yaml',
+    '--parameter-overrides',
+    `ImageUri=${imageUri}`,
+    ...(opts.memory ? [`MemorySize=${opts.memory}`] : []),
+    '--capabilities',
+    'CAPABILITY_IAM',
   ]);
 
-  const outputs = JSON.parse(out(`aws cloudformation describe-stacks --region ${region} --stack-name ${stack} --query "Stacks[0].Outputs" --output json`)) as { OutputKey: string; OutputValue: string }[];
+  const outputs = JSON.parse(
+    out(`aws cloudformation describe-stacks --region ${region} --stack-name ${stack} --query "Stacks[0].Outputs" --output json`),
+  ) as { OutputKey: string; OutputValue: string }[];
   const get = (k: string): string => outputs.find((o) => o.OutputKey === k)?.OutputValue ?? '';
   const functionName = get('FunctionName');
 

@@ -31,11 +31,19 @@ export async function startEncoder(opts: { exe: string; frameDir: string; frameF
   const html = await bundleWorkerHtml(ENCODE_WORKER);
   const server: Server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0]!;
-    if (url === '/') { res.setHeader('content-type', 'text/html'); res.end(html); return; }
+    if (url === '/') {
+      res.setHeader('content-type', 'text/html');
+      res.end(html);
+      return;
+    }
     const m = url.match(/^\/__frame\/(\d+)$/);
     if (m) {
       const name = opts.frameFiles[Number(m[1])];
-      if (!name) { res.statusCode = 404; res.end(); return; }
+      if (!name) {
+        res.statusCode = 404;
+        res.end();
+        return;
+      }
       const file = join(opts.frameDir, name);
       // long-poll until the frame lands (capture writes it atomically) — usually
       // instant since encode() runs after capture, but robust if it overlaps.
@@ -105,8 +113,12 @@ export async function concatSegments(segmentPaths: string[], codec: VideoCodec, 
     let segEnd = 0;
     let count = 0;
     for await (const packet of sink.packets()) {
-      if (count === 0 && packet.type !== 'key') throw new Error(`concatSegments: ${p} does not start on a keyframe — would corrupt the join`);
-      await source.add(packet.clone({ timestamp: packet.timestamp + offset }), firstAdd ? { decoderConfig: decoderConfig ?? undefined } : undefined);
+      if (count === 0 && packet.type !== 'key')
+        throw new Error(`concatSegments: ${p} does not start on a keyframe — would corrupt the join`);
+      await source.add(
+        packet.clone({ timestamp: packet.timestamp + offset }),
+        firstAdd ? { decoderConfig: decoderConfig ?? undefined } : undefined,
+      );
       firstAdd = false;
       segEnd = Math.max(segEnd, packet.timestamp + packet.duration);
       count += 1;

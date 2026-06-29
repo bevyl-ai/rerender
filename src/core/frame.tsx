@@ -44,8 +44,7 @@ export function Sequence({
   const parent = useCurrentFrame();
   const local = parent - from;
   if (local < 0 || local >= durationInFrames) return null;
-  const content =
-    layout === 'absolute-fill' ? <AbsoluteFill>{children}</AbsoluteFill> : children;
+  const content = layout === 'absolute-fill' ? <AbsoluteFill>{children}</AbsoluteFill> : children;
   return <FrameContext.Provider value={local}>{content}</FrameContext.Provider>;
 }
 
@@ -75,15 +74,7 @@ export function Series({ children }: { children: ReactNode }): ReactNode {
 Series.Sequence = (_props: SeriesSequenceProps): null => null; // marker; <Series> reads its props
 
 /** <Freeze> pins everything inside it to a single frame. Remotion-compatible. */
-export function Freeze({
-  frame,
-  active = true,
-  children,
-}: {
-  frame: number;
-  active?: boolean;
-  children: ReactNode;
-}): JSX.Element {
+export function Freeze({ frame, active = true, children }: { frame: number; active?: boolean; children: ReactNode }): JSX.Element {
   const current = useCurrentFrame();
   return <FrameContext.Provider value={active ? frame : current}>{children}</FrameContext.Provider>;
 }
@@ -107,4 +98,3 @@ export function Loop({
   const content = layout === 'absolute-fill' ? <AbsoluteFill>{children}</AbsoluteFill> : children;
   return <FrameContext.Provider value={local}>{content}</FrameContext.Provider>;
 }
-

@@ -1,18 +1,14 @@
 import { getVisualization } from './fft/get-visualization';
-import { type OptimizeFor, type VisualizeAudioOptions } from './types';
+import type { OptimizeFor, VisualizeAudioOptions } from './types';
 
 // Memoize each single-frame pipeline result. Temporal smoothing reuses
 // neighboring frames, so the [frame-1, frame, frame+1] windows of adjacent
 // frames overlap heavily — caching turns 3 FFTs/frame into ~1 amortized.
 const cache = new Map<string, number[]>();
 
-function cachedFrame(
-  options: VisualizeAudioOptions & { optimizeFor: OptimizeFor; dataOffsetInSeconds: number },
-  frame: number,
-): number[] {
+function cachedFrame(options: VisualizeAudioOptions & { optimizeFor: OptimizeFor; dataOffsetInSeconds: number }, frame: number): number[] {
   const { audioData, fps, numberOfSamples, optimizeFor, dataOffsetInSeconds } = options;
-  const key =
-    audioData.resultId + ':' + frame + ':' + fps + ':' + numberOfSamples + ':' + optimizeFor + ':' + dataOffsetInSeconds;
+  const key = audioData.resultId + ':' + frame + ':' + fps + ':' + numberOfSamples + ':' + optimizeFor + ':' + dataOffsetInSeconds;
   const cached = cache.get(key);
   if (cached) return cached;
   const result = getVisualization({

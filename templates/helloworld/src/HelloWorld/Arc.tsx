@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { random, useVideoConfig } from "remotion";
+import { useState } from 'react';
+import { random, useVideoConfig } from 'remotion';
 
 const getCircumferenceOfArc = (rx: number, ry: number) => {
   return Math.PI * 2 * Math.sqrt((rx * rx + ry * ry) / 2);
@@ -28,7 +28,7 @@ export const Arc: React.FC<{
     <svg
       viewBox={`0 0 ${width} ${height}`}
       style={{
-        position: "absolute",
+        position: 'absolute',
         transform: `rotate(${rotation * rotateProgress}deg)`,
       }}
     >

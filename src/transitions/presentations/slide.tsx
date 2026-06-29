@@ -39,11 +39,7 @@ function SlidePresentation({
   passedProps,
   children,
 }: TransitionPresentationComponentProps<SlideProps>): JSX.Element {
-  const transform = slideTransform(
-    passedProps.direction,
-    presentationDirection === 'entering',
-    presentationProgress,
-  );
+  const transform = slideTransform(passedProps.direction, presentationDirection === 'entering', presentationProgress);
   return <AbsoluteFill style={{ transform }}>{children}</AbsoluteFill>;
 }
 

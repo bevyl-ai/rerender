@@ -1,4 +1,4 @@
-import { type AudioData } from '../types';
+import type { AudioData } from '../types';
 import { toInt16 } from './to-int-16';
 
 // The loudest channel-0 sample, in Int16 units, used to normalize the spectrum.

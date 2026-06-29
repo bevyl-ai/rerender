@@ -76,7 +76,6 @@ function resolveEntries(children: ReactNode, fps: number): ResolvedEntry[] {
       const resolved = presentation ?? slide();
       pendingTransitionDur = timing.getDurationInFrames({ fps });
       pendingTransition = { timing, presentation: resolved };
-      continue;
     }
   }
 
@@ -171,12 +170,7 @@ export function TransitionSeries({ children }: { children: ReactNode }): JSX.Ele
         // Outside every transition window: render the entry as a plain Sequence.
         // (Sequence is null outside [actualFrom, actualFrom+duration), AbsoluteFill inside.)
         return (
-          <Sequence
-            key={i}
-            from={entry.actualFrom}
-            durationInFrames={entry.durationInFrames}
-            layout={entry.layout}
-          >
+          <Sequence key={i} from={entry.actualFrom} durationInFrames={entry.durationInFrames} layout={entry.layout}>
             {entry.children}
           </Sequence>
         );

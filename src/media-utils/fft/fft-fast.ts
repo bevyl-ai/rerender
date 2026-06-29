@@ -1,4 +1,4 @@
-import { type Complex } from './complex';
+import type { Complex } from './complex';
 
 // Iterative radix-2 FFT (the speed path). The input is first multiplied by a
 // Hamming window to suppress spectral leakage, then transformed in place with

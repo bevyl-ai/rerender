@@ -9,10 +9,7 @@ function pageUrl(serveUrl: string, id: string, inputProps: Record<string, unknow
   return `${serveUrl}/?step=1&comp=${encodeURIComponent(id)}&props=${props}`;
 }
 
-export async function getCompositions(options: {
-  serveUrl: string;
-  inputProps?: Record<string, unknown>;
-}): Promise<VideoConfig[]> {
+export async function getCompositions(options: { serveUrl: string; inputProps?: Record<string, unknown> }): Promise<VideoConfig[]> {
   const { serveUrl, inputProps = {} } = options;
   const browser = await launchBrowser(await chromeExecutable());
   try {

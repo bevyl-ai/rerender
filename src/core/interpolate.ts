@@ -6,12 +6,7 @@ export interface InterpolateOptions {
   easing?: (t: number) => number;
 }
 
-export function interpolate(
-  input: number,
-  inputRange: number[],
-  outputRange: number[],
-  options: InterpolateOptions = {},
-): number {
+export function interpolate(input: number, inputRange: number[], outputRange: number[], options: InterpolateOptions = {}): number {
   const { extrapolateLeft = 'clamp', extrapolateRight = 'clamp', easing } = options;
   const n = inputRange.length;
   if (n < 2 || n !== outputRange.length) {
@@ -37,6 +32,6 @@ export const Easing = {
   ease: (t: number): number => t * t * (3 - 2 * t),
   in: (t: number): number => t * t,
   out: (t: number): number => 1 - (1 - t) * (1 - t),
-  inOut: (t: number): number => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2),
-  cubicOut: (t: number): number => 1 - Math.pow(1 - t, 3),
+  inOut: (t: number): number => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2),
+  cubicOut: (t: number): number => 1 - (1 - t) ** 3,
 };

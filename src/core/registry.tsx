@@ -53,9 +53,7 @@ export function Composition<P extends Record<string, unknown>>(props: Compositio
 }
 
 // <Still> is a single-frame composition.
-export function Still<P extends Record<string, unknown>>(
-  props: Omit<CompositionProps<P>, 'durationInFrames' | 'fps'>,
-): null {
+export function Still<P extends Record<string, unknown>>(props: Omit<CompositionProps<P>, 'durationInFrames' | 'fps'>): null {
   return Composition({ ...props, durationInFrames: 1, fps: 1 });
 }
 

@@ -44,7 +44,16 @@ export function calculateAssetPositions(frames: Map<number, CollectedAsset[]>): 
     let prev = sorted[0]!;
     const flush = (start: number, end: number): void => {
       const a = perFrame.get(start)!;
-      positions.push({ type: a.type, src: a.src, id: a.id, startInVideo: start, duration: end - start + 1, trimLeft: a.mediaFrame, volume: a.volume, playbackRate: a.playbackRate });
+      positions.push({
+        type: a.type,
+        src: a.src,
+        id: a.id,
+        startInVideo: start,
+        duration: end - start + 1,
+        trimLeft: a.mediaFrame,
+        volume: a.volume,
+        playbackRate: a.playbackRate,
+      });
     };
     for (let i = 1; i < sorted.length; i++) {
       if (sorted[i] !== prev + 1) {
@@ -74,14 +83,31 @@ export async function muxAudio(
   }
   const html = await bundleWorkerHtml(MUX_WORKER);
   const durationSec = Math.max(videoDurationSec, ...positions.map((p) => (p.startInVideo + p.duration) / fps));
-  const muxPositions: MuxPosition[] = positions.map((p, i) => ({ assetIndex: i, startInVideo: p.startInVideo, duration: p.duration, trimLeft: p.trimLeft, volume: p.volume }));
+  const muxPositions: MuxPosition[] = positions.map((p, i) => ({
+    assetIndex: i,
+    startInVideo: p.startInVideo,
+    duration: p.duration,
+    trimLeft: p.trimLeft,
+    volume: p.volume,
+  }));
 
   const server: Server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0]!;
-    if (url === '/') { res.setHeader('content-type', 'text/html'); res.end(html); return; }
-    if (url === '/__silent') { res.setHeader('content-type', 'video/mp4'); res.end(readFileSync(silentVideo)); return; }
+    if (url === '/') {
+      res.setHeader('content-type', 'text/html');
+      res.end(html);
+      return;
+    }
+    if (url === '/__silent') {
+      res.setHeader('content-type', 'video/mp4');
+      res.end(readFileSync(silentVideo));
+      return;
+    }
     const m = url.match(/^\/__asset\/(\d+)$/);
-    if (m && positions[Number(m[1])]) { res.end(readFileSync(positions[Number(m[1])]!.src)); return; }
+    if (m && positions[Number(m[1])]) {
+      res.end(readFileSync(positions[Number(m[1])]!.src));
+      return;
+    }
     res.statusCode = 404;
     res.end();
   });

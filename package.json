@@ -1,7 +1,7 @@
 {
   "name": "remover",
   "version": "0.0.0",
-  "description": "Drop-in, MIT Remotion whose renderer is a parallel recording of the preview — slice the timeline across N browsers, record, stitch.",
+  "description": "Drop-in, MIT Remotion: renders by frame-stepping the real preview in headless chrome — sliced across N browsers and stitched, ffmpeg-free.",
   "license": "MIT",
   "author": "Noah Lindner",
   "type": "module",
@@ -20,7 +20,10 @@
     "compat:results": "tsx compat/results.ts",
     "compat:studio": "tsx compat/studio.ts",
     "compat:inspect": "tsx compat/inspect.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome check --write .",
+    "check": "biome check ."
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1075.0",
@@ -39,6 +42,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
     "@remotion/cli": "^4.0.484",
     "@remotion/media-utils": "^4.0.484",
     "@remotion/transitions": "^4.0.484",

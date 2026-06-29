@@ -2,7 +2,17 @@
 // and served to the mux browser. An OfflineAudioContext sums the asset audio (each
 // scheduled at its timeline position through a gain node); mediabunny packet-copies the
 // silent video and AAC-encodes the mix into one mp4. window.__mux() returns base64.
-import { AudioBufferSource, BufferSource, BufferTarget, EncodedPacketSink, EncodedVideoPacketSource, Input, MP4, Mp4OutputFormat, Output } from 'mediabunny';
+import {
+  AudioBufferSource,
+  BufferSource,
+  BufferTarget,
+  EncodedPacketSink,
+  EncodedVideoPacketSource,
+  Input,
+  MP4,
+  Mp4OutputFormat,
+  Output,
+} from 'mediabunny';
 import type { MuxPosition, VideoCodec } from '../src/renderer/types';
 import { toBase64 } from './worker-util';
 

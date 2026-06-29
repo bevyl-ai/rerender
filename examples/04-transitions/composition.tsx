@@ -8,7 +8,15 @@ import { slide } from '@remotion/transitions/slide';
 function Scene({ color, label }: { color: string; label: string }): JSX.Element {
   return (
     <AbsoluteFill
-      style={{ background: color, justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: 140, fontWeight: 700, fontFamily: 'system-ui, sans-serif' }}
+      style={{
+        background: color,
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: '#fff',
+        fontSize: 140,
+        fontWeight: 700,
+        fontFamily: 'system-ui, sans-serif',
+      }}
     >
       {label}
     </AbsoluteFill>

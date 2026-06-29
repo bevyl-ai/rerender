@@ -1,4 +1,4 @@
-import { type AudioData } from './types';
+import type { AudioData } from './types';
 
 interface GetAudioDataOptions {
   sampleRate?: number;
@@ -43,9 +43,7 @@ async function decode(src: string, options?: GetAudioDataOptions): Promise<Audio
     if (wave.numberOfChannels === 0) {
       throw new Error(`Audio source "${src}" decoded to zero channels.`);
     }
-    const channelWaveforms = Array.from({ length: wave.numberOfChannels }, (_, i) =>
-      wave.getChannelData(i),
-    );
+    const channelWaveforms = Array.from({ length: wave.numberOfChannels }, (_, i) => wave.getChannelData(i));
     return {
       channelWaveforms,
       sampleRate: ctx.sampleRate,

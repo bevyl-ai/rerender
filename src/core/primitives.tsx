@@ -22,10 +22,7 @@ function useRenderAsset(type: 'audio' | 'video', src: string, startFrom: number,
   }
 }
 
-export function AbsoluteFill(props: {
-  style?: CSSProperties;
-  children?: ReactNode;
-}): JSX.Element {
+export function AbsoluteFill(props: { style?: CSSProperties; children?: ReactNode }): JSX.Element {
   return (
     <div
       style={{
@@ -54,12 +51,7 @@ export function Img(props: React.ImgHTMLAttributes<HTMLImageElement>): JSX.Eleme
 
 /** A frame-synced <video>: seeks while scrubbing, plays natively while playing,
  *  and corrects drift. `startFrom` is the source-time offset in frames. */
-export function Video(props: {
-  src: string;
-  startFrom?: number;
-  volume?: number;
-  style?: CSSProperties;
-}): JSX.Element {
+export function Video(props: { src: string; startFrom?: number; volume?: number; style?: CSSProperties }): JSX.Element {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const playing = useIsPlaying();

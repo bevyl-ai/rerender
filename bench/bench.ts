@@ -39,7 +39,17 @@ const median = (xs: number[]): number => {
 
 const frameCount = (file: string): number => {
   const probe = (entry: string, count: boolean): number => {
-    const args = ['-v', 'error', '-select_streams', 'v:0', '-show_entries', `stream=${entry}`, '-of', 'default=nokey=1:noprint_wrappers=1', file];
+    const args = [
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      `stream=${entry}`,
+      '-of',
+      'default=nokey=1:noprint_wrappers=1',
+      file,
+    ];
     if (count) args.unshift('-count_frames');
     const n = Number(execFileSync('ffprobe', args, { encoding: 'utf8' }).trim());
     return Number.isFinite(n) ? n : 0;
@@ -53,8 +63,20 @@ async function timed<T>(fn: () => Promise<T>): Promise<number> {
   return (performance.now() - t0) / 1000;
 }
 
-interface ConcResult { conc: number; median: number; min: number; trials: number[]; frames: number; expected: number }
-interface EngineResult { engine: string; bundleS: number; durationInFrames: number; results: ConcResult[] }
+interface ConcResult {
+  conc: number;
+  median: number;
+  min: number;
+  trials: number[];
+  frames: number;
+  expected: number;
+}
+interface EngineResult {
+  engine: string;
+  bundleS: number;
+  durationInFrames: number;
+  results: ConcResult[];
+}
 
 async function benchRemover(dir: string): Promise<EngineResult> {
   const t0 = performance.now();
@@ -63,7 +85,15 @@ async function benchRemover(dir: string): Promise<EngineResult> {
   const comp = await removerSelect({ serveUrl: b.serveUrl, id: COMP, inputProps: {} });
   const results: ConcResult[] = [];
   for (const conc of CONCS) {
-    const opts = { composition: comp, serveUrl: b.serveUrl, concurrency: conc, crf: CRF, codec: CODEC, imageFormat: 'jpeg' as const, jpegQuality: JPEG_Q };
+    const opts = {
+      composition: comp,
+      serveUrl: b.serveUrl,
+      concurrency: conc,
+      crf: CRF,
+      codec: CODEC,
+      imageFormat: 'jpeg' as const,
+      jpegQuality: JPEG_Q,
+    };
     await removerRender({ ...opts, outputLocation: join(dir, `rmv-warm-${conc}.mp4`) }); // warmup
     const ts: number[] = [];
     let last = '';
@@ -84,7 +114,16 @@ async function benchRemotion(dir: string): Promise<EngineResult> {
   const comp = await remotionSelect({ serveUrl, id: COMP, inputProps: {} });
   const results: ConcResult[] = [];
   for (const conc of CONCS) {
-    const opts = { composition: comp, serveUrl, codec: CODEC, concurrency: conc, crf: CRF, imageFormat: 'jpeg' as const, jpegQuality: JPEG_Q, inputProps: {} };
+    const opts = {
+      composition: comp,
+      serveUrl,
+      codec: CODEC,
+      concurrency: conc,
+      crf: CRF,
+      imageFormat: 'jpeg' as const,
+      jpegQuality: JPEG_Q,
+      inputProps: {},
+    };
     await remotionRender({ ...opts, outputLocation: join(dir, `rmt-warm-${conc}.mp4`) }); // warmup
     const ts: number[] = [];
     let last = '';

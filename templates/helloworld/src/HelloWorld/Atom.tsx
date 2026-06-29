@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { random, useVideoConfig } from "remotion";
+import { useState } from 'react';
+import { random, useVideoConfig } from 'remotion';
 
 export const Atom: React.FC<{
   scale: number;
@@ -15,7 +15,7 @@ export const Atom: React.FC<{
     <svg
       viewBox={`0 0 ${config.width} ${config.height}`}
       style={{
-        position: "absolute",
+        position: 'absolute',
         transform: `scale(${scale})`,
       }}
     >
@@ -25,12 +25,7 @@ export const Atom: React.FC<{
           <stop offset="100%" stopColor={color2} />
         </linearGradient>
       </defs>
-      <circle
-        r={70}
-        cx={config.width / 2}
-        cy={config.height / 2}
-        fill={`url(#${gradientId})`}
-      />
+      <circle r={70} cx={config.width / 2} cy={config.height / 2} fill={`url(#${gradientId})`} />
     </svg>
   );
 };

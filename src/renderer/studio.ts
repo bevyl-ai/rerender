@@ -16,7 +16,10 @@ import { selectComposition } from './select-composition';
 const REMOVER_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const STUDIO_MAIN = fileURLToPath(new URL('../../studio/main.tsx', import.meta.url));
 
-export async function studioServer(entryPoint: string, options: { port?: number } = {}): Promise<{ url: string; close: () => Promise<void> }> {
+export async function studioServer(
+  entryPoint: string,
+  options: { port?: number } = {},
+): Promise<{ url: string; close: () => Promise<void> }> {
   const entry = resolve(entryPoint);
   let userRoot = dirname(entry);
   if (basename(userRoot) === 'src') userRoot = dirname(userRoot);

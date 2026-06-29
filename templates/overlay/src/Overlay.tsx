@@ -1,29 +1,24 @@
-import { loadFont } from "@remotion/google-fonts/Roboto";
-import React, { useMemo } from "react";
-import {
-  AbsoluteFill,
-  interpolate,
-  spring,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { loadFont } from '@remotion/google-fonts/Roboto';
+import type React from 'react';
+import { useMemo } from 'react';
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-const { fontFamily } = loadFont("normal", {
-  subsets: ["latin"],
-  weights: ["400", "700"],
+const { fontFamily } = loadFont('normal', {
+  subsets: ['latin'],
+  weights: ['400', '700'],
 });
 
 const title: React.CSSProperties = {
   fontFamily,
   fontSize: 80,
-  fontWeight: "bold",
+  fontWeight: 'bold',
 };
 
 const text: React.CSSProperties = {
-  fontWeight: "bold",
+  fontWeight: 'bold',
   fontFamily,
   fontSize: 40,
-  color: "#4290F5",
+  color: '#4290F5',
 };
 
 const disappearBeforeEnd = 20;
@@ -54,8 +49,8 @@ export const Overlay: React.FC = () => {
 
   const container: React.CSSProperties = useMemo(() => {
     return {
-      position: "absolute",
-      backgroundColor: "white",
+      position: 'absolute',
+      backgroundColor: 'white',
       borderRadius: 25,
       right: 90,
       top: 90,

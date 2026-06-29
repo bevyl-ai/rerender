@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { continueRender, delayRender } from '../core/delay-render';
 import { getAudioData } from './get-audio-data';
-import { type AudioData } from './types';
+import type { AudioData } from './types';
 
 interface UseAudioDataOptions {
   sampleRate?: number;

@@ -12,10 +12,23 @@ export function EdgeCases(): JSX.Element {
   return (
     <AbsoluteFill style={{ background: '#101418' }}>
       {/* viewport units: a 50vw × 20vh box must size to the composition, not the window */}
-      <div style={{ position: 'absolute', top: '10vh', left: '25vw', width: '50vw', height: '20vh', background: '#5b8cff', borderRadius: 12 }} />
+      <div
+        style={{ position: 'absolute', top: '10vh', left: '25vw', width: '50vw', height: '20vh', background: '#5b8cff', borderRadius: 12 }}
+      />
 
       {/* overflow:hidden clipping a moving stripe field */}
-      <div style={{ position: 'absolute', top: '40vh', left: '10vw', width: '80vw', height: '22vh', overflow: 'hidden', borderRadius: 16, background: '#1b2230' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: '40vh',
+          left: '10vw',
+          width: '80vw',
+          height: '22vh',
+          overflow: 'hidden',
+          borderRadius: 16,
+          background: '#1b2230',
+        }}
+      >
         <div
           style={{
             width: 3000,

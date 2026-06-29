@@ -8,7 +8,16 @@ function Pulse(): JSX.Element {
   const s = spring({ frame, fps, config: { damping: 8 } });
   return (
     <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <div style={{ width: 360, height: 360, borderRadius: '50%', background: '#ff2e63', transform: `scale(${interpolate(s, [0, 1], [0.4, 1])})`, opacity: interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' }) }} />
+      <div
+        style={{
+          width: 360,
+          height: 360,
+          borderRadius: '50%',
+          background: '#ff2e63',
+          transform: `scale(${interpolate(s, [0, 1], [0.4, 1])})`,
+          opacity: interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' }),
+        }}
+      />
     </AbsoluteFill>
   );
 }

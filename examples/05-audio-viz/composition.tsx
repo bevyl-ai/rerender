@@ -9,9 +9,7 @@ export function AudioViz(): JSX.Element {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const audioData = useAudioData(staticFile('music.mp3'));
-  const bars = audioData
-    ? visualizeAudio({ audioData, frame, fps, numberOfSamples: SAMPLES })
-    : new Array<number>(SAMPLES).fill(0);
+  const bars = audioData ? visualizeAudio({ audioData, frame, fps, numberOfSamples: SAMPLES }) : new Array<number>(SAMPLES).fill(0);
 
   return (
     <AbsoluteFill style={{ background: '#0e1116', flexDirection: 'row', alignItems: 'center', gap: 6, padding: 80 }}>

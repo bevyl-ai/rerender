@@ -34,7 +34,14 @@ export function bootStudio(): void {
 
   // let the renderer enumerate registered compositions (after the hidden <Root/> mounts).
   window.__getCompositions = () =>
-    getCompositions().map((c) => ({ id: c.id, width: c.width, height: c.height, fps: c.fps, durationInFrames: c.durationInFrames, defaultProps: c.defaultProps }));
+    getCompositions().map((c) => ({
+      id: c.id,
+      width: c.width,
+      height: c.height,
+      fps: c.fps,
+      durationInFrames: c.durationInFrames,
+      defaultProps: c.defaultProps,
+    }));
 
   function Studio(): JSX.Element {
     const Root = getRoot();

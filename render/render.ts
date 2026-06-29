@@ -28,14 +28,32 @@ async function main(): Promise<void> {
   const cfg = await readConfig(exe, STEP_URL);
   const dir = mkdtempSync(join(tmpdir(), 'remover-render-'));
   const per = Math.ceil(cfg.durationInFrames / SLICES);
-  const ranges = Array.from({ length: SLICES }, (_, i) => [i * per, Math.min((i + 1) * per, cfg.durationInFrames)] as const).filter(([a, b]) => a < b);
+  const ranges = Array.from({ length: SLICES }, (_, i) => [i * per, Math.min((i + 1) * per, cfg.durationInFrames)] as const).filter(
+    ([a, b]) => a < b,
+  );
 
   console.log(`rendering ${cfg.durationInFrames} frames (${cfg.width}x${cfg.height}@${cfg.fps}) in ${ranges.length} parallel slice(s)…`);
   const t0 = Date.now();
   await Promise.all(ranges.map(([a, b]) => captureFrames(exe, STEP_URL, a, b, dir, cfg)));
   console.log(`captured in ${((Date.now() - t0) / 1000).toFixed(1)}s wall-clock`);
 
-  ff(['-framerate', String(cfg.fps), '-i', join(dir, 'f-%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-r', String(cfg.fps), '-movflags', '+faststart', OUT]);
+  ff([
+    '-framerate',
+    String(cfg.fps),
+    '-i',
+    join(dir, 'f-%05d.png'),
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-crf',
+    '18',
+    '-r',
+    String(cfg.fps),
+    '-movflags',
+    '+faststart',
+    OUT,
+  ]);
   console.log(`wrote ${OUT}`);
 }
 

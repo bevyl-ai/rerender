@@ -9,7 +9,11 @@ function parseColor(input: string): RGBA {
   const c = input.trim();
   if (c.startsWith('#')) {
     const hex = c.slice(1);
-    const expand = (s: string): string => s.split('').map((ch) => ch + ch).join('');
+    const expand = (s: string): string =>
+      s
+        .split('')
+        .map((ch) => ch + ch)
+        .join('');
     const full = hex.length === 3 || hex.length === 4 ? expand(hex) : hex;
     const r = parseInt(full.slice(0, 2), 16);
     const g = parseInt(full.slice(2, 4), 16);
@@ -37,11 +41,16 @@ export function interpolateColors(
 ): string {
   const colors = outputRange.map(parseColor);
   const channel = (i: 0 | 1 | 2 | 3): number =>
-    interpolate(input, inputRange, colors.map((c) => c[i]), {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: options?.easing,
-    });
+    interpolate(
+      input,
+      inputRange,
+      colors.map((c) => c[i]),
+      {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+        easing: options?.easing,
+      },
+    );
   const r = Math.round(channel(0));
   const g = Math.round(channel(1));
   const b = Math.round(channel(2));

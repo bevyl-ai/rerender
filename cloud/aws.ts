@@ -23,7 +23,16 @@ export function awsInvoker(opts: AwsInvokerOptions): Invoker {
     const res = await lambda.send(
       new InvokeCommand({
         FunctionName: opts.functionName,
-        Payload: Buffer.from(JSON.stringify({ comp: job.comp, composition: job.composition, props: job.props, frameRange: job.frameRange, bucket: opts.bucket, key })),
+        Payload: Buffer.from(
+          JSON.stringify({
+            comp: job.comp,
+            composition: job.composition,
+            props: job.props,
+            frameRange: job.frameRange,
+            bucket: opts.bucket,
+            key,
+          }),
+        ),
       }),
     );
     if (res.FunctionError) {

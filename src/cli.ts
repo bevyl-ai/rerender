@@ -19,10 +19,16 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
     const a = argv[i]!;
     if (a.startsWith('--')) {
       const key = a.slice(2);
-      if (key.startsWith('no-')) { flags[key.slice(3)] = false; continue; }
+      if (key.startsWith('no-')) {
+        flags[key.slice(3)] = false;
+        continue;
+      }
       const next = argv[i + 1];
       if (next === undefined || next.startsWith('--')) flags[key] = true;
-      else { flags[key] = next; i++; }
+      else {
+        flags[key] = next;
+        i++;
+      }
     } else positional.push(a);
   }
   return { positional, flags };
@@ -34,7 +40,9 @@ const str = (v: string | boolean | undefined): string | undefined => (typeof v =
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
   if (!['render', 'still', 'studio', 'concat', 'cloud'].includes(cmd ?? '')) {
-    console.error('usage: remover render|still|studio <entry> [comp-id] [output] [flags]\n       remover concat --output <out.mp4> <segment0.mp4> …\n       remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <b> …');
+    console.error(
+      'usage: remover render|still|studio <entry> [comp-id] [output] [flags]\n       remover concat --output <out.mp4> <segment0.mp4> …\n       remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <b> …',
+    );
     process.exit(1);
   }
   const { positional, flags } = parseArgs(rest);
@@ -45,15 +53,25 @@ async function main(): Promise<void> {
     if (sub === 'deploy') {
       const project = positional[1] ?? str(flags.project);
       if (!project) {
-        console.error('usage: remover cloud deploy <project-dir> [--region r] [--memory 3008]\n  (project-dir is your video project, with src/index.ts — it gets baked into the worker image)');
+        console.error(
+          'usage: remover cloud deploy <project-dir> [--region r] [--memory 3008]\n  (project-dir is your video project, with src/index.ts — it gets baked into the worker image)',
+        );
         process.exit(1);
       }
       const { deploy } = await import('../cloud/deploy');
-      const r = await deploy({ project: resolve(project), region: str(flags.region), memory: num(flags.memory), build: flags.build !== false, localTag: str(flags['local-tag']) });
+      const r = await deploy({
+        project: resolve(project),
+        region: str(flags.region),
+        memory: num(flags.memory),
+        build: flags.build !== false,
+        localTag: str(flags['local-tag']),
+      });
       console.log(`\n✓ deployed to ${r.region}`);
       console.log(`  function: ${r.functionName}`);
       console.log(`  bucket:   ${r.bucketName}`);
-      console.log(`  render:   remover cloud render ${project}/src/index.ts <Comp> --function ${r.functionName} --bucket ${r.bucketName} --workers 20 -o out.mp4`);
+      console.log(
+        `  render:   remover cloud render ${project}/src/index.ts <Comp> --function ${r.functionName} --bucket ${r.bucketName} --workers 20 -o out.mp4`,
+      );
       return;
     }
     if (sub === 'render') {
@@ -61,7 +79,9 @@ async function main(): Promise<void> {
       const fn = str(flags.function);
       const bucket = str(flags.bucket);
       if (!cEntry || !cComp || !fn || !bucket) {
-        console.error('usage: remover cloud render <entry> <comp> --function <name> --bucket <bucket> [--workers N] [--region r] [--props json] --output out.mp4');
+        console.error(
+          'usage: remover cloud render <entry> <comp> --function <name> --bucket <bucket> [--workers N] [--region r] [--props json] --output out.mp4',
+        );
         process.exit(1);
       }
       let props: Record<string, unknown> = {};
@@ -82,7 +102,9 @@ async function main(): Promise<void> {
         onProgress: (d, total) => process.stdout.write(`\r  ${d}/${total} workers done`),
       });
       process.stdout.write('\n');
-      console.log(`✓ cloud render: ${cComp} (${r.durationInFrames}f @ ${r.fps}fps) across ${r.slices} Lambda workers → ${output}  [${((Date.now() - t0) / 1000).toFixed(1)}s]`);
+      console.log(
+        `✓ cloud render: ${cComp} (${r.durationInFrames}f @ ${r.fps}fps) across ${r.slices} Lambda workers → ${output}  [${((Date.now() - t0) / 1000).toFixed(1)}s]`,
+      );
       return;
     }
     console.error('usage: remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <bucket> …');
@@ -99,13 +121,21 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     const { concatSegments } = await import('./renderer/encode');
-    await concatSegments(positional.map((s) => resolve(s)), (str(flags.codec) as 'avc' | 'hevc' | 'vp9' | 'av1' | undefined) ?? 'avc', num(flags.fps) ?? 30, resolve(output));
+    await concatSegments(
+      positional.map((s) => resolve(s)),
+      (str(flags.codec) as 'avc' | 'hevc' | 'vp9' | 'av1' | undefined) ?? 'avc',
+      num(flags.fps) ?? 30,
+      resolve(output),
+    );
     console.log(`✓ concat: ${positional.length} segments → ${output}`);
     return;
   }
 
   const [entry, compId, outputPos] = positional;
-  if (!entry) { console.error('error: missing entry point (e.g. src/index.ts)'); process.exit(1); }
+  if (!entry) {
+    console.error('error: missing entry point (e.g. src/index.ts)');
+    process.exit(1);
+  }
 
   if (cmd === 'studio') {
     const { studioServer } = await import('./renderer/studio');
@@ -144,7 +174,16 @@ async function main(): Promise<void> {
 
     if (cmd === 'still') {
       const frame = num(flags.frame);
-      await renderStill({ composition, serveUrl: b.serveUrl, output, frame, inputProps, scale: num(flags.scale), imageFormat: str(flags['image-format']) as 'png' | 'jpeg' | undefined, jpegQuality: num(flags['jpeg-quality']) });
+      await renderStill({
+        composition,
+        serveUrl: b.serveUrl,
+        output,
+        frame,
+        inputProps,
+        scale: num(flags.scale),
+        imageFormat: str(flags['image-format']) as 'png' | 'jpeg' | undefined,
+        jpegQuality: num(flags['jpeg-quality']),
+      });
       console.log(`✓ still: ${composition.id} @ frame ${frame ?? composition.durationInFrames - 1} → ${output}`);
       return;
     }
@@ -174,7 +213,9 @@ async function main(): Promise<void> {
     });
     process.stdout.write('\n');
     const renderedFrames = Array.isArray(frameRange) ? frameRange[1] - frameRange[0] + 1 : composition.durationInFrames;
-    console.log(`✓ render: ${composition.id} (${renderedFrames}f @ ${composition.fps}fps, ${composition.width}x${composition.height}) → ${output}  [${((Date.now() - t0) / 1000).toFixed(1)}s]`);
+    console.log(
+      `✓ render: ${composition.id} (${renderedFrames}f @ ${composition.fps}fps, ${composition.width}x${composition.height}) → ${output}  [${((Date.now() - t0) / 1000).toFixed(1)}s]`,
+    );
   } finally {
     await b.close();
   }

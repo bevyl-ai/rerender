@@ -40,14 +40,19 @@ function walk(dir: string): string[] {
 
 const IMPORT_RE = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"](remotion|@remotion\/[^'"]+)['"]/g;
 
-interface Use { sym: string; pkg: string; }
+interface Use {
+  sym: string;
+  pkg: string;
+}
 function parseUses(src: string): Use[] {
   const uses: Use[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = IMPORT_RE.exec(src))) {
+  for (let m = IMPORT_RE.exec(src); m !== null; m = IMPORT_RE.exec(src)) {
     const pkg = m[2]!;
     for (const raw of m[1]!.split(',')) {
-      const sym = raw.trim().split(/\s+as\s+/)[0]!.trim();
+      const sym = raw
+        .trim()
+        .split(/\s+as\s+/)[0]!
+        .trim();
       if (sym) uses.push({ sym, pkg });
     }
   }
@@ -61,10 +66,17 @@ function classify(u: Use): Status {
 }
 
 // remover also exports these as TYPES, which a runtime Object.keys() can't see.
-const TYPE_EXPORTS = new Set(['VideoConfig', 'InterpolateOptions', 'Extrapolate', 'ExtrapolateType', 'SpringConfig', 'RemotionEnvironment', 'PlayerProps']);
+const TYPE_EXPORTS = new Set([
+  'VideoConfig',
+  'InterpolateOptions',
+  'Extrapolate',
+  'ExtrapolateType',
+  'SpringConfig',
+  'RemotionEnvironment',
+  'PlayerProps',
+]);
 // implemented if remover exports the symbol (or its base, for dotted sub-APIs like Series.Sequence)
-const isImpl = (name: string): boolean =>
-  SUPPORTED.has(name) || SUPPORTED.has(name.split('.')[0]!) || TYPE_EXPORTS.has(name);
+const isImpl = (name: string): boolean => SUPPORTED.has(name) || SUPPORTED.has(name.split('.')[0]!) || TYPE_EXPORTS.has(name);
 
 function main(): void {
   const files = walk(EXAMPLES);
@@ -93,7 +105,9 @@ function main(): void {
       : [
           miss.length ? `missing remotion: {${miss.map((u) => u.sym).join(', ')}}` : '',
           eco.length ? `ecosystem: ${[...new Set(eco.map((u) => u.pkg))].join(', ')}` : '',
-        ].filter(Boolean).join('  ·  ');
+        ]
+          .filter(Boolean)
+          .join('  ·  ');
     console.log(`  ${tag}  ${name.padEnd(22)} ${detail}`);
   }
 

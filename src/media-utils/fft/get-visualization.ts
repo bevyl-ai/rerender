@@ -1,5 +1,5 @@
-import { type AudioData, type OptimizeFor } from '../types';
-import { type Complex } from './complex';
+import type { AudioData, OptimizeFor } from '../types';
+import type { Complex } from './complex';
 import { fftAccurate } from './fft-accurate';
 import { fftFast } from './fft-fast';
 import { mag } from './mag';
@@ -39,8 +39,7 @@ export function getVisualization(params: VisualizationParams): number[] {
   }
 
   // 4. FFT.
-  const transform: Complex[] =
-    optimizeFor === 'accuracy' ? fftAccurate(windowed) : fftFast(windowed);
+  const transform: Complex[] = optimizeFor === 'accuracy' ? fftAccurate(windowed) : fftFast(windowed);
 
   // 5. Magnitude of the first half (numberOfSamples bins).
   const half = sampleSize / 2;

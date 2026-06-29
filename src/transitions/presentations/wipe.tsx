@@ -40,11 +40,7 @@ function WipePresentation({
   passedProps,
   children,
 }: TransitionPresentationComponentProps<WipeProps>): JSX.Element {
-  const clipPath = wipeClipPath(
-    passedProps.direction,
-    presentationDirection === 'entering',
-    presentationProgress,
-  );
+  const clipPath = wipeClipPath(passedProps.direction, presentationDirection === 'entering', presentationProgress);
   return <AbsoluteFill style={{ clipPath }}>{children}</AbsoluteFill>;
 }
 

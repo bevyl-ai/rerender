@@ -3,15 +3,7 @@
 // frames. Uses springCalculation directly (no circular through spring()).
 import { springCalculation, type SpringConfig } from './spring';
 
-export function measureSpring({
-  fps,
-  config = {},
-  threshold = 0.005,
-}: {
-  fps: number;
-  config?: SpringConfig;
-  threshold?: number;
-}): number {
+export function measureSpring({ fps, config = {}, threshold = 0.005 }: { fps: number; config?: SpringConfig; threshold?: number }): number {
   if (threshold === 0) return Number.POSITIVE_INFINITY;
   if (threshold === 1) return 0;
 

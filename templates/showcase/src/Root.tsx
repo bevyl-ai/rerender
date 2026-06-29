@@ -18,8 +18,20 @@ const H = { width: 1920, height: 1080, fps: 30 };
 export function RemotionRoot(): JSX.Element {
   return (
     <>
-      <Composition id="HelloWorld" component={HelloWorld} {...H} durationInFrames={150} defaultProps={{ titleText: 'Welcome to remover', titleColor: '#000000', logoColor1: '#91EAE4', logoColor2: '#86A8E7' }} />
-      <Composition id="Logo" component={Logo} {...H} durationInFrames={150} defaultProps={{ logoColor1: '#5b8cff', logoColor2: '#ff2e63' }} />
+      <Composition
+        id="HelloWorld"
+        component={HelloWorld}
+        {...H}
+        durationInFrames={150}
+        defaultProps={{ titleText: 'Welcome to remover', titleColor: '#000000', logoColor1: '#91EAE4', logoColor2: '#86A8E7' }}
+      />
+      <Composition
+        id="Logo"
+        component={Logo}
+        {...H}
+        durationInFrames={150}
+        defaultProps={{ logoColor1: '#5b8cff', logoColor2: '#ff2e63' }}
+      />
       <Composition id="Overlay" component={Overlay} {...H} durationInFrames={75} />
       <Composition id="Title" component={Title} {...V} />
       <Composition id="SpringCards" component={Cards} {...V} />

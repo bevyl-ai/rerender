@@ -25,7 +25,11 @@ export async function renderStill(options: {
 
   const dir = mkdtempSync(join(tmpdir(), 'remover-still-'));
   try {
-    await captureFrames(await chromeExecutable(), stepUrl, frame, frame + 1, dir, c, { scale: options.scale, imageFormat, jpegQuality: options.jpegQuality });
+    await captureFrames(await chromeExecutable(), stepUrl, frame, frame + 1, dir, c, {
+      scale: options.scale,
+      imageFormat,
+      jpegQuality: options.jpegQuality,
+    });
     copyFileSync(join(dir, `f-${String(frame).padStart(5, '0')}.${ext}`), output);
     return { buffer: null };
   } finally {

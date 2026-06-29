@@ -1,14 +1,14 @@
-import React from "react";
-import { interpolate, useCurrentFrame } from "remotion";
-import { COLOR_1, FONT_FAMILY } from "./constants";
+import type React from 'react';
+import { interpolate, useCurrentFrame } from 'remotion';
+import { COLOR_1, FONT_FAMILY } from './constants';
 
 const subtitle: React.CSSProperties = {
   fontFamily: FONT_FAMILY,
   fontSize: 40,
-  textAlign: "center",
-  position: "absolute",
+  textAlign: 'center',
+  position: 'absolute',
   bottom: 140,
-  width: "100%",
+  width: '100%',
 };
 
 const codeStyle: React.CSSProperties = {

@@ -30,9 +30,7 @@ export interface RenderMediaOptions {
   onProgress?: (p: { renderedFrames: number; progress: number }) => void;
 }
 
-export async function renderMedia(
-  opts: RenderMediaOptions,
-): Promise<{ buffer: null; slowestFrames: never[]; contentType: string }> {
+export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: null; slowestFrames: never[]; contentType: string }> {
   const { composition: c, serveUrl, outputLocation } = opts;
   const exe = await chromeExecutable();
   const [from, to] = Array.isArray(opts.frameRange)
@@ -45,13 +43,20 @@ export async function renderMedia(
   const props = encodeURIComponent(JSON.stringify(opts.inputProps ?? {}));
   const stepUrl = `${serveUrl}/?step=1&comp=${encodeURIComponent(c.id)}&props=${props}`;
   const collectAudio = !opts.muted;
-  const captureOpts: CaptureOptions = { scale: opts.scale, imageFormat: opts.imageFormat ?? 'png', jpegQuality: opts.jpegQuality, collectAudio };
+  const captureOpts: CaptureOptions = {
+    scale: opts.scale,
+    imageFormat: opts.imageFormat ?? 'png',
+    jpegQuality: opts.jpegQuality,
+    collectAudio,
+  };
   const ext = (opts.imageFormat ?? 'png') === 'jpeg' ? 'jpg' : 'png';
 
   const dir = mkdtempSync(join(tmpdir(), 'remover-render-'));
   try {
     const per = Math.ceil(totalFrames / concurrency);
-    const ranges = Array.from({ length: concurrency }, (_, i) => [from + i * per, Math.min(from + (i + 1) * per, to + 1)] as const).filter(([a, b]) => a < b);
+    const ranges = Array.from({ length: concurrency }, (_, i) => [from + i * per, Math.min(from + (i + 1) * per, to + 1)] as const).filter(
+      ([a, b]) => a < b,
+    );
     const codec = opts.videoCodec ?? 'avc';
     const silent = join(dir, 'silent.mp4');
     const frameFiles = Array.from({ length: totalFrames }, (_, i) => `f-${String(from + i).padStart(5, '0')}.${ext}`);
@@ -68,7 +73,9 @@ export async function renderMedia(
     //    its own frames (local indices 0..n-1, forced keyframe at 0) → segment-i.mp4.
     //    Fans out like capture, so encode is ~total/concurrency, not one serial pass.
     const segmentPaths = ranges.map((_, i) => join(dir, `segment-${i}.mp4`));
-    const encoders = await Promise.all(ranges.map(([a, b]) => startEncoder({ exe, frameDir: dir, frameFiles: frameFiles.slice(a - from, b - from) })));
+    const encoders = await Promise.all(
+      ranges.map(([a, b]) => startEncoder({ exe, frameDir: dir, frameFiles: frameFiles.slice(a - from, b - from) })),
+    );
     await Promise.all(encoders.map((enc, i) => enc.encode(segmentPaths[i]!, c.fps, codec, ranges[i]![1] - ranges[i]![0])));
     await Promise.all(encoders.map((enc) => enc.close()));
     opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.85 });
@@ -90,7 +97,14 @@ export async function renderMedia(
         writeFileSync(file, Buffer.from(await res.arrayBuffer()));
         local.set(p.src, file);
       }
-      await muxAudio(silent, outputLocation, positions.map((p) => ({ ...p, src: local.get(p.src)! })), c.fps, codec, c.durationInFrames / c.fps);
+      await muxAudio(
+        silent,
+        outputLocation,
+        positions.map((p) => ({ ...p, src: local.get(p.src)! })),
+        c.fps,
+        codec,
+        c.durationInFrames / c.fps,
+      );
     } else {
       copyFileSync(silent, outputLocation);
     }

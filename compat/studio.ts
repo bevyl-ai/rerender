@@ -45,12 +45,17 @@ function readPng(p: string): PNG {
 
 function renderPair(template: string, comp: string): number {
   const mp4 = join(OUTDIR, `studio-${comp}-remover.mp4`);
-  execFileSync('npx', ['tsx', 'render/render.ts', '1', comp, mp4], { stdio: 'ignore', env: { ...process.env, STUDIO: '1', TEMPLATE: template } });
+  execFileSync('npx', ['tsx', 'render/render.ts', '1', comp, mp4], {
+    stdio: 'ignore',
+    env: { ...process.env, STUDIO: '1', TEMPLATE: template },
+  });
   const removerPng = join(OUTDIR, `studio-${comp}-remover.png`);
   execFileSync('ffmpeg', ['-y', '-i', mp4, '-vf', `select='eq(n\\,${FRAME})'`, '-frames:v', '1', removerPng], { stdio: 'ignore' });
 
   const remotionPng = join(OUTDIR, `studio-${comp}-remotion.png`);
-  execFileSync('npx', ['remotion', 'still', `templates/${template}/src/index.ts`, comp, remotionPng, `--frame=${FRAME}`], { stdio: 'ignore' });
+  execFileSync('npx', ['remotion', 'still', `templates/${template}/src/index.ts`, comp, remotionPng, `--frame=${FRAME}`], {
+    stdio: 'ignore',
+  });
 
   const a = readPng(removerPng);
   const b = readPng(remotionPng);
@@ -68,7 +73,9 @@ function main(): void {
   for (const { template, comp } of GALLERY) {
     try {
       const differing = renderPair(template, comp);
-      console.log(`  ${`${template}/${comp}`.padEnd(26)} ${String(differing).padStart(8)} / ${total} px  →  ${(100 * (1 - differing / total)).toFixed(3)}% match`);
+      console.log(
+        `  ${`${template}/${comp}`.padEnd(26)} ${String(differing).padStart(8)} / ${total} px  →  ${(100 * (1 - differing / total)).toFixed(3)}% match`,
+      );
     } catch (e) {
       console.log(`  ${`${template}/${comp}`.padEnd(26)} render failed: ${(e as Error).message.split('\n')[0]}`);
     }
