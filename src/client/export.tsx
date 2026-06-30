@@ -147,14 +147,18 @@ async function paintFrame(
     const dw = r.width * sx;
     const dh = r.height * sy;
     const fit = getComputedStyle(v).objectFit || 'fill';
+    // A <video> scaled to nothing (e.g. animating in from scale 0) has a 0×0 box; drawing it would
+    // divide by zero and throw. Skip the draw — but still pull + close the decoded sample so the
+    // sequential decoder stays in lockstep with the frame loop.
+    const visible = dw > 0 && dh > 0;
     const gen = frames.get(v);
     if (gen) {
       const sample = (await gen.next()).value; // next decoded frame, in order
       if (sample) {
-        drawSample(ctx, sample, dx, dy, dw, dh, fit);
+        if (visible) drawSample(ctx, sample, dx, dy, dw, dh, fit);
         sample.close();
       }
-    } else if (v.videoWidth) {
+    } else if (v.videoWidth && visible) {
       drawVideo(ctx, v, dx, dy, dw, dh, fit);
     }
   }
