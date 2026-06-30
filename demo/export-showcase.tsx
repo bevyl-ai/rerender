@@ -12,7 +12,7 @@ import { CodeToFilm } from './code-to-film';
 const W = 1280;
 const H = 720;
 const FPS = 30;
-const DUR = 210;
+const DUR = 240;
 const ACCENT = '#ff5e8a';
 const DISPLAY_W = 468;
 const DISPLAY_H = Math.round((DISPLAY_W * H) / W); // whole px → integer container box, one fewer fractional snap

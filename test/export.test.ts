@@ -105,7 +105,7 @@ async function main(): Promise<void> {
     const probe = (await page.evaluate(async () => {
       const v = Array.from(document.querySelectorAll('video')).find((x) => x.src.startsWith('blob:')) as HTMLVideoElement;
       v.pause();
-      v.currentTime = 5.5; // the footage is only on screen in the back half of the comp (it bursts in ~3.5s)
+      v.currentTime = 6.9; // the footage fills the frame only in the final act (it grows out of the hero card)
       await new Promise<void>((res) => {
         v.onseeked = () => res(undefined);
       });
