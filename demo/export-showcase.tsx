@@ -7,12 +7,12 @@
 import { type ComponentType, type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Player, type PlayerRef } from '../src';
 import { exportToMp4 } from '../src/client/export';
-import { HeroReel } from './hero-reel';
+import { CodeToFilm } from './code-to-film';
 
 const W = 1280;
 const H = 720;
 const FPS = 30;
-const DUR = 90;
+const DUR = 210;
 const ACCENT = '#ff5e8a';
 const DISPLAY_W = 468;
 const DISPLAY_H = Math.round((DISPLAY_W * H) / W); // whole px → integer container box, one fewer fractional snap
@@ -307,7 +307,7 @@ export function ExportShowcase(): JSX.Element {
     const t0 = performance.now();
     try {
       const blob = await exportToMp4({
-        Component: HeroReel as ComponentType<Record<string, unknown>>,
+        Component: CodeToFilm as ComponentType<Record<string, unknown>>,
         config: { width: W, height: H, fps: FPS, durationInFrames: DUR },
         onProgress: (done) => {
           setPct(Math.round((done / DUR) * 100));
@@ -347,7 +347,7 @@ export function ExportShowcase(): JSX.Element {
           </div>
           <Player
             ref={player}
-            composition={HeroReel}
+            composition={CodeToFilm}
             width={W}
             height={H}
             fps={FPS}
