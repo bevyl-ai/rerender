@@ -21,7 +21,8 @@ const BEATS = [
   { k: 'tilt', d: 80 }, //     it rotates
   { k: 'lift', d: 80 }, //     a shadow lifts it off the page
   { k: 'fill', d: 60 }, //     a gradient fills the face — the card is complete
-  { k: 'compose', d: 56 }, //  it glides to centre and multiplies into a grid of pure CSS
+  { k: 'compose', d: 110 }, // it glides to centre, multiplies into a grid of pure CSS, and HOLDS so
+  //                            you can read each technique — conic-gradient, clip-path, mask-image…
   { k: 'grow', d: 76 }, //     the card grows into a full-frame screen, the footage inside it
   { k: 'film', d: 58 }, //     the finished film plays and the punchline lands
 ] as const;
@@ -157,7 +158,7 @@ export function CodeToFilm(): JSX.Element {
           const spread = pop * (1 + (1 - gridIn) * 2.2); // fly OUT of the hero, then explode outward as it opens
           const cx = 640 + c.dx * spread;
           const cy = 360 + c.dy * spread;
-          const ry = (c.dx / G) * -13; // perspective depth — the grid faces the camera like a wall
+          const ry = (c.dx / G) * -7; // a little perspective depth — but flat enough that labels stay readable
           return (
             <div
               key={c.label}
@@ -190,16 +191,27 @@ export function CodeToFilm(): JSX.Element {
               <div
                 style={{
                   position: 'absolute',
-                  bottom: -24,
+                  bottom: -32,
                   left: 0,
                   width: '100%',
                   textAlign: 'center',
                   fontFamily: MONO,
-                  fontSize: 12.5,
-                  color: 'rgba(255,255,255,0.82)',
+                  fontSize: 15,
                 }}
               >
-                {c.label}
+                <span
+                  style={{
+                    background: 'rgba(8,6,16,0.7)',
+                    color: '#fff',
+                    borderRadius: 7,
+                    padding: '3px 9px',
+                    fontWeight: 600,
+                    letterSpacing: 0.2,
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.55)',
+                  }}
+                >
+                  {c.label}
+                </span>
               </div>
             </div>
           );
