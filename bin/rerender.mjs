@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `remover` CLI launcher — runs the TS entry through the tsx loader.
+// `rerender` CLI launcher — runs the TS entry through the tsx loader.
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

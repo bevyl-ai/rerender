@@ -1,11 +1,21 @@
 # Deploys the demo (demo/ → `vite build` → dist/) as an assets-only Cloudflare Worker.
-# Live: https://remover-demo.noah-9fb.workers.dev
+# Live: https://rerender.video  (also https://rerender-demo.noah-9fb.workers.dev)
 #
-#   npm run build && npx wrangler deploy
-#
-# Auth is via env: CLOUDFLARE_API_TOKEN (Workers-scoped) + CLOUDFLARE_ACCOUNT_ID.
-name = "remover-demo"
+# Deploy: push to main → .github/workflows/deploy.yml. Locally: `npm run deploy`.
+# Auth (CI secrets / local env): CLOUDFLARE_API_TOKEN (Workers-scoped) + CLOUDFLARE_ACCOUNT_ID.
+name = "rerender-demo"
 compatibility_date = "2025-01-01"
+# Keep the *.workers.dev URL alive alongside the custom domain (defining routes would
+# otherwise disable it). Gives us rerender-demo.noah-9fb.workers.dev as a fallback.
+workers_dev = true
+
+# Attaches the apex domain to this Worker on deploy — Cloudflare provisions the DNS
+# record itself. Requires the rerender.video zone to be active on Cloudflare first
+# (nameservers moved Porkbun → Cloudflare). Must stay above [assets]: in TOML, keys
+# after a [table] header belong to that table, so routes here would become assets.routes.
+routes = [
+  { pattern = "rerender.video", custom_domain = true },
+]
 
 [assets]
 directory = "./dist"

@@ -67,7 +67,7 @@ export async function renderMediaOnLambda(input: RenderMediaOnLambdaInput): Prom
   const region = input.region;
   const id = renderId();
   const bucketName = input.forceBucketName;
-  if (!bucketName) throw new Error('renderMediaOnLambda: forceBucketName is required (remover does not auto-create buckets)');
+  if (!bucketName) throw new Error('renderMediaOnLambda: forceBucketName is required (rerender does not auto-create buckets)');
   const memorySize = memoryFromFunctionName(input.functionName);
   const s3 = new S3Client({ region });
   const lambda = new LambdaClient({ region });

@@ -1,4 +1,4 @@
-// remover Studio — the visual editor. Lists registered compositions, previews the
+// rerender Studio — the visual editor. Lists registered compositions, previews the
 // selected one in the <Player> (scrub/play), edits its inputProps live, and renders
 // to MP4 via the studio server's /api/render endpoint.
 import { useEffect, useMemo, useState } from 'react';
@@ -74,7 +74,7 @@ export function App(): JSX.Element {
         {/* sidebar */}
         <div style={{ width: 240, flex: 'none', borderRight: `1px solid ${C.line}`, padding: 16, overflow: 'auto', background: C.panel }}>
           <div style={{ font: '700 17px ui-sans-serif', marginBottom: 18, letterSpacing: '-0.02em' }}>
-            remover <span style={{ color: C.accent }}>studio</span>
+            rerender <span style={{ color: C.accent }}>studio</span>
           </div>
           {comps.map((c) => (
             <div

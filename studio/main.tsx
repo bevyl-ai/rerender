@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 
 export function bootStudioApp(): void {
-  if (typeof window !== 'undefined') window.__removerEnv = 'player';
+  if (typeof window !== 'undefined') window.__rerenderEnv = 'player';
   const root = document.getElementById('root');
   if (!root) throw new Error('no #root');
   createRoot(root).render(<App />);

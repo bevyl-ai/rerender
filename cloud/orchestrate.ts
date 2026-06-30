@@ -1,4 +1,4 @@
-// remover cloud — fan a render out across N workers, collect the segments, concat.
+// rerender cloud — fan a render out across N workers, collect the segments, concat.
 // The invoker is pluggable: the same orchestration drives AWS Lambda invocations in
 // production and local subprocesses in dev/test. Each worker renders ONE frame-range
 // segment (keyframe-started, silent); concatSegments stitches them with no re-encode.
@@ -48,7 +48,7 @@ export async function orchestrateRender(opts: OrchestrateOptions): Promise<{ sli
   await b.close();
 
   const slices = planSlices(composition.durationInFrames, opts.workers);
-  const dir = mkdtempSync(join(tmpdir(), 'remover-cloud-'));
+  const dir = mkdtempSync(join(tmpdir(), 'rerender-cloud-'));
   try {
     const segmentPaths = slices.map((_, i) => join(dir, `seg-${i}.mp4`));
     let done = 0;

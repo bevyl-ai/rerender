@@ -3,7 +3,7 @@
 // serializing the live DOM into an SVG <foreignObject> and rasterizing it to a canvas
 // (the in-browser stand-in for a CDP screenshot), then encode with WebCodecs + mux with
 // mediabunny — both already browser-native. Result: an mp4 Blob produced entirely in the
-// user's tab. Works for inline-styled compositions (the Remotion/remover convention).
+// user's tab. Works for inline-styled compositions (the Remotion/rerender convention).
 // <video> is handled by compositing it natively under the foreignObject (see paintFrame);
 // backdrop-filter and other compositor-only effects still aren't captured.
 import { type ComponentType, type ReactElement, useState } from 'react';
@@ -205,7 +205,7 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
 
   // Decode footage SEQUENTIALLY (one forward pass per <video>, no per-frame re-seeking, which
   // is ~10× faster). Pass 1: frame-step once to record the source time each <video> is at on
-  // each frame — cheap, no raster/decode (flushSync flushes remover's <Video> effect, which
+  // each frame — cheap, no raster/decode (flushSync flushes rerender's <Video> effect, which
   // sets currentTime synchronously). Pass 2 (the main loop) pulls decoded frames in order.
   const sinks = await openVideoSinks(stage);
   const videoEls = Array.from(stage.querySelectorAll('video'));

@@ -29,8 +29,8 @@ export function bootStudio(): void {
 
   // inputProps arrive statelessly via ?props= so the renderer's serveUrl stays a string.
   const propsParam = p.get('props');
-  if (propsParam) window.__removerInputProps = JSON.parse(decodeURIComponent(propsParam));
-  const inputProps = window.__removerInputProps ?? {};
+  if (propsParam) window.__rerenderInputProps = JSON.parse(decodeURIComponent(propsParam));
+  const inputProps = window.__rerenderInputProps ?? {};
 
   // let the renderer enumerate registered compositions (after the hidden <Root/> mounts).
   window.__getCompositions = () =>

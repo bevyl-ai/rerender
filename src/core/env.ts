@@ -3,14 +3,14 @@
 // reflects whether we're playing or rendering.
 declare global {
   interface Window {
-    __removerInputProps?: Record<string, unknown>;
-    __removerEnv?: 'player' | 'rendering';
+    __rerenderInputProps?: Record<string, unknown>;
+    __rerenderEnv?: 'player' | 'rendering';
   }
 }
 
 export function getInputProps<T = Record<string, unknown>>(): T {
-  if (typeof window !== 'undefined' && window.__removerInputProps) {
-    return window.__removerInputProps as T;
+  if (typeof window !== 'undefined' && window.__rerenderInputProps) {
+    return window.__rerenderInputProps as T;
   }
   return {} as T;
 }
@@ -24,7 +24,7 @@ export interface RemotionEnvironment {
 }
 
 export function getRemotionEnvironment(): RemotionEnvironment {
-  const rendering = typeof window !== 'undefined' && window.__removerEnv === 'rendering';
+  const rendering = typeof window !== 'undefined' && window.__rerenderEnv === 'rendering';
   return {
     isStudio: false,
     isRendering: rendering,

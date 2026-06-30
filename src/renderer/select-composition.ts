@@ -14,7 +14,7 @@ export async function getCompositions(options: { serveUrl: string; inputProps?: 
   const browser = await launchBrowser(await chromeExecutable());
   try {
     const page = (await browser.pages())[0] ?? (await browser.newPage());
-    page.on('pageerror', (e) => console.error('[remover] composition page error:', String(e).slice(0, 300)));
+    page.on('pageerror', (e) => console.error('[rerender] composition page error:', String(e).slice(0, 300)));
     await page.goto(pageUrl(serveUrl, '', inputProps), { waitUntil: 'load' });
     await page.waitForFunction(() => window.__ready === true && Boolean(window.__getCompositions), { timeout: 120_000 });
     const comps = await page.evaluate(() => window.__getCompositions!());

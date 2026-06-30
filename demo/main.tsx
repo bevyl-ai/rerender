@@ -19,7 +19,7 @@ createRoot(root).render(
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 54, gap: 16, flexWrap: 'wrap' }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>remover</span>
+          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>rerender</span>
           <span style={{ fontSize: 13, color: '#8a8a99' }}>a drop-in, MIT Remotion</span>
         </div>
         <span

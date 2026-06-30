@@ -7,11 +7,11 @@ import { useEffect, useState, type ComponentType } from 'react';
 import { flushSync } from 'react-dom';
 import { CompositionFrame, type VideoConfig } from '../src/core/frame';
 import { getPendingDelays } from '../src/core/delay-render';
-import { injectRemoverCSS } from '../src/core/default-css';
+import { injectRerenderCSS } from '../src/core/default-css';
 
 // Module-load side effects (this module only ever executes in the render/studio browser):
-injectRemoverCSS(); // match Remotion's global reset (box-sizing: border-box)
-if (typeof window !== 'undefined') window.__removerEnv = 'rendering';
+injectRerenderCSS(); // match Remotion's global reset (box-sizing: border-box)
+if (typeof window !== 'undefined') window.__rerenderEnv = 'rendering';
 
 declare global {
   interface Window {

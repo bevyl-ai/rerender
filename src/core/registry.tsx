@@ -1,6 +1,6 @@
 // The composition registry + entry point — Remotion-compatible. A real Remotion
 // project's `src/index.ts` calls registerRoot(Root); the Root renders <Composition>
-// elements that register themselves here. remover's studio + render read the
+// elements that register themselves here. rerender's studio + render read the
 // registry to enumerate and render compositions by id.
 import type { ComponentType, ReactNode } from 'react';
 
@@ -33,7 +33,7 @@ export interface CompositionProps<P extends Record<string, unknown> = Record<str
   width: number;
   height: number;
   defaultProps?: P;
-  // accepted for drop-in compatibility; not yet honored by remover's renderer
+  // accepted for drop-in compatibility; not yet honored by rerender's renderer
   calculateMetadata?: unknown;
   schema?: unknown;
 }

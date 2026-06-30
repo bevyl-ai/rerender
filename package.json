@@ -1,5 +1,5 @@
 {
-  "name": "remover",
+  "name": "rerender",
   "version": "0.0.0",
   "description": "Drop-in, MIT Remotion: renders by frame-stepping the real preview in headless chrome — sliced across N browsers and stitched, ffmpeg-free.",
   "license": "MIT",
@@ -22,13 +22,14 @@
     "LICENSE"
   ],
   "bin": {
-    "remover": "bin/remover.mjs"
+    "rerender": "bin/rerender.mjs"
   },
   "scripts": {
-    "remover": "tsx src/cli.ts",
+    "rerender": "tsx src/cli.ts",
     "studio": "tsx src/cli.ts studio",
     "dev": "vite",
     "build": "vite build",
+    "deploy": "npm run build && npx wrangler deploy",
     "test": "vite build && tsx test/export.test.ts",
     "test:export": "tsx test/export.test.ts",
     "typecheck": "tsc --noEmit",

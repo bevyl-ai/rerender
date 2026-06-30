@@ -4,8 +4,8 @@
 //     Invoked fire-and-forget by renderMediaOnLambda; getRenderProgress reads its progress.
 //   • still   — render a single frame to S3 and return its size (renderStillOnLambda).
 //   • segment — the original per-range silent worker, fanned out by the synchronous
-//     `remover cloud render` CLI (cloud/aws.ts → orchestrate.ts).
-// The project is baked into the image at REMOVER_ENTRY; cold-start seeds Vite's cache.
+//     `rerender cloud render` CLI (cloud/aws.ts → orchestrate.ts).
+// The project is baked into the image at RERENDER_ENTRY; cold-start seeds Vite's cache.
 import { cpSync, existsSync, readFileSync } from 'node:fs';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { bundle } from '../src/renderer/bundle';
@@ -28,7 +28,7 @@ import {
   type WebhookPayload,
 } from './progress';
 
-const ENTRY = process.env.REMOVER_ENTRY ?? '/var/task/project/src/index.ts';
+const ENTRY = process.env.RERENDER_ENTRY ?? '/var/task/project/src/index.ts';
 const s3 = new S3Client({});
 
 const BAKED_VITE_CACHE = '/var/task/.vite-cache-baked';
@@ -40,7 +40,7 @@ if (existsSync(BAKED_VITE_CACHE) && !existsSync('/tmp/.vite-cache')) {
   }
 }
 
-/** The original per-range silent worker (synchronous `remover cloud render`). */
+/** The original per-range silent worker (synchronous `rerender cloud render`). */
 export interface SegmentEvent {
   composition: import('../src/renderer/types').CompositionConfig;
   props?: Record<string, unknown>;
@@ -62,7 +62,7 @@ function errorList(err: unknown): { message: string; stack?: string }[] {
   return [{ message: e?.message ?? String(err), stack: e?.stack }];
 }
 
-// Bevyl passes Remotion's codec names (h264/h265); remover's WebCodecs encoder speaks the
+// Bevyl passes Remotion's codec names (h264/h265); rerender's WebCodecs encoder speaks the
 // mediabunny names (avc/hevc/…). Translate at the boundary; unsupported codecs fall back to avc.
 const REMOTION_TO_VIDEO_CODEC: Record<string, VideoCodec> = {
   h264: 'avc',

@@ -1,0 +1,30 @@
+name: deploy
+
+# Builds the demo (demo/ → vite build → dist/) and ships it to the rerender-demo
+# Cloudflare Worker — which serves https://rerender.video — on every push to main.
+# Requires repo secrets: CLOUDFLARE_API_TOKEN (Workers-scoped) + CLOUDFLARE_ACCOUNT_ID.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to main supersedes an in-flight deploy.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

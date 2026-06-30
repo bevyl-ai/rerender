@@ -217,20 +217,20 @@ function CompatMatrix(): JSX.Element {
 }
 
 // ── us vs them ──
-const VS: { label: string; remotion: string; remover: string }[] = [
-  { label: 'Cost per render', remotion: '~1¢ cloud usage fee', remover: '$0' },
-  { label: 'Infrastructure', remotion: 'AWS Lambda, tightly coupled', remover: 'your browser — or any static host' },
-  { label: 'Video encoder', remotion: 'bundled ffmpeg — a native binary per OS/arch', remover: 'WebCodecs + WASM, no binary' },
-  { label: 'To render a video', remotion: 'deploy + run a cloud render farm', remover: 'click a button' },
-  { label: 'Works offline', remotion: 'no — needs the cloud function', remover: 'yes (encode is fully local)' },
-  { label: 'License', remotion: 'per-seat, with no-compete clauses', remover: 'MIT' },
+const VS: { label: string; remotion: string; rerender: string }[] = [
+  { label: 'Cost per render', remotion: '~1¢ cloud usage fee', rerender: '$0' },
+  { label: 'Infrastructure', remotion: 'AWS Lambda, tightly coupled', rerender: 'your browser — or any static host' },
+  { label: 'Video encoder', remotion: 'bundled ffmpeg — a native binary per OS/arch', rerender: 'WebCodecs + WASM, no binary' },
+  { label: 'To render a video', remotion: 'deploy + run a cloud render farm', rerender: 'click a button' },
+  { label: 'Works offline', remotion: 'no — needs the cloud function', rerender: 'yes (encode is fully local)' },
+  { label: 'License', remotion: 'per-seat, with no-compete clauses', rerender: 'MIT' },
 ];
 
 function VsTable(): JSX.Element {
   return (
     <div style={{ marginTop: 30 }}>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>
-        remover <span style={{ color: '#6a6a76' }}>vs</span> Remotion
+        rerender <span style={{ color: '#6a6a76' }}>vs</span> Remotion
       </div>
       <div style={{ ...card, overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14, minWidth: 560 }}>
@@ -250,7 +250,7 @@ function VsTable(): JSX.Element {
                   background: 'rgba(255,94,138,0.06)',
                 }}
               >
-                remover
+                rerender
               </th>
             </tr>
           </thead>
@@ -264,7 +264,7 @@ function VsTable(): JSX.Element {
                 </td>
                 <td style={{ padding: '13px 16px', color: '#fff', borderBottom: '1px solid #16161d', background: 'rgba(255,94,138,0.06)' }}>
                   <span style={{ color: '#7fdca0', marginRight: 8 }}>✓</span>
-                  {r.remover}
+                  {r.rerender}
                 </td>
               </tr>
             ))}
@@ -460,7 +460,7 @@ export function ExportShowcase(): JSX.Element {
         <div style={{ marginTop: 18, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           <a
             href={url}
-            download="remover-export.mp4"
+            download="rerender-export.mp4"
             style={{
               display: 'inline-flex',
               alignItems: 'center',

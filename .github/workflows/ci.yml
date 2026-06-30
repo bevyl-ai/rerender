@@ -53,7 +53,7 @@ jobs:
             libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 \
             libxkbcommon0 libxrandr2 libxrender1 libxtst6
       - name: Render a short clip (multi-slice, exercises concat)
-        run: node bin/remover.mjs render templates/helloworld/src/index.ts HelloWorld /tmp/smoke.mp4 --frames 0-29 --concurrency 2
+        run: node bin/rerender.mjs render templates/helloworld/src/index.ts HelloWorld /tmp/smoke.mp4 --frames 0-29 --concurrency 2
       - name: Assert a real mp4 was produced
         run: |
           test -f /tmp/smoke.mp4

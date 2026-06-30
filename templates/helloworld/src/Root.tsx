@@ -20,7 +20,7 @@ export const RemotionRoot: React.FC = () => {
         // https://www.remotion.dev/docs/parametrized-rendering
         schema={myCompSchema}
         defaultProps={{
-          titleText: 'Welcome to remover',
+          titleText: 'Welcome to rerender',
           titleColor: '#000000',
           logoColor1: '#91EAE4',
           logoColor2: '#86A8E7',

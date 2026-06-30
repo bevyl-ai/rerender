@@ -1,6 +1,6 @@
 // prefetch() — Remotion-compatible. Fetches a media URL up front (the editor warms its
 // preview assets this way) into a blob URL, and returns a handle to await or free it.
-// remover's renderer doesn't use this — render assets stream from the dev server — so it's
+// rerender's renderer doesn't use this — render assets stream from the dev server — so it's
 // purely an editor-side helper.
 export interface PrefetchHandle {
   free: () => void;

@@ -1,4 +1,4 @@
-// @remotion/media-parser drop-in over mediabunny (already a remover dependency). Parses a
+// @remotion/media-parser drop-in over mediabunny (already a rerender dependency). Parses a
 // media URL/blob/buffer and returns the requested metadata fields — what the editor uses for
 // drag-drop import (videoCodec / slowDurationInSeconds / dimensions; videoCodec === null
 // means an audio-only file). Editor-side tooling; the render path doesn't use it.

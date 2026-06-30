@@ -4,9 +4,9 @@
 // playback transport drives. What plays here is exactly what the recorder records.
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ComponentType, type CSSProperties } from 'react';
 import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from './frame';
-import { injectRemoverCSS } from './default-css';
+import { injectRerenderCSS } from './default-css';
 
-injectRemoverCSS(); // match Remotion's global reset so preview == render == Remotion
+injectRerenderCSS(); // match Remotion's global reset so preview == render == Remotion
 
 export type PlayerEventTypes =
   | 'frameupdate'
@@ -48,12 +48,12 @@ export interface PlayerRef {
 }
 
 export interface PlayerProps {
-  /** the composition component (Remotion's `component`; `composition` is the remover alias). */
+  /** the composition component (Remotion's `component`; `composition` is the rerender alias). */
   component?: ComponentType<Record<string, unknown>>;
   composition?: ComponentType<Record<string, unknown>>;
   compositionWidth?: number;
   compositionHeight?: number;
-  /** remover aliases for compositionWidth/Height. */
+  /** rerender aliases for compositionWidth/Height. */
   width?: number;
   height?: number;
   fps: number;
@@ -64,10 +64,10 @@ export interface PlayerProps {
   playbackRate?: number;
   initialFrame?: number;
   moveToBeginningWhenEnded?: boolean;
-  /** display height in px; the composition is scaled to fit (remover-specific). */
+  /** display height in px; the composition is scaled to fit (rerender-specific). */
   displayHeight?: number;
   style?: CSSProperties;
-  // Accepted for @remotion/player API compatibility; not all affect remover's preview.
+  // Accepted for @remotion/player API compatibility; not all affect rerender's preview.
   clickToPlay?: boolean;
   doubleClickToFullscreen?: boolean;
   showVolumeControls?: boolean;

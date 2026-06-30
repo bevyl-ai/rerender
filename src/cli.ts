@@ -1,8 +1,8 @@
-// `remover render|still` — 1-1 with `remotion render|still`. Bundles an arbitrary
+// `rerender render|still` — 1-1 with `remotion render|still`. Bundles an arbitrary
 // project in-process, selects the composition, and renders it.
 //
-//   remover render <entry> <comp-id> [output] [flags]
-//   remover still  <entry> <comp-id> [output] [--frame N]
+//   rerender render <entry> <comp-id> [output] [flags]
+//   rerender still  <entry> <comp-id> [output] [--frame N]
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { bundle } from './renderer/bundle';
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
   if (!['render', 'still', 'studio', 'concat', 'cloud'].includes(cmd ?? '')) {
     console.error(
-      'usage: remover render|still|studio <entry> [comp-id] [output] [flags]\n       remover concat --output <out.mp4> <segment0.mp4> …\n       remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <b> …',
+      'usage: rerender render|still|studio <entry> [comp-id] [output] [flags]\n       rerender concat --output <out.mp4> <segment0.mp4> …\n       rerender cloud deploy | rerender cloud render <entry> <comp> --function <name> --bucket <b> …',
     );
     process.exit(1);
   }
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
       const project = positional[1] ?? str(flags.project);
       if (!project) {
         console.error(
-          'usage: remover cloud deploy <project-dir> [--region r] [--memory 3008]\n  (project-dir is your video project, with src/index.ts — it gets baked into the worker image)',
+          'usage: rerender cloud deploy <project-dir> [--region r] [--memory 3008]\n  (project-dir is your video project, with src/index.ts — it gets baked into the worker image)',
         );
         process.exit(1);
       }
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
       console.log(`  function: ${r.functionName}`);
       console.log(`  bucket:   ${r.bucketName}`);
       console.log(
-        `  render:   remover cloud render ${project}/src/index.ts <Comp> --function ${r.functionName} --bucket ${r.bucketName} --workers 20 -o out.mp4`,
+        `  render:   rerender cloud render ${project}/src/index.ts <Comp> --function ${r.functionName} --bucket ${r.bucketName} --workers 20 -o out.mp4`,
       );
       return;
     }
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
       const bucket = str(flags.bucket);
       if (!cEntry || !cComp || !fn || !bucket) {
         console.error(
-          'usage: remover cloud render <entry> <comp> --function <name> --bucket <bucket> [--workers N] [--region r] [--props json] --output out.mp4',
+          'usage: rerender cloud render <entry> <comp> --function <name> --bucket <bucket> [--workers N] [--region r] [--props json] --output out.mp4',
         );
         process.exit(1);
       }
@@ -107,17 +107,17 @@ async function main(): Promise<void> {
       );
       return;
     }
-    console.error('usage: remover cloud deploy | remover cloud render <entry> <comp> --function <name> --bucket <bucket> …');
+    console.error('usage: rerender cloud deploy | rerender cloud render <entry> <comp> --function <name> --bucket <bucket> …');
     process.exit(1);
   }
 
   // Coordinator step for distributed renders: stitch the segments produced by N workers
-  // (each `remover render <entry> <comp> --frames lo-hi --muted -o segK.mp4`) into one
+  // (each `rerender render <entry> <comp> --frames lo-hi --muted -o segK.mp4`) into one
   // mp4. Pure mediabunny packet-copy in Node — no browser, no ffmpeg.
   if (cmd === 'concat') {
     const output = str(flags.output);
     if (!output || positional.length === 0) {
-      console.error('usage: remover concat --output <out.mp4> [--fps 30] [--codec avc] <segment0.mp4> <segment1.mp4> …');
+      console.error('usage: rerender concat --output <out.mp4> [--fps 30] [--codec avc] <segment0.mp4> <segment1.mp4> …');
       process.exit(1);
     }
     const { concatSegments } = await import('./renderer/encode');
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
   if (cmd === 'studio') {
     const { studioServer } = await import('./renderer/studio');
     const s = await studioServer(resolve(entry), { port: num(flags.port) });
-    console.log(`\n  remover studio  →  ${s.url}\n  Ctrl-C to stop.\n`);
+    console.log(`\n  rerender studio  →  ${s.url}\n  Ctrl-C to stop.\n`);
     const opener = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
     const { spawn } = await import('node:child_process');
     spawn(opener, [s.url], { stdio: 'ignore', detached: true }).unref();

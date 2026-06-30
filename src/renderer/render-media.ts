@@ -56,7 +56,7 @@ export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: n
   };
   const ext = (opts.imageFormat ?? 'png') === 'jpeg' ? 'jpg' : 'png';
 
-  const dir = mkdtempSync(join(tmpdir(), 'remover-render-'));
+  const dir = mkdtempSync(join(tmpdir(), 'rerender-render-'));
   try {
     const per = Math.ceil(totalFrames / concurrency);
     const ranges = Array.from({ length: concurrency }, (_, i) => [from + i * per, Math.min(from + (i + 1) * per, to + 1)] as const).filter(

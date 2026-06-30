@@ -1,6 +1,6 @@
 // delayRender / continueRender — Remotion-compatible. A composition calls
 // delayRender() to tell the renderer "don't capture yet" (e.g. while loading data)
-// and continueRender(handle) when ready. remover's render harness waits for
+// and continueRender(handle) when ready. rerender's render harness waits for
 // getPendingDelays() === 0 before capturing each frame.
 let counter = 0;
 const pending = new Set<number>();

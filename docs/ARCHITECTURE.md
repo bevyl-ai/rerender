@@ -1,11 +1,11 @@
-# remover — architecture
+# rerender — architecture
 
 The whole thing is: **author in Remotion's API → render to real DOM → record the preview → slice +
 stitch for scale.** No second renderer, no WASM rasterizer, no screenshot pipeline.
 
 ## The pieces
 
-### 1. The runtime (`@remover/core`) — Remotion-compatible, renders to real DOM
+### 1. The runtime (`@rerender/core`) — Remotion-compatible, renders to real DOM
 The drop-in surface. Thin React over real DOM, matching Remotion's signatures exactly:
 - Hooks: `useCurrentFrame`, `useVideoConfig`.
 - Timing: `interpolate`, `spring`, `Easing`, `<Sequence>`, `<Series>`.
@@ -32,8 +32,8 @@ Split `[0, durationInFrames)` into N slices, run N recorders **in parallel** (N 
 Firecracker microVMs), then `ffmpeg concat` the chunks (stream-copy if keyframe-aligned). Wall-clock
 ≈ (video length ÷ N) + stitch.
 
-### 5. The drop-in shim — `remotion` → `remover`
-A `remotion`-compatible entry so existing projects alias `remotion` to `remover` and run unchanged.
+### 5. The drop-in shim — `remotion` → `rerender`
+A `remotion`-compatible entry so existing projects alias `remotion` to `rerender` and run unchanged.
 
 ## The non-negotiable property
 
@@ -50,7 +50,7 @@ by construction — the render is a *recording of the preview*, not a re-render 
 
 ## Build order
 
-1. `@remover/core` runtime + a `<Player>` (preview). Get a composition playing in real DOM.
+1. `@rerender/core` runtime + a `<Player>` (preview). Get a composition playing in real DOM.
 2. The recorder (client `getDisplayMedia` first — fastest to verify a real MP4 out).
 3. The orchestrator: 2 slices → stitch → prove the seam is clean. Then N.
 4. The server recorder (controlled browser, no prompt) + Firecracker fan-out.

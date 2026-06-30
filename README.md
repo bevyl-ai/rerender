@@ -1,4 +1,4 @@
-# remover
+# rerender
 
 > **Drop-in, MIT Remotion.** Same React API — but the renderer is just a *recording of the
 > preview*, sliced across N browsers and stitched. Preview and export are the same pixels, by
@@ -17,22 +17,24 @@ fanned across Lambda. That's a **second** rendering pipeline, separate from the 
 and keeping the two pixel-identical is a whole class of bugs (`OffthreadVideo` vs `Video`, font
 drift, Chrome-version skew).
 
-**remover deletes the second pipeline. The render is a recording of the preview.** Your composition
-plays once in a real browser; remover captures that exact playback. Preview and export aren't *kept*
+**rerender deletes the second pipeline. The render is a recording of the preview.** Your composition
+plays once in a real browser; rerender captures that exact playback. Preview and export aren't *kept*
 in sync — they **are** the same pixels, because the export is literally a recording of the thing you
 previewed. One engine. No drift. Arbitrary CSS works because it's a real browser, not a reimplemented
 renderer.
 
 ## How it scales
 
-Recording is real-time — so remover **slices the timeline** and records the slices **in parallel**:
-N compositors, each seeks to its slice, plays + records it, and remover stitches the chunks
+Recording is real-time — so rerender **slices the timeline** and records the slices **in parallel**:
+N compositors, each seeks to its slice, plays + records it, and rerender stitches the chunks
 (`ffmpeg concat`). A 60s video across 60 browsers ≈ rendered in ~a second + a stitch. Remotion-class
 speed, without Remotion's screenshot machinery — just **slice → record → stitch.**
 
-## Why "remover"
+## Why "rerender"
 
-It removes your need for Remotion. (And it's *re-mover* — moving again.)
+The export is a *re-render* of the preview — the same React tree, played once and recorded — so
+the two can't drift. And `rerender` is already React's word for it: the audience this is for
+reads it as native vocabulary.
 
 ## The honest tradeoffs
 

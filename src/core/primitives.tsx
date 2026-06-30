@@ -38,7 +38,7 @@ const sourceFrameAt = (frame: number, offset: number, playbackRate: number, trim
 function useRenderAsset(type: 'audio' | 'video', src: string, opts: { offset: number; playbackRate: number; volume: number }): void {
   const frame = useCurrentFrame();
   const timeline = useTimelinePosition();
-  if (typeof window !== 'undefined' && window.__removerEnv === 'rendering') {
+  if (typeof window !== 'undefined' && window.__rerenderEnv === 'rendering') {
     registerRenderAsset({
       type,
       src: new URL(src, location.href).href,
@@ -181,12 +181,12 @@ export function Video({
   );
 }
 
-// OffthreadVideo — Remotion extracts frames off the main thread for the render; remover
+// OffthreadVideo — Remotion extracts frames off the main thread for the render; rerender
 // captures the real <video> element instead, so the frame-synced <Video> is the same thing.
 export const OffthreadVideo = Video;
 
 interface AudioProps extends MediaProps {
-  /** player-only: route through the Web Audio API. remover renders audio via the muxer, so
+  /** player-only: route through the Web Audio API. rerender renders audio via the muxer, so
    *  this is a no-op during render. */
   useWebAudioApi?: boolean;
 }

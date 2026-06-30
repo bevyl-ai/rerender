@@ -1,7 +1,7 @@
-// remover cloud deploy — the whole hook, one command. Builds the worker image
+// rerender cloud deploy — the whole hook, one command. Builds the worker image
 // (linux/amd64), pushes it to ECR (creating the repo if needed), and deploys the
 // CloudFormation stack (Lambda + S3). No SAM, no manual steps — just docker + the AWS
-// CLI, which `remover cloud deploy` shells out to.
+// CLI, which `rerender cloud deploy` shells out to.
 import { execFileSync, execSync } from 'node:child_process';
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,8 +37,8 @@ const runFile = (file: string, args: string[]): void => {
 
 export async function deploy(opts: DeployOptions): Promise<DeployResult> {
   const region = opts.region ?? process.env.AWS_REGION ?? (out('aws configure get region') || 'us-east-1');
-  const stack = opts.stackName ?? 'remover-cloud';
-  const repo = opts.repo ?? 'remover-worker';
+  const stack = opts.stackName ?? 'rerender-cloud';
+  const repo = opts.repo ?? 'rerender-worker';
   const account = out('aws sts get-caller-identity --query Account --output text');
   const registry = `${account}.dkr.ecr.${region}.amazonaws.com`;
   const imageUri = `${registry}/${repo}:latest`;
@@ -54,12 +54,12 @@ export async function deploy(opts: DeployOptions): Promise<DeployResult> {
   run(`aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${registry}`);
 
   if (opts.build === false) {
-    runFile('docker', ['tag', opts.localTag ?? 'remover-worker:amd64', imageUri]);
+    runFile('docker', ['tag', opts.localTag ?? 'rerender-worker:amd64', imageUri]);
   } else {
     // PROJECT must be relative to the build context (the repo root), not absolute.
     const projectArg = relative(REPO_ROOT, opts.project);
     if (projectArg.startsWith('..'))
-      throw new Error(`project must live inside the remover repo for now (got ${opts.project}); copy it under templates/ or a subdir`);
+      throw new Error(`project must live inside the rerender repo for now (got ${opts.project}); copy it under templates/ or a subdir`);
     console.log(`• building worker image (linux/amd64 — chrome-headless-shell is x86_64 only), baking ${projectArg}…`);
     // --provenance=false: buildx otherwise emits an attestation manifest list that Lambda rejects.
     runFile('docker', [

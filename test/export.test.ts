@@ -20,9 +20,9 @@ const DIST = join(fileURLToPath(new URL('.', import.meta.url)), '../dist');
 // The client export decodes the footage with WebCodecs, which chrome-headless-shell (the binary
 // the renderer uses) can't do — it stalls. So this test drives FULL Chrome's new headless mode
 // (+ SwiftShader for a software GL backend that works headless/in CI). Pinned to the same build
-// the renderer uses; override with REMOVER_CHROME_BUILD.
-const CHROME_BUILD = process.env.REMOVER_CHROME_BUILD ?? '149.0.7790.0';
-const CHROME_CACHE = join(fileURLToPath(new URL('.', import.meta.url)), '../node_modules/.remover-chrome');
+// the renderer uses; override with RERENDER_CHROME_BUILD.
+const CHROME_BUILD = process.env.RERENDER_CHROME_BUILD ?? '149.0.7790.0';
+const CHROME_CACHE = join(fileURLToPath(new URL('.', import.meta.url)), '../node_modules/.rerender-chrome');
 
 async function launchTestChrome(): ReturnType<typeof puppeteer.launch> {
   await install({ browser: Browser.CHROME, buildId: CHROME_BUILD, cacheDir: CHROME_CACHE });

@@ -1,4 +1,4 @@
-// studioServer — `remover studio`. A Vite server that serves the remover Studio
+// studioServer — `rerender studio`. A Vite server that serves the rerender Studio
 // editor (sidebar + live preview + props editor) over the user's project, plus an
 // /api/render endpoint backing the render button (bundles + renders to an mp4 it
 // then serves at /renders/<file>).
@@ -8,12 +8,12 @@ import { createReadStream, existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { removerAliases } from '../../render/aliases';
+import { rerenderAliases } from '../../render/aliases';
 import { bundle } from './bundle';
 import { renderMedia } from './render-media';
 import { selectComposition } from './select-composition';
 
-const REMOVER_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const RERENDER_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const STUDIO_MAIN = fileURLToPath(new URL('../../studio/main.tsx', import.meta.url));
 
 export async function studioServer(
@@ -23,10 +23,10 @@ export async function studioServer(
   const entry = resolve(entryPoint);
   let userRoot = dirname(entry);
   if (basename(userRoot) === 'src') userRoot = dirname(userRoot);
-  const rendersDir = mkdtempSync(join(tmpdir(), 'remover-studio-'));
+  const rendersDir = mkdtempSync(join(tmpdir(), 'rerender-studio-'));
 
   const studioHtml =
-    `<!doctype html><html><head><meta charset="utf-8"><title>remover studio</title>` +
+    `<!doctype html><html><head><meta charset="utf-8"><title>rerender studio</title>` +
     `<style>html,body,#root{margin:0;height:100%;background:#0a0a0c}</style></head>` +
     `<body><div id="root"></div>` +
     `<script type="module">import ${JSON.stringify('/@fs/' + entry)};` +
@@ -40,7 +40,7 @@ export async function studioServer(
     plugins: [
       react(),
       {
-        name: 'remover-studio',
+        name: 'rerender-studio',
         configureServer(s) {
           s.middlewares.use((req, res, next) => {
             const url = req.url ?? '/';
@@ -94,9 +94,9 @@ export async function studioServer(
         },
       },
     ],
-    resolve: { alias: removerAliases, dedupe: ['react', 'react-dom'] },
+    resolve: { alias: rerenderAliases, dedupe: ['react', 'react-dom'] },
     optimizeDeps: { include: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime'] },
-    server: { port: options.port ?? 0, fs: { allow: [userRoot, REMOVER_ROOT, rendersDir] }, hmr: false },
+    server: { port: options.port ?? 0, fs: { allow: [userRoot, RERENDER_ROOT, rendersDir] }, hmr: false },
   });
 
   await server.listen();

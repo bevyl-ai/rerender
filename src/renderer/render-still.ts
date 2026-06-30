@@ -23,7 +23,7 @@ export async function renderStill(options: {
   const props = encodeURIComponent(JSON.stringify(options.inputProps ?? {}));
   const stepUrl = `${serveUrl}/?step=1&comp=${encodeURIComponent(c.id)}&props=${props}`;
 
-  const dir = mkdtempSync(join(tmpdir(), 'remover-still-'));
+  const dir = mkdtempSync(join(tmpdir(), 'rerender-still-'));
   try {
     await captureFrames(await chromeExecutable(), stepUrl, frame, frame + 1, dir, c, {
       scale: options.scale,

@@ -1,8 +1,8 @@
-# remover cloud worker — an AWS Lambda container image that renders one frame-range
+# rerender cloud worker — an AWS Lambda container image that renders one frame-range
 # segment to S3. Built per project (the project is baked in); built + deployed by
-# `remover cloud deploy` (docker build + `aws cloudformation deploy` against
+# `rerender cloud deploy` (docker build + `aws cloudformation deploy` against
 # cloud/template.yaml, no SAM). Container Lambda so we can ship chrome-headless-shell + the
-# full remover runtime (vite/esbuild/puppeteer/mediabunny), which a zip layer can't hold.
+# full rerender runtime (vite/esbuild/puppeteer/mediabunny), which a zip layer can't hold.
 #
 #   build context is the repo root (deploy.ts runs `docker build -f cloud/Dockerfile .`)
 #   the project dir is passed via   --build-arg PROJECT=<dir relative to repo root>
@@ -21,14 +21,14 @@ RUN dnf install -y \
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-# remover's renderer runtime (puppeteer-core, vite, @vitejs/plugin-react, esbuild,
+# rerender's renderer runtime (puppeteer-core, vite, @vitejs/plugin-react, esbuild,
 # mediabunny, tsx) and the non-aliased packages compositions import (@remotion/google-
 # fonts, @remotion/zod-types, zod, react) are all in dependencies, so a plain prod install.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-# remover runtime: the renderer + the browser worker .ts files esbuild bundles at run
-# time + the bin. tsx loads the TS directly (same as everywhere else in remover).
+# rerender runtime: the renderer + the browser worker .ts files esbuild bundles at run
+# time + the bin. tsx loads the TS directly (same as everywhere else in rerender).
 COPY tsconfig.json ./
 COPY src ./src
 COPY render ./render
@@ -38,13 +38,13 @@ COPY cloud ./cloud
 # point HOME at the writable /tmp.
 ENV HOME=/tmp
 
-# The user's project, baked in. REMOVER_ENTRY points the worker at its registerRoot.
+# The user's project, baked in. RERENDER_ENTRY points the worker at its registerRoot.
 ARG PROJECT=./project
 COPY ${PROJECT} ./project
-ENV REMOVER_ENTRY=${LAMBDA_TASK_ROOT}/project/src/index.ts
+ENV RERENDER_ENTRY=${LAMBDA_TASK_ROOT}/project/src/index.ts
 
-# chrome-headless-shell, pinned to the version remover renders with. Use remover's own
-# chromeExecutable() so build and runtime agree on the cache dir (node_modules/.remover-
+# chrome-headless-shell, pinned to the version rerender renders with. Use rerender's own
+# chromeExecutable() so build and runtime agree on the cache dir (node_modules/.rerender-
 # chrome) and the binary is already present at invocation — no download in the Lambda.
 # Chrome-for-Testing ships linux64 only — this image MUST be built for linux/amd64
 # (--platform) and run as an x86_64 Lambda; arm64/Graviton can't execute the binary.
@@ -53,8 +53,8 @@ RUN node --import tsx -e "import('./render/browser.ts').then(m => m.chromeExecut
 # Pre-bake Vite's dep-optimizer cache for the baked project (optimizeDeps.entries scans
 # the entry at server start), so a cold worker doesn't pay the ~4s optimize. handler.ts
 # copies this into /tmp on cold start.
-RUN REMOVER_VITE_CACHE=/var/task/.vite-cache-baked node --import tsx -e \
-  "import('./src/renderer/bundle.ts').then(async m => { const b = await m.bundle(process.env.REMOVER_ENTRY); await new Promise(r => setTimeout(r, 5000)); await b.close(); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })" \
+RUN RERENDER_VITE_CACHE=/var/task/.vite-cache-baked node --import tsx -e \
+  "import('./src/renderer/bundle.ts').then(async m => { const b = await m.bundle(process.env.RERENDER_ENTRY); await new Promise(r => setTimeout(r, 5000)); await b.close(); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })" \
   && echo "baked vite cache:" && ls /var/task/.vite-cache-baked 2>/dev/null || true
 
 # The AWS runtime interface client loads cloud/handler.mjs, which tsx-loads the TS handler.
