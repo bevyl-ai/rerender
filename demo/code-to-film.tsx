@@ -88,6 +88,7 @@ export function CodeToFilm(): JSX.Element {
   const heroScale = heroPop * (1 + bump(28) + bump(40) + bump(62)) * key([78, 94, 108], [1, 1.1, 1]) * key([182, last], [1, 1.08]);
 
   const codeOp = seg(6, 16) * seg(74, 90, 1, 0);
+  const codeCursor = LINES.reduce((a, l, i) => (frame >= l.f ? i : a), -1); // line currently "typing"
   const gridIn = seg(132, 154, 1, 0); // grid recedes as the hero opens
   const glowOp = seg(86, 106) * seg(138, 158, 1, 0);
   const grade = seg(166, 196) * 0.32;
@@ -187,7 +188,9 @@ export function CodeToFilm(): JSX.Element {
             position: 'absolute',
             inset: 0,
             borderRadius: heroRadius,
-            background: 'linear-gradient(135deg,#ff5e8a,#ffb24a)',
+            // glossy top-left highlight over the gradient — reads as a premium, lit surface
+            background:
+              'radial-gradient(120% 90% at 26% 18%, rgba(255,255,255,0.45), rgba(255,255,255,0) 46%), linear-gradient(135deg,#ff5e8a,#ffb24a)',
             opacity: faceFade,
           }}
         />
@@ -247,7 +250,7 @@ export function CodeToFilm(): JSX.Element {
           boxShadow: '0 24px 70px rgba(0,0,0,0.5)',
         }}
       >
-        {LINES.map((ln) => {
+        {LINES.map((ln, i) => {
           const o = seg(ln.f, ln.f + 8);
           const fresh = frame >= ln.f && frame < ln.f + 18;
           return (
@@ -268,6 +271,9 @@ export function CodeToFilm(): JSX.Element {
               }}
             >
               {highlight(ln.t)}
+              {i === codeCursor && frame < 80 && (
+                <span style={{ color: '#ff6f9d', opacity: Math.floor(frame / 8) % 2 === 0 ? 1 : 0.2 }}>▋</span>
+              )}
             </div>
           );
         })}
