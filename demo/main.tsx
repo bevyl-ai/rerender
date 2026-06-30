@@ -33,7 +33,7 @@ createRoot(root).render(
           </span>
         </h1>
         <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.55, margin: 0 }}>
-          It's the same React you'd write in Remotion — real DOM, real CSS. One click frame-steps the composition, captures each frame from
+          It's the same React you'd write in Remotion: real DOM, real CSS. One click frame-steps the composition, captures each frame from
           the page, and encodes an MP4 with WebCodecs, right here in this tab. No server, no native ffmpeg, no render farm to stand up.
         </p>
       </section>
@@ -41,7 +41,7 @@ createRoot(root).render(
       <ExportShowcase />
 
       <footer style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #1d1d25', color: '#55555f', fontSize: 12, lineHeight: 1.5 }}>
-        Independent open-source project — not affiliated with, endorsed by, or sponsored by Remotion or Remotion Inc. &ldquo;Remotion&rdquo;
+        Independent open-source project. Not affiliated with, endorsed by, or sponsored by Remotion or Remotion Inc. &ldquo;Remotion&rdquo;
         is a trademark of its respective owner; used here only to describe API compatibility.
       </footer>
     </div>

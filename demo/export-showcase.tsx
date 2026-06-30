@@ -83,7 +83,7 @@ function CssReveal(): JSX.Element {
     <div style={{ marginTop: 30 }}>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Every shape in that film is one styled &lt;div&gt;.</div>
       <div style={{ color: '#8a8a99', fontSize: 14, marginBottom: 14, maxWidth: 720 }}>
-        No canvas drawing, no shader — just CSS the renderer rasterizes straight into the mp4. The radial-gradient tile in the grid, for
+        No canvas drawing, no shader. Just CSS the renderer rasterizes straight into the mp4. The radial-gradient tile in the grid, for
         one:
       </div>
       <pre
@@ -130,7 +130,7 @@ function PortableHosting(): JSX.Element {
     <div style={{ marginTop: 30 }}>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Self-host the render farm anywhere.</div>
       <div style={{ color: '#8a8a99', fontSize: 14, marginBottom: 14, maxWidth: 720 }}>
-        The renderer is a plain Node package — no proprietary runtime, no vendor lock-in. Slice a render across Firecracker microVMs on
+        The renderer is a plain Node package: no proprietary runtime, no vendor lock-in. Slice a render across Firecracker microVMs on
         Fly.io, a box on AWS, or your own metal: wherever you already deploy.
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -159,10 +159,10 @@ function PortableHosting(): JSX.Element {
 
 // ── us vs them ──
 const VS: { label: string; remotion: string; rerender: string }[] = [
-  { label: 'License', remotion: 'Paid company license above 3 employees', rerender: 'MIT — free, no seats, no restrictions' },
+  { label: 'License', remotion: 'Paid company license above 3 employees', rerender: 'MIT, free, no seats, no restrictions' },
   { label: 'Source', remotion: 'Source-available, license-gated', rerender: 'Fully open source' },
-  { label: 'Render in the browser', remotion: 'Experimental (@remotion/web-renderer)', rerender: 'Yes — what this page just did' },
-  { label: 'Distributed / farm render', remotion: 'AWS Lambda only', rerender: 'Any host — or your own Firecracker' },
+  { label: 'Render in the browser', remotion: 'Experimental (@remotion/web-renderer)', rerender: 'Yes, what this page just did' },
+  { label: 'Distributed / farm render', remotion: 'AWS Lambda only', rerender: 'Any host, or your own Firecracker' },
   { label: 'To render with no cloud', remotion: 'Node + headless Chrome + an ffmpeg binary', rerender: 'a browser tab' },
 ];
 
@@ -182,12 +182,12 @@ function VsTable(): JSX.Element {
               <div style={{ display: 'flex', gap: 9, marginBottom: 7 }}>
                 <span style={{ color: '#7fdca0' }}>✓</span>
                 <span style={{ color: '#fff', flex: 1, fontSize: 14 }}>
-                  <b style={{ color: ACCENT }}>rerender</b> — {r.rerender}
+                  <b style={{ color: ACCENT }}>rerender:</b> {r.rerender}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 9 }}>
                 <span style={{ color: '#ff8080' }}>✕</span>
-                <span style={{ color: '#9a9aa6', flex: 1, fontSize: 14 }}>Remotion — {r.remotion}</span>
+                <span style={{ color: '#9a9aa6', flex: 1, fontSize: 14 }}>Remotion: {r.remotion}</span>
               </div>
             </div>
           ))}
@@ -362,7 +362,7 @@ export function ExportShowcase(): JSX.Element {
             boxShadow: status === 'running' ? 'none' : '0 10px 36px rgba(255,94,138,0.4)',
           }}
         >
-          {status === 'running' ? `Exporting… ${pct}%` : status === 'done' ? '↻ Export again' : '⬇ Export this to MP4 — in your browser'}
+          {status === 'running' ? `Exporting… ${pct}%` : status === 'done' ? '↻ Export again' : '⬇ Export this to MP4 in your browser'}
         </button>
 
         {status === 'done' && meta && (
@@ -421,7 +421,7 @@ export function ExportShowcase(): JSX.Element {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start', paddingTop: 4 }}>
               {downloaded && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#7fdca0', fontSize: 14, fontWeight: 600 }}>
-                  <span style={{ fontSize: 16 }}>✓</span> Saved to your downloads —{' '}
+                  <span style={{ fontSize: 16 }}>✓</span> Saved to your downloads:{' '}
                   <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender-export.mp4</code>
                 </div>
               )}

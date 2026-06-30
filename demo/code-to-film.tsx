@@ -395,7 +395,7 @@ export function CodeToFilm(): JSX.Element {
           <span
             style={{ position: 'absolute', left: 0, width: '100%', opacity: seg(T.compose + 16, T.compose + 30) * seg(T.grow - 8, T.grow + 6, 1, 0) }}
           >
-            {'// …and it composes — all of it just CSS'}
+            {'// …and it composes, all of it just CSS'}
           </span>
         </div>
 
