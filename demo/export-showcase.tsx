@@ -117,115 +117,41 @@ function CssReveal(): JSX.Element {
   );
 }
 
-// ── caniuse-style support matrix ──
-type Cell = ['ok' | 'partial' | 'no', string];
-const COMPAT: { feat: string; cells: Cell[] }[] = [
-  {
-    feat: 'WebCodecs · VideoEncoder (mp4)',
-    cells: [
-      ['ok', '94'],
-      ['ok', '94'],
-      ['ok', '16.4'],
-      ['partial', '130'],
-    ],
-  },
-  {
-    feat: 'WebCodecs · VideoDecoder (footage)',
-    cells: [
-      ['ok', '94'],
-      ['ok', '94'],
-      ['ok', '16.4'],
-      ['ok', '130'],
-    ],
-  },
-  {
-    feat: 'foreignObject → <canvas>',
-    cells: [
-      ['ok', '✓'],
-      ['ok', '✓'],
-      ['partial', '*'],
-      ['ok', '✓'],
-    ],
-  },
-  {
-    feat: 'This demo, end to end',
-    cells: [
-      ['ok', ''],
-      ['ok', ''],
-      ['partial', ''],
-      ['partial', ''],
-    ],
-  },
+// ── where the FARM runs — portability, not browser-export trivia ──
+const HOSTS: { icon: string; name: string; note: string }[] = [
+  { icon: '🪰', name: 'Fly.io', note: 'Firecracker microVMs' },
+  { icon: '☁️', name: 'AWS', note: 'EC2, ECS, your own box' },
+  { icon: '🐳', name: 'Docker', note: 'anywhere it runs' },
+  { icon: '🖥', name: 'Bare metal', note: 'no platform required' },
 ];
-const BROWSERS = ['Chrome', 'Edge', 'Safari', 'Firefox'];
-const CELL_BG: Record<Cell[0], string> = { ok: '#15301f', partial: '#332a12', no: '#331717' };
-const CELL_FG: Record<Cell[0], string> = { ok: '#7fdca0', partial: '#e8c06b', no: '#ff8080' };
-const CELL_MARK: Record<Cell[0], string> = { ok: '✓', partial: '~', no: '✕' };
 
-function CompatMatrix(): JSX.Element {
+function PortableHosting(): JSX.Element {
   return (
     <div style={{ marginTop: 30 }}>
-      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Where it runs</div>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Self-host the render farm anywhere.</div>
       <div style={{ color: '#8a8a99', fontSize: 14, marginBottom: 14, maxWidth: 720 }}>
-        It's all standard web platform — WebCodecs + canvas. <span style={{ color: '#e8c06b' }}>~</span> = works with caveats (Firefox's
-        encoder is newer; Safari's foreignObject→canvas has quirks).
+        The renderer is a plain Node package — no proprietary runtime, no vendor lock-in. Slice a render across Firecracker microVMs on
+        Fly.io, a box on AWS, or your own metal: wherever you already deploy.
       </div>
-      <div style={{ ...card, overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13, minWidth: 520 }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: 'left', padding: '12px 16px', color: '#8a8a99', fontWeight: 600, borderBottom: '1px solid #1d1d25' }}>
-                Feature
-              </th>
-              {BROWSERS.map((b) => (
-                <th
-                  key={b}
-                  style={{ padding: '12px 8px', color: '#cfcfd8', fontWeight: 600, borderBottom: '1px solid #1d1d25', width: 92 }}
-                >
-                  {b}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {COMPAT.map((row) => (
-              <tr key={row.feat}>
-                <td
-                  style={{
-                    padding: '10px 16px',
-                    color: '#cfcfd8',
-                    fontFamily: 'ui-monospace, monospace',
-                    fontSize: 12.5,
-                    borderBottom: '1px solid #16161d',
-                  }}
-                >
-                  {row.feat}
-                </td>
-                {row.cells.map((c, i) => (
-                  <td key={BROWSERS[i]} style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #16161d' }}>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 1,
-                        background: CELL_BG[c[0]],
-                        color: CELL_FG[c[0]],
-                        borderRadius: 7,
-                        padding: '6px 0',
-                        width: 60,
-                        fontWeight: 700,
-                      }}
-                    >
-                      <span style={{ fontSize: 14 }}>{CELL_MARK[c[0]]}</span>
-                      {c[1] && <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 500 }}>{c[1]}</span>}
-                    </span>
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {HOSTS.map((h) => (
+          <span
+            key={h.name}
+            style={{
+              ...card,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '12px 16px',
+            }}
+          >
+            <span style={{ fontSize: 18 }}>{h.icon}</span>
+            <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{h.name}</span>
+              <span style={{ color: '#8a8a99', fontSize: 12 }}>{h.note}</span>
+            </span>
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -528,7 +454,7 @@ export function ExportShowcase(): JSX.Element {
       )}
 
       <CssReveal />
-      <CompatMatrix />
+      <PortableHosting />
       <VsTable />
     </div>
   );
