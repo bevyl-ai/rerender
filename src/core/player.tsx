@@ -249,9 +249,15 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
             position: 'absolute',
             top: 0,
             left: 0,
-            // No willChange here. @remotion/player sets none, and forcing this div to a GPU layer
-            // made the descendant <video> a NESTED promoted layer — a second integer-snap seam
-            // that compounds the Ken Burns shake rather than fixing it.
+            // Flatten the whole composition (incl. any <video>) into ONE rasterized layer before
+            // the fractional display down-scale is applied. A CSS filter forces the subtree to be
+            // rendered into an offscreen buffer as a unit, so a <video> is no longer its own
+            // compositor layer — and a separate video layer is what the GPU presents snapped to
+            // whole device pixels, making its position wobble frame-to-frame under the animated
+            // Ken Burns scale (the shake). Rasterized-then-down-scaled, the video is bilinearly
+            // sub-pixel sampled instead — exactly why the canvas-drawn export is smooth.
+            // (opacity(0.999) is visually imperceptible; its only job is to trigger the flatten.)
+            filter: 'opacity(0.999)',
           }}
         >
           <ConfigContext.Provider value={config}>

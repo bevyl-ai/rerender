@@ -165,14 +165,11 @@ export function Video({
       playsInline
       crossOrigin={crossOrigin}
       className={className}
-      // While PLAYING, force the <video> off the hardware-overlay plane and onto a regular
-      // composited texture by applying a (visually-imperceptible) filter. An overlay video is
-      // presented snapped to whole device pixels, so under the animated Ken Burns scale its snap
-      // residual wobbles frame-to-frame = shake; a texture is sub-pixel sampled (bilinear), which
-      // is exactly why the canvas-drawn export is smooth. The filter forces an offscreen raster
-      // pass, which a hardware overlay can't do. Paused/while-rendering we drop it so the
-      // frame-stepped capture stays pixel-exact. (A composition's own style still wins via ...style.)
-      style={playing ? { filter: 'opacity(0.999)', ...style } : style}
+      // No hint on the <video> itself — a filter HERE keeps it a separate (now texture) layer,
+      // which still gets position-snapped to whole device pixels when scaled. The fix is on the
+      // Player's scaled container, whose filter flattens this video INTO the down-scaled layer so
+      // it's sub-pixel sampled. (A composition's own style wins via ...style.)
+      style={style}
       onCanPlay={onCanPlay}
       onError={onError}
       onSeeking={onSeeking}
