@@ -45,6 +45,12 @@ const GRID: Cell[] = [
   { dx: G, dy: G, label: 'linear-gradient', bg: 'linear-gradient(135deg,#ff5e8a,#a64bf4)', r: 24 },
 ];
 
+const BOKEH = [
+  { x: 210, y: 180, hue: 330, op: 0.5 },
+  { x: 1080, y: 540, hue: 264, op: 0.42 },
+  { x: 660, y: 640, hue: 40, op: 0.46 },
+];
+
 function highlight(text: string): JSX.Element[] {
   return text.split(/('[^']*')/g).map((p, i) => (
     <span key={`${p}-${i}`} style={p.startsWith("'") ? { color: STR } : undefined}>
@@ -183,6 +189,25 @@ export function CodeToFilm(): JSX.Element {
           background: `linear-gradient(120deg, hsla(${gradeHue},85%,55%,0.6) 0%, transparent 55%, hsla(${gradeHue - 70},85%,52%,0.5) 100%)`,
         }}
       />
+      {/* drifting bokeh — soft out-of-focus light for cinematic depth (filter:blur renders to mp4) */}
+      {BOKEH.map((b, i) => (
+        <div
+          key={`bokeh-${b.hue}`}
+          style={{
+            position: 'absolute',
+            left: b.x + Math.sin(ph * 0.5 + i * 2) * 60,
+            top: b.y + Math.cos(ph * 0.4 + i) * 40,
+            width: 300,
+            height: 300,
+            marginLeft: -150,
+            marginTop: -150,
+            borderRadius: '50%',
+            opacity: grade * 1.7 * b.op,
+            background: `radial-gradient(circle, hsla(${b.hue},92%,68%,0.6), transparent 64%)`,
+            filter: 'blur(12px)',
+          }}
+        />
+      ))}
       {/* cinematic vignette for depth */}
       <AbsoluteFill
         style={{ opacity: seg(168, 196) * 0.55, background: 'radial-gradient(circle at 50% 46%, transparent 42%, rgba(2,1,8,0.9) 100%)' }}
