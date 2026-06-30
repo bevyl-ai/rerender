@@ -238,7 +238,6 @@ const VS: { label: string; remotion: string; rerender: string }[] = [
   { label: 'Render in the browser', remotion: 'Experimental (@remotion/web-renderer)', rerender: 'Yes — what this page just did' },
   { label: 'Distributed / farm render', remotion: 'AWS Lambda only', rerender: 'Any host — or your own Firecracker' },
   { label: 'To render with no cloud', remotion: 'Node + headless Chrome + an ffmpeg binary', rerender: 'a browser tab' },
-  { label: 'Drop-in API', remotion: 'the original', rerender: 'same API — swap the import' },
 ];
 
 function VsTable(): JSX.Element {
