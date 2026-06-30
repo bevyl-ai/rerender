@@ -122,6 +122,16 @@ async function openVideoSinks(stage: HTMLElement): Promise<Map<string, VideoSamp
   return sinks;
 }
 
+/** Resolve a computed `border-radius` (px or %) to a canvas-space corner radius for a dw×dh box,
+ *  capped at a full pill/circle. Only the first radius is honoured (no elliptical/per-corner). */
+function cssRadius(value: string, dw: number, dh: number): number {
+  const first = value?.split(/[\s/]+/)[0];
+  if (!first) return 0;
+  const min = Math.min(dw, dh);
+  const r = first.endsWith('%') ? (Number.parseFloat(first) / 100) * min : Number.parseFloat(first);
+  return Number.isFinite(r) && r > 0 ? Math.min(r, min / 2) : 0;
+}
+
 /** Capture one frame: composite each <video> natively (its laid-out box, with object-fit
  *  and any scale/translate transform reflected via getBoundingClientRect — rotation/skew
  *  are not), then draw the DOM overlay — everything except the videos — on top via an SVG
@@ -146,11 +156,22 @@ async function paintFrame(
     const dy = (r.top - stageRect.top) * sy;
     const dw = r.width * sx;
     const dh = r.height * sy;
-    const fit = getComputedStyle(v).objectFit || 'fill';
+    const cs = getComputedStyle(v);
+    const fit = cs.objectFit || 'fill';
     // A <video> scaled to nothing (e.g. animating in from scale 0) has a 0×0 box; drawing it would
     // divide by zero and throw. Skip the draw — but still pull + close the decoded sample so the
     // sequential decoder stays in lockstep with the frame loop.
     const visible = dw > 0 && dh > 0;
+    // Honour the element's own border-radius (foreignObject clips DOM but composites the <video>
+    // separately, so we must clip the canvas ourselves) — lets a <Video> round its corners or
+    // become a circle, matching the preview.
+    const radius = visible ? cssRadius(cs.borderRadius, dw, dh) : 0;
+    if (radius > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(dx, dy, dw, dh, radius);
+      ctx.clip();
+    }
     const gen = frames.get(v);
     if (gen) {
       const sample = (await gen.next()).value; // next decoded frame, in order
@@ -161,6 +182,7 @@ async function paintFrame(
     } else if (v.videoWidth && visible) {
       drawVideo(ctx, v, dx, dy, dw, dh, fit);
     }
+    if (radius > 0) ctx.restore();
   }
 
   const clone = stage.cloneNode(true) as HTMLElement;
