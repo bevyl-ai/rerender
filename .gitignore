@@ -8,3 +8,7 @@ out/
 !public/demo-clip.mp4
 
 compat/out/
+
+.env
+.env.*
+!.env.example
