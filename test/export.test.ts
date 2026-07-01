@@ -30,7 +30,17 @@ async function launchTestChrome(): ReturnType<typeof puppeteer.launch> {
   return puppeteer.launch({
     executablePath,
     headless: true,
-    args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--use-gl=angle', '--use-angle=swiftshader', '--hide-scrollbars'],
+    args: [
+      '--no-sandbox',
+      '--autoplay-policy=no-user-gesture-required',
+      '--use-gl=angle',
+      '--use-angle=swiftshader',
+      '--hide-scrollbars',
+      // CI containers typically cap /dev/shm at 64MB; Chrome's renderer uses it for shared memory
+      // and silently crashes (context destroyed, no JS error, no timeout) once a memory-heavy
+      // operation like this export's WebCodecs encoding exceeds it. Falls back to /tmp instead.
+      '--disable-dev-shm-usage',
+    ],
   });
 }
 const MIME: Record<string, string> = {
