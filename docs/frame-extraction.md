@@ -69,6 +69,7 @@ Self-contained: no imports from the rest of rerender, no dependencies, browser-o
 - `extractor.ts` — `createFrameExtractor(...)`: groups requested timestamps by GOP, bounded
   parallel GOP fetches, one `VideoDecoder` pass per GOP, presentation-timestamp matching with
   clamping + dedupe.
+- `frame-store.ts` / `frame-cache.ts` — the batteries-included layer (see below).
 - `index.ts` — public API.
 
 ## API
@@ -92,6 +93,40 @@ Design rules:
   one callback (duplicates after clamping share a decoded frame via per-target callbacks).
 - The caller owns delivered frames (`close()` them); everything else is closed internally.
 - `extract()` is safe to call repeatedly and concurrently; the sample table is built once.
+
+## Frame store (batteries included)
+
+`createFrameExtractor` is deliberately low-level — one src, caller owns lifecycle and frames.
+`createFrameStore` is the layer every timeline-filmstrip consumer would otherwise rebuild:
+
+```ts
+import { createFrameStore } from 'rerender/extract';
+
+const store = createFrameStore();
+// timestamps in µs; the store snaps them to the sample grid, dedupes in-flight decodes,
+// serves cache hits synchronously-ish, and fans decoded frames out to every subscriber.
+const unsubscribe = store.subscribeToExtraction(url, [0, 1_500_000], (frame) => {
+  ctx.drawImage(frame, x, 0, w, h); // store closes the frame after the callback
+});
+store.getClosestCachedFrame(url, 1_400_000); // nearest cached frame for placeholder paints
+store.snapToSampleMicros(url, 1_400_000); // the frame identity a request resolves to
+store.dispose();
+```
+
+What it owns (all unit-tested in `test/frame-store.test.ts`):
+
+- One extractor per src for the store's lifetime — the sample table is fetched/flattened once.
+- Snap-to-sample-grid keying, so requests at different granularities hit the same cache entries
+  and in-flight decodes instead of re-decoding the same GOP per subscriber.
+- An LRU `FrameCache` of decoded frames with a per-src sorted index for nearest-frame lookups
+  (`getClosestCachedFrame`, for painting a stale-but-close frame while the exact one decodes).
+- Delivery safety: subscribers are isolated (one throwing doesn't starve the rest), late frames
+  after `dispose()` are closed not leaked, failed extractions retry on the next subscription.
+
+Extraction hoisted from Bevyl's filmstrip stack once the API went cold
+(`apps/web/lib/video-extraction/frame-service.ts` → here, `createFrameService` →
+`createFrameStore`). The product keeps its fill planners and canvas hydration; the store is the
+product-agnostic half.
 
 ## Edges handled (and tested)
 

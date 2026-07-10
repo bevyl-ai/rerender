@@ -57,7 +57,7 @@
     "check": "biome check .",
     "knip": "knip",
     "publint": "publint",
-    "test:extract": "tsx test/extract-sample-table.test.ts"
+    "test:extract": "tsx test/extract-sample-table.test.ts && tsx test/frame-store.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1075.0",
