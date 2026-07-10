@@ -28,7 +28,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json",
-    "./extract": "./src/extract/index.ts"
+    "./extract": "./src/extract/index.ts",
+    "./media-parser": "./src/media-parser/index.ts"
   },
   "files": [
     "bin",
