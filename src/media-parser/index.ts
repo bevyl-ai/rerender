@@ -7,27 +7,25 @@ import { ALL_FORMATS, BlobSource, BufferSource, Input, type Source, UrlSource } 
 /** Remotion's media-parser timescale (microseconds). */
 export const WEBCODECS_TIMESCALE = 1_000_000;
 
-export interface ParseMediaFields {
-  durationInSeconds?: boolean;
-  slowDurationInSeconds?: boolean;
-  dimensions?: boolean;
-  fps?: boolean;
-  videoCodec?: boolean;
-  audioCodec?: boolean;
+interface ParseMediaFieldValues {
+  durationInSeconds: number | null;
+  slowDurationInSeconds: number;
+  dimensions: { width: number; height: number } | null;
+  fps: number | null;
+  videoCodec: string | null;
+  audioCodec: string | null;
 }
 
-export interface ParseMediaResult {
-  durationInSeconds?: number | null;
-  slowDurationInSeconds?: number;
-  dimensions?: { width: number; height: number } | null;
-  fps?: number | null;
-  videoCodec?: string | null;
-  audioCodec?: string | null;
-}
+export type ParseMediaFields = { [K in keyof ParseMediaFieldValues]?: boolean };
 
-export interface ParseMediaOptions {
+/** Requested fields are present in the result — same contract as Remotion's parseMedia. */
+export type ParseMediaResult<F extends ParseMediaFields = ParseMediaFields> = {
+  [K in keyof ParseMediaFieldValues as F[K] extends true ? K : never]: ParseMediaFieldValues[K];
+};
+
+export interface ParseMediaOptions<F extends ParseMediaFields = ParseMediaFields> {
   src: string | Blob | ArrayBuffer | Uint8Array;
-  fields?: ParseMediaFields;
+  fields?: F;
   acknowledgeRemotionLicense?: boolean;
 }
 
@@ -42,10 +40,10 @@ function toSource(src: ParseMediaOptions['src']): Source {
   return new BufferSource(new Uint8Array(src));
 }
 
-export async function parseMedia(options: ParseMediaOptions): Promise<ParseMediaResult> {
+export async function parseMedia<const F extends ParseMediaFields>(options: ParseMediaOptions<F>): Promise<ParseMediaResult<F>> {
   const input = new Input({ formats: ALL_FORMATS, source: toSource(options.src) });
-  const fields = options.fields ?? {};
-  const result: ParseMediaResult = {};
+  const fields: ParseMediaFields = options.fields ?? {};
+  const result: Partial<ParseMediaFieldValues> = {};
   const video = await input.getPrimaryVideoTrack();
 
   if (fields.durationInSeconds) result.durationInSeconds = await input.getDurationFromMetadata();
@@ -67,5 +65,6 @@ export async function parseMedia(options: ParseMediaOptions): Promise<ParseMedia
   }
   if (fields.audioCodec) result.audioCodec = (await input.getPrimaryAudioTrack())?.codec ?? null;
   if (fields.fps) result.fps = video ? (await video.computePacketStats()).averagePacketRate : null;
-  return result;
+  // The conditional construction above fills exactly the requested keys; TS cannot prove it.
+  return result as ParseMediaResult<F>;
 }
