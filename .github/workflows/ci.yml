@@ -27,10 +27,10 @@ jobs:
         run: npm run check
       - name: Dead code / unused deps (knip)
         run: npm run knip
-      - name: Package publish surface (publint)
-        run: npm run publint
       - name: Library dist build + license guard
         run: npm run build:lib
+      - name: Package publish surface (publint)
+        run: npm run publint
       - name: Package types (attw)
         run: npm run attw
 
