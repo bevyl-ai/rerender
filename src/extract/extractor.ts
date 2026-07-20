@@ -67,13 +67,17 @@ interface GopJob {
 
 export async function createFrameExtractor(options: FrameExtractorOptions): Promise<FrameExtractor> {
   const abort = new AbortController();
-  const external = options.signal;
-  if (external) {
-    if (external.aborted) abort.abort(external.reason);
-    else external.addEventListener('abort', () => abort.abort(external.reason), { once: true });
-  }
+  // dispose() and the caller's signal compose into one extractor-level signal.
+  // AbortSignal.any covers a pre-aborted caller signal and detaches cleanly — a
+  // manual listener on a long-lived caller signal would pin the internal
+  // controller past dispose().
+  const extractorSignal = options.signal ? AbortSignal.any([abort.signal, options.signal]) : abort.signal;
   const source: RangeSource = createUrlSource(options.src, options.fetchFn);
-  const table = parseSampleTable(await source.readThroughMoov(abort.signal));
+  const moovBytes = await source.readThroughMoov(extractorSignal);
+  // The read can settle in the same tick the signal aborts (abort events are not
+  // replayed) — reject rather than resolve an already-dead extractor.
+  extractorSignal.throwIfAborted();
+  const table = parseSampleTable(moovBytes);
   const { presentationTicks, byteOffsets, byteSizes, keySampleIndices, timescale } = table;
   const maxParallel = options.maxParallelFetches ?? 4;
 
@@ -143,7 +147,7 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
           } catch {
             // already closed
           }
-          reject(signal.reason ?? new Error('frame extractor disposed'));
+          reject(signal.reason);
         };
         signal.addEventListener('abort', onAbort, { once: true });
         removeAbortListener = () => signal.removeEventListener('abort', onAbort);
@@ -182,8 +186,8 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   };
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
-    const signal = extractOptions?.signal ? AbortSignal.any([abort.signal, extractOptions.signal]) : abort.signal;
-    if (signal.aborted) throw signal.reason ?? new Error('frame extractor disposed');
+    const signal = extractOptions?.signal ? AbortSignal.any([extractorSignal, extractOptions.signal]) : extractorSignal;
+    signal.throwIfAborted();
     const byGop = new Map<number, GopJob>();
     for (const seconds of timestampsInSeconds) {
       const { gopIndex, presentationMicros } = resolveTarget(seconds);

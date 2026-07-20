@@ -70,6 +70,17 @@ function fileFetch(path: string, opts?: { holdFromCall?: number; settleOnAbortFr
   await assert.rejects(pending, (error: unknown) => error === reason);
 }
 
+// Setup that settles WITH bytes in the same tick the signal aborts must reject —
+// never resolve an already-dead extractor.
+{
+  const controller = new AbortController();
+  const { fetchFn } = fileFetch(FIXTURE, { settleOnAbortFromCall: 1 });
+  const pending = createFrameExtractor({ src: SRC, fetchFn, signal: controller.signal });
+  const reason = new Error('aborted as setup read settled');
+  setTimeout(() => controller.abort(reason), 10);
+  await assert.rejects(pending, (error: unknown) => error === reason);
+}
+
 // A per-call signal cancels that call's in-flight GOP fetch; the extractor stays usable.
 {
   // Call 1 is the moov probe (faststart moov fits the head probe); GOP fetches follow.
