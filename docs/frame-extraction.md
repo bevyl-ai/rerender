@@ -108,8 +108,8 @@ Design rules:
 - To bound **setup only**, abort a dedicated controller from a timer you clear once
   `createFrameExtractor` settles; per-call `extract()` signals can be plain
   `AbortSignal.timeout(...)` since each call composes its own signal.
-- Signal support uses `AbortSignal.any`/`throwIfAborted` (Chrome 116+, Safari 17.4+,
-  Node 20.3+); code paths without signals don't touch either.
+- Passing a signal (extractor-level or per-call) uses `AbortSignal.any` (Chrome 116+,
+  Safari 17.4+, Node 20.3+); signal-free usage never touches it.
 
 ## Frame store (batteries included)
 

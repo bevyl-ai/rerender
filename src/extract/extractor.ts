@@ -82,7 +82,7 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   const moovBytes = await source.readThroughMoov(extractorSignal);
   // The read can settle in the same tick the signal aborts (abort events are not
   // replayed) — reject rather than resolve an already-dead extractor.
-  extractorSignal.throwIfAborted();
+  if (extractorSignal.aborted) throw extractorSignal.reason;
   const table = parseSampleTable(moovBytes);
   const { presentationTicks, byteOffsets, byteSizes, keySampleIndices, timescale } = table;
   const maxParallel = options.maxParallelFetches ?? 4;
@@ -115,8 +115,9 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     const bytes = await source.read(rangeStart, rangeEnd, signal);
     // The read can settle in the same tick the signal aborts; abort events are
     // not replayed, so registering onAbort below would never fire. Bail before
-    // touching the decoder.
-    signal.throwIfAborted();
+    // touching the decoder. (Explicit check, not throwIfAborted — Chrome 94–99
+    // has WebCodecs but not that method, and this path runs signal-free too.)
+    if (signal.aborted) throw signal.reason;
 
     // presentation µs → requested seconds still waiting on that frame
     const wanted = new Map<number, number[]>();
@@ -193,7 +194,7 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
     const signal = extractOptions?.signal ? AbortSignal.any([extractorSignal, extractOptions.signal]) : extractorSignal;
-    signal.throwIfAborted();
+    if (signal.aborted) throw signal.reason;
     const byGop = new Map<number, GopJob>();
     for (const seconds of timestampsInSeconds) {
       const { gopIndex, presentationMicros } = resolveTarget(seconds);
