@@ -103,6 +103,10 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     const rangeStart = byteOffsets[first]!;
     const rangeEnd = byteOffsets[end - 1]! + byteSizes[end - 1]!;
     const bytes = await source.read(rangeStart, rangeEnd, signal);
+    // The read can settle in the same tick the signal aborts; abort events are
+    // not replayed, so registering onAbort below would never fire. Bail before
+    // touching the decoder.
+    signal.throwIfAborted();
 
     // presentation µs → requested seconds still waiting on that frame
     const wanted = new Map<number, number[]>();

@@ -17,7 +17,7 @@ const SRC = 'https://fixture.test/faststart.mp4';
  * onward, requests never resolve — they only reject when their signal aborts —
  * so tests can pin an "in-flight" fetch deterministically.
  */
-function fileFetch(path: string, opts?: { holdFromCall?: number }) {
+function fileFetch(path: string, opts?: { holdFromCall?: number; settleOnAbortFromCall?: number }) {
   const bytes = readFileSync(path);
   let calls = 0;
   const fetchFn: typeof fetch = (_input, init) =>
@@ -28,16 +28,25 @@ function fileFetch(path: string, opts?: { holdFromCall?: number }) {
         reject(signal.reason);
         return;
       }
+      const serve = () => {
+        const range = new Headers(init?.headers).get('Range');
+        const match = /^bytes=(\d+)-(\d+)$/.exec(range ?? '');
+        assert.ok(match, `unexpected Range: ${range}`);
+        const start = Number(match[1]);
+        const end = Math.min(Number(match[2]) + 1, bytes.length);
+        resolve(new Response(bytes.subarray(start, end), { status: 206 }));
+      };
       if (opts?.holdFromCall !== undefined && calls >= opts.holdFromCall) {
         signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
         return;
       }
-      const range = new Headers(init?.headers).get('Range');
-      const match = /^bytes=(\d+)-(\d+)$/.exec(range ?? '');
-      assert.ok(match, `unexpected Range: ${range}`);
-      const start = Number(match[1]);
-      const end = Math.min(Number(match[2]) + 1, bytes.length);
-      resolve(new Response(bytes.subarray(start, end), { status: 206 }));
+      // Settled-while-aborting race: the read RESOLVES with real bytes in the
+      // same tick the abort fires, so the awaiter resumes with an already-aborted signal.
+      if (opts?.settleOnAbortFromCall !== undefined && calls >= opts.settleOnAbortFromCall) {
+        signal?.addEventListener('abort', serve, { once: true });
+        return;
+      }
+      serve();
     });
   return { fetchFn, calls: () => calls };
 }
@@ -82,6 +91,23 @@ function fileFetch(path: string, opts?: { holdFromCall?: number }) {
   assert.ok(calls() > callsBefore, 'second extract() should start a new GOP fetch');
   second.abort(new Error('test cleanup'));
   await secondPending.catch(() => undefined);
+  extractor.dispose();
+}
+
+// A GOP read that settles WITH bytes in the same tick the signal aborts must still
+// reject with the abort reason — never proceed to the decoder with a dead signal.
+// (Without the post-read guard this crashes on VideoDecoder in node, failing the
+// reason assertion.)
+{
+  const { fetchFn } = fileFetch(FIXTURE, { settleOnAbortFromCall: 2 });
+  const extractor = await createFrameExtractor({ src: SRC, fetchFn });
+  const controller = new AbortController();
+  const reason = new Error('aborted as read settled');
+  const pending = extractor.extract([0], () => assert.fail('no frames expected'), {
+    signal: controller.signal,
+  });
+  setTimeout(() => controller.abort(reason), 10);
+  await assert.rejects(pending, (error: unknown) => error === reason);
   extractor.dispose();
 }
 
