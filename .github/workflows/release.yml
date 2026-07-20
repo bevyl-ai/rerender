@@ -1,6 +1,12 @@
-# Publishes to npm with provenance on every v* tag push, after re-running the fast
-# verification gate. Requires the NPM_TOKEN repo secret (an npm automation token for
-# an account with publish rights on the package name).
+# Publishes to npm on every v* tag push, after re-running the fast verification gate.
+#
+# Auth, in order of preference:
+#  1. Trusted publishing (OIDC, zero secrets): configure this repo + workflow as a
+#     trusted publisher in the package's npmjs.com settings (available after the
+#     first publish). npm >=11.5 exchanges the id-token automatically; provenance
+#     is implied.
+#  2. NPM_TOKEN repo secret (granular automation token): used when set; required
+#     for the very first publish, before trusted publishing can be configured.
 name: release
 
 on:
@@ -9,7 +15,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # npm provenance
+  id-token: write # npm provenance + OIDC trusted publishing
 
 jobs:
   publish:
@@ -21,6 +27,8 @@ jobs:
           node-version: '22'
           cache: npm
           registry-url: 'https://registry.npmjs.org'
+      # setup-node's bundled npm predates OIDC trusted publishing.
+      - run: npm install -g npm@latest
       - run: npm ci
       - name: Verify
         run: npm run typecheck && npm run check && npm run test:extract && npm run build:lib && npm run publint && npm run attw
