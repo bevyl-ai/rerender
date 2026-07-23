@@ -24,25 +24,24 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "//exports": "Consumed as a GitHub source tarball (dist/ is gitignored and only built by prepack on npm publish), so the exports resolve to TypeScript source — the consumer transpiles them (Bevyl's next.config lists 'rerender' in transpilePackages). publishConfig.exports below restores the built dist form for `npm publish`.",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./extract": {
-      "types": "./dist/extract.d.ts",
-      "default": "./dist/extract.js"
-    },
-    "./media-parser": {
-      "types": "./dist/media-parser.d.ts",
-      "default": "./dist/media-parser.js"
-    },
-    "./media": {
-      "types": "./dist/media.d.ts",
-      "default": "./dist/media.js"
-    },
+    ".": "./src/index.ts",
+    "./extract": "./src/extract/index.ts",
+    "./media-parser": "./src/media-parser/index.ts",
+    "./media": "./src/media/index.ts",
     "./package.json": "./package.json",
     "./audio-engine": "./src/core/audio-engine.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "./extract": { "types": "./dist/extract.d.ts", "default": "./dist/extract.js" },
+      "./media-parser": { "types": "./dist/media-parser.d.ts", "default": "./dist/media-parser.js" },
+      "./media": { "types": "./dist/media.d.ts", "default": "./dist/media.js" },
+      "./package.json": "./package.json",
+      "./audio-engine": "./src/core/audio-engine.ts"
+    }
   },
   "files": [
     "bin",
