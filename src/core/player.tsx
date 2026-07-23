@@ -4,6 +4,7 @@
 // playback transport drives. What plays here is exactly what the recorder records.
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ComponentType, type CSSProperties } from 'react';
 import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from './frame';
+import { beginPlayback, getAnchor, getCtx, resumeCtx, stopPlayback } from './audio-engine';
 import { injectRerenderCSS } from './default-css';
 
 injectRerenderCSS(); // match Remotion's global reset so preview == render == Remotion
@@ -139,9 +140,17 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
       if (playingRef.current === value) return;
       playingRef.current = value;
       setPlayingState(value);
+      // Drive the Web Audio scheduler: anchor it to (ctxTime, frame) at play; tear down on pause.
+      // resumeCtx runs inside the play call (a user gesture) so autoplay policy is satisfied.
+      if (value) {
+        resumeCtx();
+        beginPlayback(frameRef.current, fps);
+      } else {
+        stopPlayback();
+      }
       emit(value ? 'play' : 'pause', undefined);
     },
-    [emit],
+    [emit, fps],
   );
 
   // The rAF clock: advance the frame at fps·playbackRate while playing; loop or fire `ended`.
@@ -149,19 +158,21 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
     if (!playing) return;
     let anchor = { t: performance.now(), f: frameRef.current >= durationInFrames - 1 ? 0 : frameRef.current };
     const tick = (): void => {
-      const elapsed = (performance.now() - anchor.t) / 1000;
+      // Audio is the master clock: when playback is anchored, derive the frame from the
+      // AudioContext clock so video follows the (sample-accurate) audio with no wall-vs-audio
+      // drift over long timelines. Silent compositions fall back to the wall clock.
       // Commit only WHOLE frames during playback, like @remotion/player's floored clock. The rAF
       // fires ~60x/s but we re-render the React tree (and thus re-evaluate the Ken Burns transform
-      // on the <video>) only when the integer frame changes — i.e. at fps. A live <video> is a
-      // compositor layer that the GPU presents snapped to integer device pixels; re-snapping it
-      // 60x/s under a continuously-changing effective scale is exactly what reads as shake. The
-      // footage still plays continuously via the native <video>; only the React-driven transforms
-      // step at fps — the same cadence the (smooth) export uses.
-      const raw = anchor.f + elapsed * fps * playbackRate;
+      // on the <video>) only when the integer frame changes — i.e. at fps.
+      const aud = getAnchor();
+      const raw = aud
+        ? aud.frame + (getCtx().currentTime - aud.ctxTime) * fps * playbackRate
+        : anchor.f + ((performance.now() - anchor.t) / 1000) * fps * playbackRate;
       if (raw >= durationInFrames) {
         if (loop) {
           anchor = { t: performance.now(), f: 0 };
           commitFrame(0);
+          beginPlayback(0, fps); // re-anchor audio + reschedule clips from frame 0
         } else {
           commitFrame(durationInFrames - 1);
           setPlaying(false);

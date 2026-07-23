@@ -1,7 +1,8 @@
 // The primitive vocabulary — real DOM, Remotion-compatible. These are thin wrappers
 // over <div>/<img>/<video>/<audio>, so arbitrary CSS in a composition just works.
-import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
-import { useCurrentFrame, useIsPlaying, useTimelinePosition, useVideoConfig } from './frame';
+import { memo, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { SequenceFromContext, useCurrentFrame, useIsPlaying, useTimelinePosition, useVideoConfig } from './frame';
+import { decode, register, unregister } from './audio-engine';
 import { registerRenderAsset } from './assets';
 import { continueRender, delayRender } from './delay-render';
 
@@ -229,6 +230,11 @@ interface AudioProps extends MediaProps {
   useWebAudioApi?: boolean;
 }
 
+// Preview playback goes through the Web Audio scheduler (audio-engine): decode each source
+// once, place each clip's slice at a precise AudioContext time. That is sample-accurate and
+// warms during premount, so a dense edit has no startup silence and no per-cut gap — the html5
+// <audio>-per-clip path had both (inherent .play() latency under a free-running frame clock).
+// Renders are unaffected: they mux from useRenderAsset below, not from playback.
 export function Audio({
   src,
   trimBefore,
@@ -236,35 +242,48 @@ export function Audio({
   trimAfter,
   playbackRate = 1,
   volume,
-  crossOrigin,
+  crossOrigin: _crossOrigin,
   pauseWhenBuffering: _pauseWhenBuffering,
   useWebAudioApi: _useWebAudioApi,
-}: AudioProps): JSX.Element {
+}: AudioProps): JSX.Element | null {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const playing = useIsPlaying();
-  const ref = useRef<HTMLAudioElement>(null);
+  const from = useContext(SequenceFromContext); // absolute timeline start frame (stable during premount)
   const offset = trimBefore ?? startFrom ?? 0;
   useRenderAsset('audio', src, { offset, playbackRate, volume: resolveVolume(volume, frame) });
 
-  useEffect(() => {
-    const a = ref.current;
-    if (!a) return;
-    const target = sourceFrameAt(frame, offset, playbackRate, trimAfter) / fps;
-    if (playing) {
-      a.playbackRate = playbackRate;
-      if (a.paused) void a.play().catch(() => undefined);
-      if (Math.abs(a.currentTime - target) > 0.3) a.currentTime = target;
-    } else {
-      if (!a.paused) a.pause();
-      a.currentTime = target;
-    }
-  }, [frame, playing, fps, offset, playbackRate, trimAfter]);
+  const rendering = typeof window !== 'undefined' && (window as unknown as { __rerenderEnv?: string }).__rerenderEnv === 'rendering';
+  const durFrames = trimAfter !== undefined ? Math.max(0, trimAfter - offset) : Number.POSITIVE_INFINITY;
 
-  return (
-    <>
-      <audio ref={ref} src={src} crossOrigin={crossOrigin} />
-      <MediaVolume mediaRef={ref} volume={volume} />
-    </>
-  );
+  // volume may be a fresh inline fade function each render; keep it in a ref so its identity
+  // doesn't re-trigger the schedule effect (which would restart the source every frame).
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
+
+  const idRef = useRef<symbol>();
+  if (!idRef.current) idRef.current = Symbol('rerender-audio-clip');
+
+  // Warm: decode the source the moment this clip mounts (including its premount window).
+  useEffect(() => {
+    if (!rendering) void decode(src).catch(() => undefined);
+  }, [src, rendering]);
+
+  // Register with the scheduler while playback is active; it schedules (and reschedules on
+  // play/loop/seek). Unregister on unmount.
+  useEffect(() => {
+    if (rendering || !playing) return undefined;
+    const id = idRef.current as symbol;
+    let cancelled = false;
+    void decode(src).then((buffer) => {
+      if (cancelled) return;
+      register(id, { buffer, fromFrame: from, trimBefore: offset, durFrames, playbackRate, volume: volumeRef.current ?? 1, fps });
+    });
+    return () => {
+      cancelled = true;
+      unregister(id);
+    };
+  }, [playing, src, from, offset, durFrames, playbackRate, fps, rendering]);
+
+  return null;
 }
