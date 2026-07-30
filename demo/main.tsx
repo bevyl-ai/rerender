@@ -53,11 +53,11 @@ createRoot(root).render(
             letterSpacing: -1.6,
           }}
         >
-          Scrubbing mp4s, <span style={{ color: ACCENT }}>faster than ever.</span>
+          Nothing was prepared for this video.
         </h1>
         <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
-          This is an ordinary mp4 on an ordinary static host. No sprite sheet, no pre-rendered thumbnails, no wasm blob to download first,
-          no server. Drag the track: every frame is found, fetched, and decoded the moment you ask for it.
+          It's a plain .mp4 sitting on a static host. Drag the track and each frame is decoded as you land on it, out of a few kilobytes of
+          the file.
         </p>
       </section>
 
@@ -68,12 +68,12 @@ createRoot(root).render(
         <a href="https://github.com/bevyl-ai/rerender#rerender-videoextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
           <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender-video/extract</code>
         </a>
-        , a zero-dependency module that reads the index every mp4 already carries. It runs in production in{' '}
+        . Every mp4 already carries an index of where its frames live. This reads it, then asks the server for just those bytes.{' '}
         <a href="https://bevyl.ai" style={link}>
           Bevyl
         </a>
-        's editor timeline, where it replaced <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code> and made
-        deep seeks about 100× faster.
+        's editor timeline runs on it in production, in place of{' '}
+        <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>, which needed seconds for seeks this deep.
       </p>
 
       {/* ── act two: the same primitives, wired all the way into a renderer ── */}
@@ -85,8 +85,8 @@ createRoot(root).render(
           Export video <span style={{ color: ACCENT }}>in your browser.</span>
         </h2>
         <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.55, margin: '0 0 30px' }}>
-          Extraction is one module of a drop-in, MIT-licensed Remotion alternative. One click frame-steps the composition below, captures
-          each frame from the real DOM, and encodes an MP4 with WebCodecs — right here in this tab.
+          Extraction is one module. The rest is a drop-in, MIT-licensed Remotion alternative: React compositions rendered to real DOM. Press
+          the button and it encodes the composition below into an MP4 without leaving this tab.
         </p>
         <ExportShowcase />
       </section>
