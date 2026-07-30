@@ -161,18 +161,24 @@ product-agnostic half.
 - Audio.
 - Encrypted media.
 
-## First consumer
+## First consumer (shipped)
 
-Bevyl's editor timeline filmstrips (`apps/web/lib/video-extraction/frame-service.ts`): swaps
-`extractFramesOnWebWorker` for this module and deletes `@remotion/webcodecs` +
-`@remotion/media-parser` from the app in the same change. No server-side work: the module reads
-the filmstrip renditions (and legacy fallback renditions) already in production. Plan doc lives in
-the Bevyl repo (`docs/planning/active/2026-07-10-filmstrip-extraction-rerender-migration.md`).
+Bevyl's editor timeline filmstrips (`apps/web/lib/video-extraction/frame-service.ts`), live since
+2026-07-10 (BEV-4395): swapped `extractFramesOnWebWorker` for this module and deleted
+`@remotion/webcodecs` + `@remotion/media-parser` from the app in the same change. No server-side
+work — the module reads the filmstrip renditions (and legacy fallback renditions) already in
+production.
 
 ## Roadmap after POC
 
 1. Web Worker wrapper (`extract/worker`) so table-flatten + decode never touch the main thread.
 2. Puppeteer E2E in rerender's own test suite (same pattern as `test/export.test.ts`).
-3. Publish story: rerender is currently `private: true`; Bevyl consumes via a pinned git
-   dependency until rerender publishes to npm.
-4. Benchmark page for the README (the vs-remotion table above, reproducible).
+3. Publish story: still open, and blocked on the name. `rerender` on npm is an unrelated package
+   last published in 2018, so `npm publish` 403s and the release workflow can't complete a `v*`
+   tag. Consumers install from the GitHub tarball, which is what Bevyl already does. Publishing
+   needs either a different npm name or the existing one transferred.
+4. ~~Benchmark page~~ — superseded by something better: [rerender.video](https://rerender.video) is
+   a live scrubber (`demo/extract-showcase.tsx`). Drag the track and the frame under the playhead
+   is fetched and decoded on the spot, with the measured latency and bytes printed underneath
+   (7–10 ms and 20–50 KB per seek, warm, on a 52 s / 2 MB source). The vs-remotion table stays in
+   the README, where a reader who wants numbers will look for them.

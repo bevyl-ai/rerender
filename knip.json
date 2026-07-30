@@ -10,8 +10,7 @@
     "studio/main.tsx",
     "src/transitions/index.ts",
     "src/media-utils/index.ts",
-    "templates/*/src/index.ts",
-    "src/core/audio-engine.ts"
+    "templates/*/src/index.ts"
   ],
   "project": ["**/*.{ts,tsx,mjs}"],
   "rules": {

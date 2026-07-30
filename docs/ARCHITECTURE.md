@@ -4,6 +4,11 @@ The whole thing is: **author in Remotion's API, render to real DOM, capture each
 deterministically, encode with WebCodecs, mux with mediabunny.** No ffmpeg, no screenshot
 recording, no reimplemented CSS renderer.
 
+This document covers the **renderer**. The package also ships standalone browser media modules
+that the render path does not use and that do not import it — most importantly
+`rerender/extract`, the zero-dependency mp4 frame extractor that runs in production in
+Bevyl's editor timeline. It has its own doc: [frame-extraction.md](frame-extraction.md).
+
 ## The pieces
 
 ### 1. The runtime (`src/core`, `src/index.ts`): Remotion-compatible, renders to real DOM
