@@ -56,23 +56,25 @@ createRoot(root).render(
         >
           Frame extraction, fast AF.
         </h1>
-        <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
-          Zero preprocessing. Every mp4 already knows where its frames live, and this page went and got them, a few kilobytes at a time.
+        <p style={{ fontSize: 18, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 6px' }}>
+          Zero preprocessing. Drag the filmstrip. Every frame is one Range request and one WebCodecs decode.
+        </p>
+        <p style={{ fontSize: 14, color: '#6a6a76', maxWidth: 660, lineHeight: 1.6, margin: 0 }}>
+          1,253 frames indexed, 2 MB on disk. No sprite sheet, no sidecar index, no server.
         </p>
       </section>
 
       <ExtractShowcase />
 
-      <p style={{ marginTop: 26, fontSize: 15, color: '#6a6a76', maxWidth: 640, lineHeight: 1.6 }}>
-        That's{' '}
+      <p style={{ margin: '16px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
         <a href="https://github.com/bevyl-ai/rerender#rerenderextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
-          <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender/extract</code>
+          rerender/extract
         </a>
-        — zero dependencies, no sprite sheets, no server. Runs in production in{' '}
+        . Zero dependencies. Runs in production in{' '}
         <a href="https://bevyl.ai" style={link}>
           Bevyl
         </a>
-        's editor timeline, replacing <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>.
+        's editor timeline, replacing @remotion/webcodecs.
       </p>
 
       <section style={{ marginTop: 72 }}>
