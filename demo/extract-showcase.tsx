@@ -301,7 +301,7 @@ export function ExtractShowcase(): JSX.Element {
               transition: 'opacity 0.4s',
             }}
           >
-            drag to scrub
+            go on, drag it
           </span>
         </div>
 
@@ -343,16 +343,16 @@ export function ExtractShowcase(): JSX.Element {
 
       <div style={{ marginTop: 12, minHeight: 20, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#6a6a76' }}>
         {!supported ? (
-          <span>No VideoDecoder in this browser. WebCodecs ships in Chrome and Edge 94+, Safari 17+.</span>
+          <span>This browser has no VideoDecoder, so the demo can't run here. WebCodecs lives in Chrome and Edge 94+, and Safari 17+.</span>
         ) : err ? (
           <span style={{ color: '#ff6b6b' }}>{err}</span>
         ) : seek ? (
           <span>
-            decoded in <span style={{ color: '#cfcfd8' }}>{seek.ms.toFixed(0)} ms</span> from{' '}
+            that frame cost <span style={{ color: '#cfcfd8' }}>{seek.ms.toFixed(0)} ms</span> and{' '}
             <span style={{ color: '#cfcfd8' }}>{kb(seek.bytes)}</span>
           </span>
         ) : (
-          <span>reading the index…</span>
+          <span>asking the file where its frames live…</span>
         )}
       </div>
     </div>

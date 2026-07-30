@@ -109,6 +109,32 @@ export function Race(): JSX.Element {
 
   return (
     <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+        <button
+          type="button"
+          onClick={() => void run()}
+          disabled={!supported || running !== null}
+          style={{
+            background: running ? '#1c2733' : ACCENT,
+            color: running ? '#9a9aa6' : '#0b0b0d',
+            border: 0,
+            borderRadius: 12,
+            padding: '13px 26px',
+            fontSize: 16,
+            fontWeight: 700,
+            cursor: running ? 'default' : 'pointer',
+          }}
+        >
+          {running ? 'Running… most of this wait is the other engine' : done ? '↻ Race them again' : `Race them (${FRAMES} frames a side)`}
+        </button>
+        {done && factor > 0 && (
+          <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, color: '#8a8a99' }}>
+            <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}×</span> apart this run. Your machine,
+            your numbers.
+          </span>
+        )}
+        {err && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#ff6b6b' }}>{err}</span>}
+      </div>
       {(['rerender', 'remotion'] as const).map((engine) => (
         <div key={engine} style={{ ...card, marginBottom: 12 }}>
           <div
@@ -126,7 +152,7 @@ export function Race(): JSX.Element {
             <span style={{ color: engine === 'rerender' ? ACCENT : '#8a8a99' }}>{LABEL[engine]}</span>
             <span style={{ marginLeft: 'auto', color: '#8a8a99' }}>
               {running === engine ? (
-                'extracting…'
+                'pulling frames…'
               ) : results[engine] ? (
                 <>
                   <span style={{ color: '#cfcfd8' }}>{results[engine]?.ms.toFixed(0)} ms</span> · {results[engine]?.frames}/{FRAMES} frames
@@ -144,32 +170,6 @@ export function Race(): JSX.Element {
           />
         </div>
       ))}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginTop: 16 }}>
-        <button
-          type="button"
-          onClick={() => void run()}
-          disabled={!supported || running !== null}
-          style={{
-            background: running ? '#1c2733' : ACCENT,
-            color: running ? '#9a9aa6' : '#0b0b0d',
-            border: 0,
-            borderRadius: 12,
-            padding: '13px 26px',
-            fontSize: 16,
-            fontWeight: 700,
-            cursor: running ? 'default' : 'pointer',
-          }}
-        >
-          {running ? `Running ${LABEL[running]}…` : done ? '↻ Run it again' : `Build both strips (${FRAMES} frames each)`}
-        </button>
-        {done && factor > 0 && (
-          <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, color: '#8a8a99' }}>
-            <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}×</span> the difference, this run
-          </span>
-        )}
-        {err && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#ff6b6b' }}>{err}</span>}
-      </div>
     </div>
   );
 }
