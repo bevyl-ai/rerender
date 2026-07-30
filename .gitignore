@@ -5,7 +5,9 @@ dist/
 .vite/
 out/
 *.mp4
+# Demo page assets are served by the deployed Worker, so they have to be committed.
 !public/demo-clip.mp4
+!public/sintel-480p.mp4
 
 compat/out/
 

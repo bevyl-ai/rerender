@@ -8,25 +8,22 @@ import { type ComponentType, type CSSProperties, useEffect, useRef, useState } f
 import { Player, type PlayerRef } from '../src';
 import { exportToMp4 } from '../src/client/export';
 import { CodeToFilm, CODE_TO_FILM_DURATION } from './code-to-film';
+import { ACCENT, Badge, card, cardLabel, SMOKE_TEST, useNarrow } from './ui';
 
 const W = 1280;
 const H = 720;
 const FPS = 30;
-// The CI smoke test (test/export.test.ts) loads this page with ?smoketest so both the live
-// preview and the export capture a short slice of the reveal act instead of the full ~18s
-// timeline — the full hero video is genuinely heavy (software-rendered WebCodecs encoding of a
-// video-compositing-heavy composition), too heavy to reliably finish on a free CI runner. The
-// real page (no query param) is completely unaffected: same duration, same frameOffset 0, as
-// always. Mirrors how the render-smoke CI job already renders a short clip for the same reason.
-const SMOKE_TEST = typeof location !== 'undefined' && new URLSearchParams(location.search).has('smoketest');
+// Under ?smoketest (see ui.tsx) both the live preview and the export capture a short slice of the
+// reveal act instead of the full ~18s timeline — the full hero video is genuinely heavy
+// (software-rendered WebCodecs encoding of a video-compositing-heavy composition), too heavy to
+// reliably finish on a free CI runner. The real page is completely unaffected: same duration, same
+// frameOffset 0, as always. Mirrors how the render-smoke CI job renders a short clip for the same reason.
 const CI_FRAME_OFFSET = 350; // just before T.grow(370) — starts with the reveal transition still visible
 const CI_DUR = 100; // covers the reveal (370-430) plus settled full-screen footage after, for sampling
 const DUR = SMOKE_TEST ? CI_DUR : CODE_TO_FILM_DURATION; // single source of truth — the comp owns its own length
 const FRAME_OFFSET = SMOKE_TEST ? CI_FRAME_OFFSET : 0;
-const ACCENT = '#61afef'; // same blue used for keywords in the CSS/CLI snippets below — one accent, not a gradient
 const DISPLAY_W = 468; // the hero's pre-measure fallback width basis
 
-const card: CSSProperties = { background: '#0f0f15', border: '1px solid #23232c', borderRadius: 14, overflow: 'hidden' };
 const bigStat: CSSProperties = {
   fontSize: 40,
   fontWeight: 850,
@@ -34,52 +31,6 @@ const bigStat: CSSProperties = {
   color: ACCENT,
   letterSpacing: -1,
 };
-const cardLabel: CSSProperties = {
-  fontFamily: 'ui-monospace, monospace',
-  fontSize: 11,
-  letterSpacing: 1.5,
-  color: '#8a8a99',
-  padding: '10px 14px',
-  borderBottom: '1px solid #1d1d25',
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 8,
-  flexWrap: 'wrap',
-};
-
-function Badge({ children }: { children: React.ReactNode }): JSX.Element {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        background: '#16161d',
-        border: '1px solid #26262e',
-        borderRadius: 999,
-        padding: '7px 14px',
-        fontSize: 13,
-        fontFamily: 'ui-monospace, monospace',
-        color: '#cfcfd8',
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-/** True on narrow (phone) viewports — drives the tables' stacked mobile layout. */
-function useNarrow(maxWidth = 640): boolean {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${maxWidth}px)`);
-    const on = (): void => setNarrow(mq.matches);
-    on();
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, [maxWidth]);
-  return narrow;
-}
 
 // ── CSS reveal: the actual style object behind one grid cell, so it's obvious the visuals are real DOM/CSS ──
 function CssReveal(): JSX.Element {
@@ -165,16 +116,13 @@ function PortableHosting(): JSX.Element {
           overflowX: 'auto',
         }}
       >
-        <span style={{ color: '#5c6370' }}># not on npm yet, clone + install from source</span>
+        <span style={{ color: '#5c6370' }}># the renderer and CLI ship in the same package</span>
         {'\n'}
-        <span style={{ color: '#61afef' }}>git</span> clone https://github.com/bevyl-ai/rerender &&{' '}
-        <span style={{ color: '#61afef' }}>cd</span> rerender
-        {'\n'}
-        <span style={{ color: '#61afef' }}>npm</span> install
+        <span style={{ color: ACCENT }}>npm</span> install rerender-video
         {'\n\n'}
         <span style={{ color: '#5c6370' }}># fan a render across your own cores, self-hosted, no cloud required</span>
         {'\n'}
-        <span style={{ color: '#61afef' }}>npx</span> rerender render ./src/index.tsx MyComp out.mp4
+        <span style={{ color: ACCENT }}>npx</span> rerender render ./src/index.tsx MyComp out.mp4
       </pre>
     </div>
   );

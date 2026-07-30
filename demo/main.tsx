@@ -1,8 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import { ExportShowcase } from './export-showcase';
+import { ExtractShowcase } from './extract-showcase';
+import { ACCENT } from './ui';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('no #root');
+
+const link = { color: '#8a8a99', borderBottom: '1px solid #2a2a34' };
 
 createRoot(root).render(
   <>
@@ -16,7 +20,7 @@ createRoot(root).render(
     <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 28px 80px' }}>
       <header style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 54, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>rerender</span>
-        <span style={{ fontSize: 13, color: '#8a8a99' }}>a drop-in, MIT-licensed Remotion alternative</span>
+        <span style={{ fontSize: 13, color: '#8a8a99' }}>MIT video primitives for the browser</span>
         <a
           href="https://github.com/bevyl-ai/rerender"
           target="_blank"
@@ -39,21 +43,70 @@ createRoot(root).render(
         </a>
       </header>
 
-      <section style={{ marginBottom: 36 }}>
-        <h1 style={{ fontSize: 'clamp(34px, 8.5vw, 56px)', fontWeight: 850, lineHeight: 1.05, margin: '0 0 18px', letterSpacing: -1.6 }}>
-          Export video <span style={{ color: '#61afef' }}>in your browser.</span>
+      <section style={{ marginBottom: 28 }}>
+        <h1
+          style={{
+            fontSize: 'clamp(34px, 8.5vw, 56px)',
+            fontWeight: 850,
+            lineHeight: 1.05,
+            margin: '0 0 18px',
+            letterSpacing: -1.6,
+          }}
+        >
+          Scrubbing mp4s, <span style={{ color: ACCENT }}>faster than ever.</span>
         </h1>
-        <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.55, margin: 0 }}>
-          It's the same React you'd write in Remotion: real DOM, real CSS. One click frame-steps the composition, captures each frame from
-          the page, and encodes an MP4 with WebCodecs, right here in this tab. No server, no native ffmpeg, no render farm to stand up.
+        <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
+          This is an ordinary mp4 on an ordinary static host. No sprite sheet, no pre-rendered thumbnails, no wasm blob to download first,
+          no server. Drag the track: every frame is found, fetched, and decoded the moment you ask for it.
         </p>
       </section>
 
-      <ExportShowcase />
+      <ExtractShowcase />
 
-      <footer style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #1d1d25', color: '#55555f', fontSize: 12, lineHeight: 1.5 }}>
-        Independent open-source project. Not affiliated with, endorsed by, or sponsored by Remotion or Remotion Inc. &ldquo;Remotion&rdquo;
-        is a trademark of its respective owner; used here only to describe API compatibility.
+      <p style={{ marginTop: 26, fontSize: 15, color: '#6a6a76', maxWidth: 640, lineHeight: 1.6 }}>
+        That's{' '}
+        <a href="https://github.com/bevyl-ai/rerender#rerender-videoextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
+          <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender-video/extract</code>
+        </a>
+        , a zero-dependency module that reads the index every mp4 already carries. It runs in production in{' '}
+        <a href="https://bevyl.ai" style={link}>
+          Bevyl
+        </a>
+        's editor timeline, where it replaced <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code> and made
+        deep seeks about 100× faster.
+      </p>
+
+      {/* ── act two: the same primitives, wired all the way into a renderer ── */}
+      <section style={{ marginTop: 96, paddingTop: 40, borderTop: '1px solid #1d1d25' }}>
+        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, letterSpacing: 1.5, color: '#55555f', marginBottom: 14 }}>
+          THE REST OF THE PACKAGE
+        </div>
+        <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 850, lineHeight: 1.1, margin: '0 0 16px', letterSpacing: -1.1 }}>
+          Export video <span style={{ color: ACCENT }}>in your browser.</span>
+        </h2>
+        <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.55, margin: '0 0 30px' }}>
+          Extraction is one module of a drop-in, MIT-licensed Remotion alternative. One click frame-steps the composition below, captures
+          each frame from the real DOM, and encodes an MP4 with WebCodecs — right here in this tab.
+        </p>
+        <ExportShowcase />
+      </section>
+
+      <footer style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #1d1d25', color: '#55555f', fontSize: 12, lineHeight: 1.6 }}>
+        <div>
+          Scrubber footage:{' '}
+          <a href="https://durian.blender.org" style={{ color: '#6a6a76' }}>
+            Sintel
+          </a>{' '}
+          © Blender Foundation,{' '}
+          <a href="https://creativecommons.org/licenses/by/3.0/" style={{ color: '#6a6a76' }}>
+            CC BY 3.0
+          </a>
+          .
+        </div>
+        <div style={{ marginTop: 8 }}>
+          Independent open-source project. Not affiliated with, endorsed by, or sponsored by Remotion or Remotion Inc.
+          &ldquo;Remotion&rdquo; is a trademark of its respective owner; used here only to describe API compatibility.
+        </div>
       </footer>
     </div>
   </>,
