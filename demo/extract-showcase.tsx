@@ -32,7 +32,7 @@ const timecode = (seconds: number): string => {
     .padStart(2, '0')}`;
 };
 
-const kb = (bytes: number): string => `${(bytes / 1024).toFixed(0)} KB`;
+const kb = (bytes: number): string => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`);
 
 /** Resolves with the element's width once it has one. */
 const measured = (el: HTMLElement): Promise<number> =>
@@ -49,6 +49,8 @@ interface Seek {
   seconds: number;
   ms: number;
   bytes: number;
+  /** Everything fetched for this source so far, so a zero-byte seek can say where it came from. */
+  fetchedTotal: number;
 }
 
 /** The slice of the file the strip is showing. */
@@ -69,6 +71,9 @@ export function ExtractShowcase(): JSX.Element {
   const painted = useRef(-1);
   /** Running total from the wrapped fetch; a seek snapshots it before and after. */
   const bytes = useRef(0);
+  /** Everything pulled for this source, ever. A seek that costs no bytes is being served out of
+   *  what the filmstrip already fetched, and saying "0 KB" without saying that reads as free. */
+  const fetched = useRef(0);
   /** Bumped per strip build so a slow one can't paint over a newer one. */
   const build = useRef(0);
 
@@ -85,7 +90,9 @@ export function ExtractShowcase(): JSX.Element {
 
   const countingFetch = useCallback<typeof fetch>(async (input, init) => {
     const res = await fetch(input, init);
-    bytes.current += Number(res.headers.get('content-length') ?? 0);
+    const length = Number(res.headers.get('content-length') ?? 0);
+    bytes.current += length;
+    fetched.current += length;
     return res;
   }, []);
 
@@ -105,7 +112,7 @@ export function ExtractShowcase(): JSX.Element {
           frame.close();
         });
         painted.current = live.snapToSampleMicros(seconds);
-        setSeek({ seconds, ms: performance.now() - started, bytes: bytes.current - startedBytes });
+        setSeek({ seconds, ms: performance.now() - started, bytes: bytes.current - startedBytes, fetchedTotal: fetched.current });
         if (target.current === seconds) break; // pointer didn't move while we decoded
       }
     } catch (error) {
@@ -373,8 +380,16 @@ export function ExtractShowcase(): JSX.Element {
           <span style={{ color: '#ff6b6b' }}>{err}</span>
         ) : seek ? (
           <span>
-            <span style={{ color: '#cfcfd8' }}>{seek.ms.toFixed(0)} ms</span> · <span style={{ color: '#cfcfd8' }}>{kb(seek.bytes)}</span>{' '}
-            per frame
+            <span style={{ color: '#cfcfd8' }}>{seek.ms.toFixed(0)} ms</span> ·{' '}
+            {seek.bytes > 0 ? (
+              <>
+                <span style={{ color: '#cfcfd8' }}>{kb(seek.bytes)}</span> fetched for this frame
+              </>
+            ) : (
+              <>
+                decode only, out of the <span style={{ color: '#cfcfd8' }}>{kb(seek.fetchedTotal)}</span> the filmstrip already pulled
+              </>
+            )}
           </span>
         ) : (
           <span>reading index…</span>
