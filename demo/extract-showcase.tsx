@@ -9,7 +9,7 @@
 // stays within the same frame costs nothing at all.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createFrameExtractor, type FrameExtractor } from '../src/extract';
-import { ACCENT, card, cardLabel, SMOKE_TEST } from './ui';
+import { ACCENT, card, SMOKE_TEST } from './ui';
 
 const SRC = '/sintel-480p.mp4';
 /** The source's native size (2.35:1, letterbox cropped out) — the canvas draws 1:1, CSS fits it. */
@@ -48,6 +48,8 @@ export function ExtractShowcase(): JSX.Element {
   const [ratio, setRatio] = useState(0);
   const [readout, setReadout] = useState<Readout | null>(null);
   const [err, setErr] = useState('');
+  /** Drops the "drag" hint once the visitor has worked out that they can. */
+  const [touched, setTouched] = useState(false);
 
   const supported = typeof VideoDecoder !== 'undefined';
 
@@ -119,6 +121,7 @@ export function ExtractShowcase(): JSX.Element {
   const onPointer = (event: React.PointerEvent<HTMLDivElement>): void => {
     if (event.type === 'pointermove' && event.buttons === 0 && event.pointerType !== 'mouse') return;
     const rect = event.currentTarget.getBoundingClientRect();
+    setTouched(true);
     seekTo((event.clientX - rect.left) / rect.width);
   };
 
@@ -132,19 +135,33 @@ export function ExtractShowcase(): JSX.Element {
   return (
     <div>
       <div style={card}>
-        <div style={cardLabel}>
-          <span>● {supported ? 'DRAG TO SCRUB' : 'rerender/extract'}</span>
-          <span style={{ color: ACCENT }}>createFrameExtractor()</span>
+        <div style={{ position: 'relative' }}>
+          <canvas
+            ref={canvas}
+            width={FRAME_W}
+            height={FRAME_H}
+            style={{ display: 'block', width: '100%', aspectRatio: `${FRAME_W} / ${FRAME_H}`, background: '#08080b' }}
+          />
+          {readout && (
+            <span
+              style={{
+                position: 'absolute',
+                left: 14,
+                bottom: 14,
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: 12,
+                color: '#e9e9ee',
+                background: 'rgba(8,8,11,0.7)',
+                padding: '4px 8px',
+                borderRadius: 6,
+              }}
+            >
+              {timecode(readout.seconds)}
+            </span>
+          )}
         </div>
 
-        <canvas
-          ref={canvas}
-          width={FRAME_W}
-          height={FRAME_H}
-          style={{ display: 'block', width: '100%', aspectRatio: `${FRAME_W} / ${FRAME_H}`, background: '#08080b' }}
-        />
-
-        {/* biome-ignore lint/a11y/useSemanticElements: a range input can't carry the playhead + tick rendering */}
+        {/* biome-ignore lint/a11y/useSemanticElements: a range input can't carry a custom playhead */}
         <div
           role="slider"
           tabIndex={0}
@@ -161,65 +178,45 @@ export function ExtractShowcase(): JSX.Element {
           onKeyDown={onKey}
           style={{
             position: 'relative',
-            height: 46,
+            height: 40,
             borderTop: '1px solid #1d1d25',
             cursor: supported ? 'ew-resize' : 'default',
             touchAction: 'none',
-            background: 'linear-gradient(#101017, #0c0c12)',
           }}
         >
-          {/* one tick per 5 s, so the track reads as a timeline rather than a progress bar */}
-          {duration > 0 &&
-            Array.from({ length: Math.floor(duration / 5) }, (_, i) => (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: `${(((i + 1) * 5) / duration) * 100}%`,
-                  top: 0,
-                  bottom: 0,
-                  width: 1,
-                  background: '#1d1d25',
-                }}
-              />
-            ))}
-          <div
-            style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${ratio * 100}%`, background: 'rgba(97,175,239,0.10)' }}
-          />
+          {/* No fill behind the playhead: nothing is playing, so "progress" would be a lie. */}
           <div style={{ position: 'absolute', left: `${ratio * 100}%`, top: 0, bottom: 0, width: 2, background: ACCENT, marginLeft: -1 }} />
+          <span
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              paddingLeft: 14,
+              fontSize: 12,
+              color: '#4a4a55',
+              pointerEvents: 'none',
+              opacity: supported && !touched ? 1 : 0,
+              transition: 'opacity 0.4s',
+            }}
+          >
+            drag to scrub
+          </span>
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          minHeight: 20,
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: 13,
-          color: '#6a6a76',
-          display: 'flex',
-          gap: 10,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div style={{ marginTop: 12, minHeight: 20, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#6a6a76' }}>
         {!supported ? (
-          <span>This browser has no VideoDecoder — WebCodecs ships in Chrome/Edge 94+ and Safari 17+.</span>
+          <span>No VideoDecoder in this browser. WebCodecs ships in Chrome and Edge 94+, Safari 17+.</span>
         ) : err ? (
-          <span style={{ color: '#ff6b6b' }}>✗ {err}</span>
+          <span style={{ color: '#ff6b6b' }}>{err}</span>
         ) : readout ? (
-          <>
-            <span style={{ color: '#cfcfd8' }}>{timecode(readout.seconds)}</span>
-            <span>·</span>
-            <span>
-              fetched + decoded in <span style={{ color: '#cfcfd8' }}>{readout.ms.toFixed(0)} ms</span>
-            </span>
-            <span>·</span>
-            <span>
-              <span style={{ color: '#cfcfd8' }}>{(readout.bytes / 1024).toFixed(1)} KB</span> off the wire
-            </span>
-          </>
+          <span>
+            decoded in <span style={{ color: '#cfcfd8' }}>{readout.ms.toFixed(0)} ms</span> from{' '}
+            <span style={{ color: '#cfcfd8' }}>{(readout.bytes / 1024).toFixed(0)} KB</span>
+          </span>
         ) : (
-          <span>indexing…</span>
+          <span>reading the index…</span>
         )}
       </div>
     </div>

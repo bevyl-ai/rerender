@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { ExportShowcase } from './export-showcase';
 import { ExtractShowcase } from './extract-showcase';
-import { ACCENT } from './ui';
+import { ACCENT, SMOKE_TEST } from './ui';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('no #root');
@@ -76,20 +76,25 @@ createRoot(root).render(
         <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>, which needed seconds for seeks this deep.
       </p>
 
-      {/* ── act two: the same primitives, wired all the way into a renderer ── */}
-      <section style={{ marginTop: 96, paddingTop: 40, borderTop: '1px solid #1d1d25' }}>
-        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, letterSpacing: 1.5, color: '#55555f', marginBottom: 14 }}>
-          THE REST OF THE PACKAGE
-        </div>
-        <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 850, lineHeight: 1.1, margin: '0 0 16px', letterSpacing: -1.1 }}>
-          Export video <span style={{ color: ACCENT }}>in your browser.</span>
-        </h2>
-        <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.55, margin: '0 0 30px' }}>
-          Extraction is one module. The rest is a drop-in, MIT-licensed Remotion alternative: React compositions rendered to real DOM. Press
-          the button and it encodes the composition below into an MP4 without leaving this tab.
-        </p>
-        <ExportShowcase />
-      </section>
+      {/* The in-browser export is parked: this page is about extraction. It stays mounted under
+          ?smoketest so test/export.test.ts keeps driving the real export flow through the real UI —
+          deleting it outright would take the export-smoke CI job down with it. Drop the guard to
+          put it back on the page. */}
+      {SMOKE_TEST && (
+        <section style={{ marginTop: 96, paddingTop: 40, borderTop: '1px solid #1d1d25' }}>
+          <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, letterSpacing: 1.5, color: '#55555f', marginBottom: 14 }}>
+            THE REST OF THE PACKAGE
+          </div>
+          <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 850, lineHeight: 1.1, margin: '0 0 16px', letterSpacing: -1.1 }}>
+            Export video <span style={{ color: ACCENT }}>in your browser.</span>
+          </h2>
+          <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.55, margin: '0 0 30px' }}>
+            Extraction is one module. The rest is a drop-in, MIT-licensed Remotion alternative: React compositions rendered to real DOM.
+            Press the button and it encodes the composition below into an MP4 without leaving this tab.
+          </p>
+          <ExportShowcase />
+        </section>
+      )}
 
       <footer style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #1d1d25', color: '#55555f', fontSize: 12, lineHeight: 1.6 }}>
         <div>
