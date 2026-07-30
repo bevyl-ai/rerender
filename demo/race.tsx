@@ -151,11 +151,6 @@ export function Race(): JSX.Element {
         >
           {running === 'warming' ? 'Fetching the file…' : running ? 'Running…' : done ? 'Run again' : 'Run benchmark'}
         </button>
-        {done && factor > 0 && (
-          <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, color: '#8a8a99' }}>
-            <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}× faster</span>
-          </span>
-        )}
         {err && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#ff6b6b' }}>{err}</span>}
       </div>
       <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', margin: '0 0 12px', minHeight: 18 }}>
@@ -199,6 +194,12 @@ export function Race(): JSX.Element {
           </div>
         </div>
       ))}
+
+      {done && factor > 0 && (
+        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 15, color: '#8a8a99', margin: '2px 0 14px' }}>
+          <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}× faster</span>
+        </div>
+      )}
 
       <p style={{ margin: '4px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
         Remotion runs in a web worker; ours runs on the main thread. It gets a fresh timestamp array, in-range timestamps only, and our
