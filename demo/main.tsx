@@ -104,11 +104,15 @@ createRoot(root).render(
 
       <footer style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #1d1d25', color: '#55555f', fontSize: 12, lineHeight: 1.6 }}>
         <div>
-          Scrubber footage:{' '}
+          Footage:{' '}
           <a href="https://durian.blender.org" style={{ color: '#6a6a76' }}>
             Sintel
           </a>{' '}
-          © Blender Foundation,{' '}
+          and{' '}
+          <a href="https://mango.blender.org" style={{ color: '#6a6a76' }}>
+            Tears of Steel
+          </a>
+          , © Blender Foundation,{' '}
           <a href="https://creativecommons.org/licenses/by/3.0/" style={{ color: '#6a6a76' }}>
             CC BY 3.0
           </a>

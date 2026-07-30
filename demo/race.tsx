@@ -17,12 +17,16 @@ import { createFrameExtractor } from '../src/extract';
 import { nearestIndex, paintThumb, prepareStrip, STRIP_H, stripTimestamps } from './filmstrip';
 import { ACCENT, card } from './ui';
 
-// A 30-minute 128p rendition — the shape Bevyl actually stores for timeline filmstrips, and the
-// scenario the benchmark is about. 43,200 samples, so walking the sample table costs something.
+// A 12-minute 128p rendition — the shape Bevyl actually stores for timeline filmstrips, and the
+// scenario the benchmark is about. 17,620 samples, so walking the sample table costs something.
 // On the hero's 52 s file the two engines are within ~25% of each other, because a short table is
 // cheap to walk however you do it; the gap is a function of how deep into the file you seek.
-// Nobody downloads the 5 MB: both engines fetch ranges.
-const SRC = '/filmstrip-30min-128p.mp4';
+//
+// It has to be one continuous film. The first version of this was the 52 s trailer looped 34
+// times, which put the sample count where it needed to be but made the strip unreadable: twelve
+// frames spread over the file land at arbitrary points in the loop, so the credits showed up
+// fourth and the sequence ran backwards.
+const SRC = '/filmstrip-12min-128p.mp4';
 /** Fixed so the numbers mean the same thing on every screen size. */
 const FRAMES = 12;
 /** Narrowest a thumbnail may get before the strip scrolls instead of shrinking. Twelve frames
