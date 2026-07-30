@@ -57,7 +57,8 @@ createRoot(root).render(
           Frame extraction, fast AF.
         </h1>
         <p style={{ fontSize: 18, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 6px' }}>
-          Zero preprocessing. Drag the filmstrip. Every frame is one Range request and one WebCodecs decode.
+          <code style={{ fontFamily: 'ui-monospace, monospace', color: '#cfcfd8' }}>rerender/extract</code> is a fast, zero-dependency mp4
+          frame extractor for the browser, built on Range requests and WebCodecs.
         </p>
         <p style={{ fontSize: 14, color: '#6a6a76', maxWidth: 660, lineHeight: 1.6, margin: 0 }}>
           1,253 frames indexed, 2 MB on disk. No sprite sheet, no sidecar index, no server.
@@ -69,8 +70,8 @@ createRoot(root).render(
       <p style={{ margin: '16px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
         <a href="https://github.com/bevyl-ai/rerender#rerenderextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
           rerender/extract
-        </a>
-        . Zero dependencies. Runs in production in{' '}
+        </a>{' '}
+        runs in production in{' '}
         <a href="https://bevyl.ai" style={link}>
           Bevyl
         </a>
