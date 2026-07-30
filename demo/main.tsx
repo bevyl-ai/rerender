@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { ExportShowcase } from './export-showcase';
 import { ExtractShowcase } from './extract-showcase';
+import { Race } from './race';
 import { ACCENT, SMOKE_TEST } from './ui';
 
 const root = document.getElementById('root');
@@ -20,7 +21,7 @@ createRoot(root).render(
     <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 28px 80px' }}>
       <header style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 54, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>rerender</span>
-        <span style={{ fontSize: 13, color: '#8a8a99' }}>MIT video primitives for the browser</span>
+        <span style={{ fontSize: 13, color: '#8a8a99' }}>Browser-side frame extraction and rendering. MIT.</span>
         <a
           href="https://github.com/bevyl-ai/rerender"
           target="_blank"
@@ -53,28 +54,33 @@ createRoot(root).render(
             letterSpacing: -1.6,
           }}
         >
-          Any frame of an mp4, in the browser.
+          Frame extraction, fast AF.
         </h1>
-        <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
-          It's a plain .mp4 sitting on a static host. Drag the track and each frame is decoded as you land on it, out of a few kilobytes of
-          the file.
+        <p style={{ fontSize: 18, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 6px' }}>
+          <code style={{ fontFamily: 'ui-monospace, monospace', color: '#cfcfd8' }}>rerender/extract</code> is a fast, zero-dependency mp4
+          frame extractor for the browser, built on Range requests and WebCodecs.
         </p>
       </section>
 
       <ExtractShowcase />
 
-      <p style={{ marginTop: 26, fontSize: 15, color: '#6a6a76', maxWidth: 640, lineHeight: 1.6 }}>
-        That's{' '}
+      <p style={{ margin: '16px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
         <a href="https://github.com/bevyl-ai/rerender#rerenderextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
-          <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender/extract</code>
-        </a>
-        . Every mp4 already carries an index of where its frames live. This reads it, then asks the server for just those bytes.{' '}
+          rerender/extract
+        </a>{' '}
+        runs in production in{' '}
         <a href="https://bevyl.ai" style={link}>
           Bevyl
         </a>
-        's editor timeline runs on it in production, in place of{' '}
-        <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>, which needed seconds for seeks this deep.
+        's editor timeline, replacing @remotion/webcodecs.
       </p>
+
+      <section style={{ marginTop: 72 }}>
+        <h2 style={{ fontSize: 'clamp(24px, 4.5vw, 32px)', fontWeight: 850, lineHeight: 1.15, margin: '0 0 14px', letterSpacing: -1 }}>
+          10× faster than <code style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 850 }}>@remotion/webcodecs</code>
+        </h2>
+        <Race />
+      </section>
 
       {/* The in-browser export is parked: this page is about extraction. It stays mounted under
           ?smoketest so test/export.test.ts keeps driving the real export flow through the real UI —
