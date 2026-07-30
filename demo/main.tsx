@@ -53,11 +53,11 @@ createRoot(root).render(
             letterSpacing: -1.6,
           }}
         >
-          Any frame of an mp4, in the browser.
+          Frame extraction, fast AF.
         </h1>
         <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
-          It's a plain .mp4 sitting on a static host. Drag the track and each frame is decoded as you land on it, out of a few kilobytes of
-          the file.
+          That filmstrip was assembled in this tab, from a plain .mp4 on a static host. Drag it and the frame you land on is decoded right
+          then, out of a few kilobytes of the file.
         </p>
       </section>
 
