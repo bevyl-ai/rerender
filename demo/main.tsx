@@ -64,35 +64,27 @@ createRoot(root).render(
       <ExtractShowcase />
 
       <p style={{ marginTop: 26, fontSize: 15, color: '#6a6a76', maxWidth: 640, lineHeight: 1.6 }}>
-        You were dragging{' '}
+        That's{' '}
         <a href="https://github.com/bevyl-ai/rerender#rerenderextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
           <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender/extract</code>
         </a>
-        : one module, zero dependencies. It builds the filmstrips in{' '}
+        — zero dependencies, no sprite sheets, no server. Runs in production in{' '}
         <a href="https://bevyl.ai" style={link}>
           Bevyl
         </a>
-        's editor timeline in production, where it replaced{' '}
-        <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>.
+        's editor timeline, replacing <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>.
       </p>
 
       <section style={{ marginTop: 72 }}>
         <h2 style={{ fontSize: 'clamp(24px, 4.5vw, 32px)', fontWeight: 850, lineHeight: 1.15, margin: '0 0 14px', letterSpacing: -1 }}>
-          Race it against the thing it replaced.
+          10× faster than <code style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 850 }}>@remotion/webcodecs</code>
         </h2>
-        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 18px' }}>
-          Same strip, same timestamps, same drawing code; only the extraction engine changes, and the two run back to back so neither slows
-          the other. Remotion gets every break we could give it: a web worker off the main thread while ours holds the main thread, a fresh
-          copy of the timestamp array because its extractor destroys the one you hand it, and every timestamp in range so a known
-          frame-dropping bug sleeps through the race. Ours gets no favors, and it rebuilds its index cold on every run.
+        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 6px' }}>
+          Extracting 12 frames from a 30-minute mp4. Same timestamps, same drawing code, run back to back.
         </p>
-        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 24px' }}>
-          The race file is a 30-minute 128p rendition, the kind a real editor stores for timeline thumbnails: 43,200 frames in the index, 5
-          MB on disk, and neither engine downloads more than a sliver of it.{' '}
-          <span style={{ color: '#cfcfd8' }}>Fair warning: on the 52-second clip up top, the two land within about 25% of each other</span>,
-          because a short index is cheap to walk however you walk it. Stretch the file to 30 minutes and the gap is about 12×, ours holding
-          near 90 ms while theirs climbs from about 112 ms to about 1,100 ms. Reading the index up front pays once there is an index worth
-          reading.
+        <p style={{ fontSize: 14, color: '#6a6a76', maxWidth: 660, lineHeight: 1.6, margin: '0 0 22px' }}>
+          43,200 frames indexed, 5 MB on disk. Time in milliseconds, measured in your browser, so the number moves with your machine — 10×
+          is the slowest result we have recorded. The gap scales with the index: on the 52-second file above it is 1.25×.
         </p>
         <Race />
       </section>

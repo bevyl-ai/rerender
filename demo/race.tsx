@@ -125,12 +125,11 @@ export function Race(): JSX.Element {
             cursor: running ? 'default' : 'pointer',
           }}
         >
-          {running ? 'Running… most of this wait is the other engine' : done ? '↻ Race them again' : `Race them (${FRAMES} frames a side)`}
+          {running ? 'Running…' : done ? 'Run again' : 'Run benchmark'}
         </button>
         {done && factor > 0 && (
           <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, color: '#8a8a99' }}>
-            <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}×</span> apart this run. Your machine,
-            your numbers.
+            <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}× faster</span>
           </span>
         )}
         {err && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#ff6b6b' }}>{err}</span>}
@@ -152,7 +151,7 @@ export function Race(): JSX.Element {
             <span style={{ color: engine === 'rerender' ? ACCENT : '#8a8a99' }}>{LABEL[engine]}</span>
             <span style={{ marginLeft: 'auto', color: '#8a8a99' }}>
               {running === engine ? (
-                'pulling frames…'
+                'decoding…'
               ) : results[engine] ? (
                 <>
                   <span style={{ color: '#cfcfd8' }}>{results[engine]?.ms.toFixed(0)} ms</span> · {results[engine]?.frames}/{FRAMES} frames
@@ -170,6 +169,11 @@ export function Race(): JSX.Element {
           />
         </div>
       ))}
+
+      <p style={{ margin: '4px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
+        Remotion runs in a web worker; ours runs on the main thread. It gets a fresh timestamp array, in-range timestamps only, and our
+        index is rebuilt cold on every run.
+      </p>
     </div>
   );
 }
