@@ -14,7 +14,7 @@
 // within the same frame costs nothing at all.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createFrameExtractor, type FrameExtractor } from '../src/extract';
-import { paintThumb, prepareStrip, STRIP_H, stripTimestamps, TARGET_SLOT_W } from './filmstrip';
+import { paintThumb, prepareStrip, STRIP_H, stripTimestamps } from './filmstrip';
 import { ACCENT, card, SMOKE_TEST } from './ui';
 
 const SRC = '/sintel-480p.mp4';
@@ -215,7 +215,6 @@ export function ExtractShowcase(): JSX.Element {
   };
 
   const inWindow = window_.span > 0 ? (playhead - window_.start) / window_.span : 0;
-  const gap = window_.span > 0 && track.current ? window_.span / Math.max(1, Math.round(track.current.clientWidth / TARGET_SLOT_W)) : 0;
 
   return (
     <div>
@@ -339,9 +338,6 @@ export function ExtractShowcase(): JSX.Element {
               {level}×
             </button>
           ))}
-          <span style={{ color: '#55555f', marginLeft: 'auto' }}>
-            {gap > 0 ? `${gap < 1 ? `${(gap * 1000).toFixed(0)} ms` : `${gap.toFixed(1)} s`} between frames` : ''}
-          </span>
         </div>
       </div>
 

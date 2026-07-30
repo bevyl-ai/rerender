@@ -2,7 +2,8 @@
 // the same rendering code and only the extraction engine differs.
 
 export const STRIP_H = 76;
-export const TARGET_SLOT_W = 88;
+/** Roughly how wide each thumbnail wants to be; the count falls out of the track's width. */
+const TARGET_SLOT_W = 88;
 
 export interface StripLayout {
   ctx: CanvasRenderingContext2D;

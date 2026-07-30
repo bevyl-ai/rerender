@@ -57,8 +57,7 @@ createRoot(root).render(
           Frame extraction, fast AF.
         </h1>
         <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
-          Nobody prepared those thumbnails. Every mp4 already knows where its frames live, and this page went and got them, a few kilobytes
-          at a time.
+          Zero preprocessing. Every mp4 already knows where its frames live, and this page went and got them, a few kilobytes at a time.
         </p>
       </section>
 
