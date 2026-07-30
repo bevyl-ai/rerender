@@ -74,6 +74,7 @@ export function ExtractShowcase(): JSX.Element {
 
   const [duration, setDuration] = useState(0);
   const [window_, setWindow] = useState<Window>({ start: 0, span: 0 });
+  const windowRef = useRef<Window>({ start: 0, span: 0 });
   const [zoom, setZoom] = useState<number>(1);
   const [playhead, setPlayhead] = useState(0);
   const [seek, setSeek] = useState<Seek | null>(null);
@@ -195,6 +196,31 @@ export function ExtractShowcase(): JSX.Element {
     };
   }, [buildStrip, countingFetch, pump, supported]);
 
+  // The strip is rasterised for one particular track width. Resize the window and those pixels
+  // get stretched to fit — 744px of filmstrip squashed into 317px, at the wrong aspect and blurry.
+  // Rebuild at the new width instead, debounced so a drag-resize does not re-extract per frame.
+  useEffect(() => {
+    const el = track.current;
+    if (!el || !supported || SMOKE_TEST) return;
+    let lastWidth = el.clientWidth;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      const width = el.clientWidth;
+      if (width === 0 || Math.abs(width - lastWidth) < 8) return;
+      lastWidth = width;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const live = extractor.current;
+        if (live) void buildStrip(live, windowRef.current, () => false);
+      }, 150);
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, [buildStrip, supported]);
+
   /** x within the track → the time that column of the strip represents. */
   const timeAt = (event: React.PointerEvent<HTMLDivElement>): number => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -215,6 +241,10 @@ export function ExtractShowcase(): JSX.Element {
     event.preventDefault();
     seekTo(target.current + delta);
   };
+
+  useEffect(() => {
+    windowRef.current = window_;
+  }, [window_]);
 
   const inWindow = window_.span > 0 ? (playhead - window_.start) / window_.span : 0;
 

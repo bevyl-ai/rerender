@@ -25,6 +25,9 @@ import { ACCENT, card } from './ui';
 const SRC = '/filmstrip-30min-128p.mp4';
 /** Fixed so the numbers mean the same thing on every screen size. */
 const FRAMES = 12;
+/** Narrowest a thumbnail may get before the strip scrolls instead of shrinking. Twelve frames
+ *  squeezed into a phone would be 26px slivers, which shows nothing. */
+const MIN_SLOT_W = 64;
 
 type Engine = 'rerender' | 'remotion';
 type Phase = Engine | 'warming';
@@ -49,6 +52,8 @@ export function Race(): JSX.Element {
   const [results, setResults] = useState<Partial<Record<Engine, Result>>>({});
   const [running, setRunning] = useState<Phase | null>(null);
   const [warmup, setWarmup] = useState<Warmup | null>(null);
+  /** Logical width the strips were drawn at; the row scrolls when it exceeds the container. */
+  const [stripWidth, setStripWidth] = useState(0);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
 
@@ -57,8 +62,10 @@ export function Race(): JSX.Element {
   const run = useCallback(async () => {
     const oursCanvas = canvases.current.rerender;
     const theirsCanvas = canvases.current.remotion;
-    const width = oursCanvas?.clientWidth ?? 0;
-    if (!oursCanvas || !theirsCanvas || width === 0) return;
+    const available = oursCanvas?.parentElement?.clientWidth ?? 0;
+    if (!oursCanvas || !theirsCanvas || available === 0) return;
+    const width = Math.max(available, FRAMES * MIN_SLOT_W);
+    setStripWidth(width);
     setResults({});
     setWarmup(null);
     setErr('');
@@ -199,12 +206,14 @@ export function Race(): JSX.Element {
               )}
             </span>
           </div>
-          <canvas
-            ref={(el) => {
-              canvases.current[engine] = el;
-            }}
-            style={{ display: 'block', width: '100%', height: STRIP_H, background: '#08080b' }}
-          />
+          <div style={{ overflowX: 'auto', background: '#08080b' }}>
+            <canvas
+              ref={(el) => {
+                canvases.current[engine] = el;
+              }}
+              style={{ display: 'block', width: stripWidth ? stripWidth : '100%', height: STRIP_H }}
+            />
+          </div>
         </div>
       ))}
 
