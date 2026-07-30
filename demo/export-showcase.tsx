@@ -118,7 +118,7 @@ function PortableHosting(): JSX.Element {
       >
         <span style={{ color: '#5c6370' }}># the renderer and CLI ship in the same package</span>
         {'\n'}
-        <span style={{ color: ACCENT }}>npm</span> install rerender-video
+        <span style={{ color: ACCENT }}>npm</span> install github:bevyl-ai/rerender
         {'\n\n'}
         <span style={{ color: '#5c6370' }}># fan a render across your own cores, self-hosted, no cloud required</span>
         {'\n'}

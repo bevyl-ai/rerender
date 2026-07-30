@@ -65,8 +65,8 @@ createRoot(root).render(
 
       <p style={{ marginTop: 26, fontSize: 15, color: '#6a6a76', maxWidth: 640, lineHeight: 1.6 }}>
         That's{' '}
-        <a href="https://github.com/bevyl-ai/rerender#rerender-videoextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
-          <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender-video/extract</code>
+        <a href="https://github.com/bevyl-ai/rerender#rerenderextract--any-frame-of-any-mp4-in-milliseconds" style={link}>
+          <code style={{ fontFamily: 'ui-monospace, monospace' }}>rerender/extract</code>
         </a>
         . Every mp4 already carries an index of where its frames live. This reads it, then asks the server for just those bytes.{' '}
         <a href="https://bevyl.ai" style={link}>

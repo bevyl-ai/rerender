@@ -6,7 +6,7 @@ recording, no reimplemented CSS renderer.
 
 This document covers the **renderer**. The package also ships standalone browser media modules
 that the render path does not use and that do not import it — most importantly
-`rerender-video/extract`, the zero-dependency mp4 frame extractor that runs in production in
+`rerender/extract`, the zero-dependency mp4 frame extractor that runs in production in
 Bevyl's editor timeline. It has its own doc: [frame-extraction.md](frame-extraction.md).
 
 ## The pieces

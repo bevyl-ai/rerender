@@ -1,4 +1,4 @@
-# rerender: frame extraction (`rerender-video/extract`)
+# rerender: frame extraction (`rerender/extract`)
 
 Random-access frame extraction from mp4 URLs — the thing every timeline UI needs for
 filmstrips/thumbnails — as a self-contained, zero-dependency module. Fetch ranges over HTTP,
@@ -59,7 +59,7 @@ exists.
 ## Module layout (`src/extract/`)
 
 Self-contained: no imports from the rest of rerender, no dependencies, browser-only Web APIs
-(fetch, DataView, WebCodecs). Consumable as `rerender-video/extract` without pulling in the renderer.
+(fetch, DataView, WebCodecs). Consumable as `rerender/extract` without pulling in the renderer.
 
 - `mp4-sample-table.ts` — box walk (`moov` → `trak` → `stbl`), front- or back-of-file moov,
   `stts`/`ctts`(v0+v1)/`stss`/`stsz`/`stsc`/`stco`/`co64`/`elst`, avcC decoder config. Output:
@@ -75,7 +75,7 @@ Self-contained: no imports from the rest of rerender, no dependencies, browser-o
 ## API
 
 ```ts
-import { createFrameExtractor } from 'rerender-video/extract';
+import { createFrameExtractor } from 'rerender/extract';
 
 // signal (optional) is a LIFETIME signal — aborting it is equivalent to dispose(),
 // so tie it to the owner (e.g. component unmount). Don't pass AbortSignal.timeout
@@ -117,7 +117,7 @@ Design rules:
 `createFrameStore` is the layer every timeline-filmstrip consumer would otherwise rebuild:
 
 ```ts
-import { createFrameStore } from 'rerender-video/extract';
+import { createFrameStore } from 'rerender/extract';
 
 const store = createFrameStore();
 // timestamps in µs; the store snaps them to the sample grid, dedupes in-flight decodes,
@@ -173,9 +173,10 @@ production.
 
 1. Web Worker wrapper (`extract/worker`) so table-flatten + decode never touch the main thread.
 2. Puppeteer E2E in rerender's own test suite (same pattern as `test/export.test.ts`).
-3. ~~Publish story~~ — done. The package publishes to npm as `rerender-video` (the bare
-   `rerender` name belongs to an unrelated 2018 package). Bevyl still consumes a pinned git
-   tarball under the old `rerender` specifier and needs to move to the npm package.
+3. Publish story: still open, and blocked on the name. `rerender` on npm is an unrelated package
+   last published in 2018, so `npm publish` 403s and the release workflow can't complete a `v*`
+   tag. Consumers install from the GitHub tarball, which is what Bevyl already does. Publishing
+   needs either a different npm name or the existing one transferred.
 4. ~~Benchmark page~~ — superseded by something better: [rerender.video](https://rerender.video) is
    a live scrubber (`demo/extract-showcase.tsx`). Drag the track and the frame under the playhead
    is fetched and decoded on the spot, with the measured latency and bytes printed underneath
