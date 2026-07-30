@@ -172,9 +172,7 @@ export function ExtractShowcase(): JSX.Element {
     let disposed = false;
     void (async () => {
       try {
-        // Ranges only, no whole-file shortcut: this demo's whole claim is that a frame costs a
-        // few kilobytes on demand, so it should pay that rather than quietly pulling the file.
-        const live = await createFrameExtractor({ src: SRC, fetchFn: countingFetch, maxWholeFileBytes: 0 });
+        const live = await createFrameExtractor({ src: SRC, fetchFn: countingFetch });
         if (disposed) return live.dispose();
         extractor.current = live;
         const whole = { start: 0, span: live.durationSeconds };

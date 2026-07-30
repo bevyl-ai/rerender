@@ -20,12 +20,6 @@ export interface FrameExtractorOptions {
   fetchFn?: typeof fetch;
   /** Max GOP fetches in flight per extract() call. Default 8. */
   maxParallelFetches?: number;
-  /**
-   * Above a handful of scattered GOPs it is cheaper to pull a file this size than to ask for
-   * windows of it, because ranges of one URL serialize at the origin. Default 12 MB; set 0 to
-   * always use ranges, which costs latency but never fetches a byte that was not asked for.
-   */
-  maxWholeFileBytes?: number;
 }
 
 export interface ExtractOptions {
@@ -222,32 +216,6 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     return { gopIndex, presentationMicros: toMicros(presentationTicks[sampleIndex]!), sampleIndex };
   };
 
-  /**
-   * Ranges of one URL serialize at the origin, so N scattered GOPs cost about N round trips no
-   * matter how many are in flight. Once N is high enough that those round trips outrun simply
-   * pulling the file, pull the file: measured on the demo's 5 MB rendition, twelve windows cost
-   * 943 ms where the whole thing cost 211 ms. Bounded by size so this never runs away on a large
-   * source, and only when enough GOPs are wanted to pay for it.
-   *
-   * The bytes are held for the duration of the extract() calls that asked for them and dropped
-   * after the last one finishes. An extractor is usually kept alive for as long as its source is
-   * on screen — a timeline holds one per clip — and retaining a whole rendition each would be
-   * megabytes per clip for the rest of the session. A repeat preload is served by the browser's
-   * cache anyway, so the saving was never worth the residency.
-   */
-  const wholeFileMaxBytes = options.maxWholeFileBytes ?? 12 * 1024 * 1024;
-  const WHOLE_FILE_MIN_GOPS = 4;
-
-  /** Concurrent extract() calls share one preload; the last one out drops it. */
-  let preloadHolders = 0;
-  const releasePreload = (): void => {
-    preloadHolders -= 1;
-    if (preloadHolders <= 0) {
-      preloadHolders = 0;
-      source.release();
-    }
-  };
-
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
     const signal = extractOptions?.signal ? AbortSignal.any([extractorSignal, extractOptions.signal]) : extractorSignal;
     if (signal.aborted) throw signal.reason;
@@ -259,28 +227,12 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
       byGop.set(gopIndex, job);
     }
 
+    // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
     const queue = Array.from(byGop.values());
-    const total = source.size();
-    const preloading = wholeFileMaxBytes > 0 && queue.length >= WHOLE_FILE_MIN_GOPS && total !== null && total <= wholeFileMaxBytes;
-    if (preloading) {
-      preloadHolders += 1;
-      try {
-        await resolveUnlessAborted(source.preload(signal), signal);
-      } catch (error) {
-        releasePreload();
-        throw error;
-      }
-    }
-
-    try {
-      // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
-      const workers = Array.from({ length: Math.min(maxParallel, queue.length) }, async () => {
-        for (let job = queue.shift(); job; job = queue.shift()) await decodeGop(job, onFrame, signal);
-      });
-      await Promise.all(workers);
-    } finally {
-      if (preloading) releasePreload();
-    }
+    const workers = Array.from({ length: Math.min(maxParallel, queue.length) }, async () => {
+      for (let job = queue.shift(); job; job = queue.shift()) await decodeGop(job, onFrame, signal);
+    });
+    await Promise.all(workers);
   };
 
   return {
@@ -288,9 +240,6 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     durationSeconds: lastTicks / timescale,
     snapToSampleMicros: (seconds) => resolveTarget(seconds).presentationMicros,
     extract,
-    dispose: () => {
-      source.release();
-      abort.abort(new Error('frame extractor disposed'));
-    },
+    dispose: () => abort.abort(new Error('frame extractor disposed')),
   };
 }
