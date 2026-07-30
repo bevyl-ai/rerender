@@ -97,10 +97,10 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   const moovBytes = await resolveUnlessAborted(source.readThroughMoov(extractorSignal), extractorSignal);
   const table = parseSampleTable(moovBytes);
   const { presentationTicks, byteOffsets, byteSizes, keySampleIndices, timescale } = table;
-  // Each GOP is its own request, so the ceiling is round trips, not bandwidth: over a real
-  // network a filmstrip's worth of spread-out frames costs ceil(gops / maxParallel) RTTs.
-  // Measured against the deployed demo, 6 concurrent range requests cost 111 ms where 6
-  // sequential ones cost 442 ms. Past ~8 the per-request time degrades and the win flattens.
+  // Concurrent range requests to the *same* URL do not actually run concurrently. Measured
+  // against the deployed demo: twelve in flight took 943 ms against one URL and 163 ms against
+  // twelve distinct URLs, so they queue roughly one at a time behind the origin's cache lock.
+  // Raising this alone buys nothing; see the whole-file path below for what to do about it.
   const maxParallel = options.maxParallelFetches ?? 8;
 
   // Presentation ticks of each GOP's keyframe — ascending, used to route a timestamp to its GOP.
@@ -216,6 +216,16 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     return { gopIndex, presentationMicros: toMicros(presentationTicks[sampleIndex]!), sampleIndex };
   };
 
+  /**
+   * Ranges of one URL serialize at the origin, so N scattered GOPs cost about N round trips no
+   * matter how many are in flight. Once N is high enough that those round trips outrun simply
+   * pulling the file, pull the file: measured on the demo's 5 MB rendition, twelve windows cost
+   * 943 ms where the whole thing cost 211 ms. Bounded by size so this never runs away on a large
+   * source, and only when enough GOPs are wanted to pay for it.
+   */
+  const WHOLE_FILE_MAX_BYTES = 12 * 1024 * 1024;
+  const WHOLE_FILE_MIN_GOPS = 4;
+
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
     const signal = extractOptions?.signal ? AbortSignal.any([extractorSignal, extractOptions.signal]) : extractorSignal;
     if (signal.aborted) throw signal.reason;
@@ -227,8 +237,13 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
       byGop.set(gopIndex, job);
     }
 
-    // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
     const queue = Array.from(byGop.values());
+    const total = source.size();
+    if (queue.length >= WHOLE_FILE_MIN_GOPS && total !== null && total <= WHOLE_FILE_MAX_BYTES) {
+      await resolveUnlessAborted(source.preload(signal), signal);
+    }
+
+    // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
     const workers = Array.from({ length: Math.min(maxParallel, queue.length) }, async () => {
       for (let job = queue.shift(); job; job = queue.shift()) await decodeGop(job, onFrame, signal);
     });

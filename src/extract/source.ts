@@ -7,6 +7,10 @@ export interface RangeSource {
   read(start: number, end: number, signal?: AbortSignal): Promise<Uint8Array>;
   /** Bytes spanning file offset 0 through the end of the moov box. */
   readThroughMoov(signal?: AbortSignal): Promise<Uint8Array>;
+  /** Total file size once a response has reported it, else null. */
+  size(): number | null;
+  /** Pull the whole file once; every later read is served from it without touching the network. */
+  preload(signal?: AbortSignal): Promise<void>;
 }
 
 /** How many bytes to speculatively read when probing box headers. Covers ftyp+free+small moovs in one request. */
@@ -28,12 +32,27 @@ function readTopLevelBox(view: DataView, at: number): TopLevelBox | null {
 }
 
 export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): RangeSource {
+  let totalSize: number | null = null;
+  let whole: Uint8Array | null = null;
+
   const read = async (start: number, end: number, signal?: AbortSignal): Promise<Uint8Array> => {
+    if (whole) return whole.subarray(start, Math.min(end, whole.byteLength));
     const res = await fetchFn(src, { headers: { Range: `bytes=${start}-${end - 1}` }, signal });
     if (res.status !== 206 && res.status !== 200) throw new Error(`range request failed for ${src}: ${res.status}`);
+    const total = res.headers?.get('Content-Range')?.split('/')[1];
+    if (total && total !== '*') totalSize = Number(total);
     const bytes = new Uint8Array(await res.arrayBuffer());
+    if (res.status === 200) totalSize = bytes.byteLength;
     // A 200 means the server ignored the Range header; slice locally so callers still work.
     return res.status === 200 ? bytes.slice(start, end) : bytes;
+  };
+
+  const preload = async (signal?: AbortSignal): Promise<void> => {
+    if (whole) return;
+    const res = await fetchFn(src, { signal });
+    if (!res.ok) throw new Error(`whole-file read failed for ${src}: ${res.status}`);
+    whole = new Uint8Array(await res.arrayBuffer());
+    totalSize = whole.byteLength;
   };
 
   const readThroughMoov = async (signal?: AbortSignal): Promise<Uint8Array> => {
@@ -72,5 +91,5 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
     throw new Error(`could not locate moov in ${src} (probed first ${HEAD_PROBE_BYTES} bytes)`);
   };
 
-  return { read, readThroughMoov };
+  return { read, readThroughMoov, size: () => totalSize, preload };
 }

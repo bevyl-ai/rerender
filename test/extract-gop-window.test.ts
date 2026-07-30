@@ -65,16 +65,31 @@ function installFakeDecoder(fed: Fed): () => void {
   };
 }
 
-/** Serves the fixture over ranged reads and records every range asked for. */
-function rangeRecordingFetch(ranges: { start: number; end: number }[]) {
-  const bytes = readFileSync(FIXTURE);
+/** Serves a file over ranged reads and records every request. A request with no Range header is
+ *  recorded as `whole`, which is how the preload path shows up. */
+function rangeRecordingFetch(ranges: { start: number; end: number; whole?: boolean }[], path = FIXTURE) {
+  const bytes = readFileSync(path);
   return ((_input: unknown, init?: { headers?: Record<string, string> }) => {
-    const match = /bytes=(\d+)-(\d+)/.exec(init?.headers?.Range ?? '');
+    const header = init?.headers?.Range;
+    if (!header) {
+      ranges.push({ start: 0, end: bytes.byteLength, whole: true });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      } as unknown as Response);
+    }
+    const match = /bytes=(\d+)-(\d+)/.exec(header);
     const start = Number(match![1]);
     const end = Math.min(Number(match![2]) + 1, bytes.byteLength);
     ranges.push({ start, end });
     const slice = bytes.subarray(start, end);
-    return Promise.resolve({ status: 206, arrayBuffer: async () => slice.slice().buffer } as unknown as Response);
+    return Promise.resolve({
+      status: 206,
+      headers: { get: (name: string) => (name.toLowerCase() === 'content-range' ? `bytes ${start}-${end - 1}/${bytes.byteLength}` : null) },
+      arrayBuffer: async () => slice.slice().buffer,
+    } as unknown as Response);
   }) as unknown as typeof fetch;
 }
 
@@ -134,6 +149,55 @@ test('every requested timestamp is still delivered exactly once', async () => {
     assert.deepEqual(
       delivered.slice().sort((a, b) => a - b),
       wanted.slice().sort((a, b) => a - b),
+    );
+    extractor.dispose();
+  } finally {
+    restore();
+  }
+});
+
+// Ranges of one URL serialize at the origin, so past a handful of GOPs it is cheaper to pull the
+// file than to ask for windows of it. Needs a source with enough GOPs to cross the threshold,
+// which the two small fixtures do not have — the committed demo rendition does.
+const MANY_GOPS = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'public', 'sintel-480p.mp4');
+
+test('enough scattered GOPs and the file is pulled once instead of windowed', async () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(MANY_GOPS)));
+  assert.ok(table.keySampleIndices.length >= 8, 'demo rendition should have plenty of GOPs');
+
+  const fed: Fed = { timestamps: [] };
+  const restore = installFakeDecoder(fed);
+  const requests: { start: number; end: number; whole?: boolean }[] = [];
+  try {
+    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
+    const setupReads = requests.length;
+    const duration = table.presentationTicks.reduce((max, t) => Math.max(max, t), 0) / table.timescale;
+    const wanted = Array.from({ length: 8 }, (_, i) => ((i + 0.5) / 8) * duration);
+
+    const delivered: number[] = [];
+    await extractor.extract(wanted, (_frame, requestedSeconds) => delivered.push(requestedSeconds));
+
+    const afterSetup = requests.slice(setupReads);
+    assert.equal(afterSetup.length, 1, 'one request, not one per GOP');
+    assert.equal(afterSetup[0]!.whole, true, 'and it is the whole file, not a range');
+    assert.equal(delivered.length, wanted.length, 'every timestamp still delivered');
+    extractor.dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('a couple of GOPs still uses ranges rather than pulling the file', async () => {
+  const fed: Fed = { timestamps: [] };
+  const restore = installFakeDecoder(fed);
+  const requests: { start: number; end: number; whole?: boolean }[] = [];
+  try {
+    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests) });
+    const setupReads = requests.length;
+    await extractor.extract([0, 0.1], () => {});
+    assert.ok(
+      requests.slice(setupReads).every((r) => !r.whole),
+      'below the threshold it should stay on ranges',
     );
     extractor.dispose();
   } finally {
