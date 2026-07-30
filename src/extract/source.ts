@@ -48,7 +48,14 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
       if (box.type === 'moov') {
         const moovEnd = box.start + box.size;
         if (moovEnd <= head.byteLength) return head.subarray(0, moovEnd);
-        return read(0, moovEnd, signal);
+        // Only the part the probe didn't already cover. Re-reading from 0 costs the probe's
+        // bytes a second time, which is most of a round trip's worth on a long file's moov
+        // (a 30-minute rendition indexes ~400 KB of sample table).
+        const rest = await read(head.byteLength, moovEnd, signal);
+        const moov = new Uint8Array(moovEnd);
+        moov.set(head, 0);
+        moov.set(rest, head.byteLength);
+        return moov;
       }
       if (box.type === 'mdat') {
         // moov is behind the media data: probe the box header right after mdat.

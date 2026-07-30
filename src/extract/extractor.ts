@@ -18,7 +18,7 @@ export interface FrameExtractorOptions {
   signal?: AbortSignal;
   /** Injectable for tests; defaults to global fetch. */
   fetchFn?: typeof fetch;
-  /** Max GOP fetches in flight per extract() call. */
+  /** Max GOP fetches in flight per extract() call. Default 8. */
   maxParallelFetches?: number;
 }
 
@@ -96,7 +96,11 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   const moovBytes = await resolveUnlessAborted(source.readThroughMoov(extractorSignal), extractorSignal);
   const table = parseSampleTable(moovBytes);
   const { presentationTicks, byteOffsets, byteSizes, keySampleIndices, timescale } = table;
-  const maxParallel = options.maxParallelFetches ?? 4;
+  // Each GOP is its own request, so the ceiling is round trips, not bandwidth: over a real
+  // network a filmstrip's worth of spread-out frames costs ceil(gops / maxParallel) RTTs.
+  // Measured against the deployed demo, 6 concurrent range requests cost 111 ms where 6
+  // sequential ones cost 442 ms. Past ~8 the per-request time degrades and the win flattens.
+  const maxParallel = options.maxParallelFetches ?? 8;
 
   // Presentation ticks of each GOP's keyframe — ascending, used to route a timestamp to its GOP.
   const gopStartTicks = new Float64Array(keySampleIndices.length);
