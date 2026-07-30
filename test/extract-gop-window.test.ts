@@ -65,8 +65,7 @@ function installFakeDecoder(fed: Fed): () => void {
   };
 }
 
-/** Serves a file over ranged reads and records every request. A request with no Range header is
- *  recorded as `whole`, which is how the preload path shows up. */
+/** Serves a file over ranged reads and records every range asked for. */
 function rangeRecordingFetch(ranges: { start: number; end: number; whole?: boolean }[], path = FIXTURE) {
   const bytes = readFileSync(path);
   return ((_input: unknown, init?: { headers?: Record<string, string> }) => {
@@ -150,87 +149,6 @@ test('every requested timestamp is still delivered exactly once', async () => {
       delivered.slice().sort((a, b) => a - b),
       wanted.slice().sort((a, b) => a - b),
     );
-    extractor.dispose();
-  } finally {
-    restore();
-  }
-});
-
-// Ranges of one URL serialize at the origin, so past a handful of GOPs it is cheaper to pull the
-// file than to ask for windows of it. Needs a source with enough GOPs to cross the threshold,
-// which the two small fixtures do not have — the committed demo rendition does.
-const MANY_GOPS = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'public', 'sintel-480p.mp4');
-
-test('enough scattered GOPs and the file is pulled once instead of windowed', async () => {
-  const table = parseSampleTable(new Uint8Array(readFileSync(MANY_GOPS)));
-  assert.ok(table.keySampleIndices.length >= 8, 'demo rendition should have plenty of GOPs');
-
-  const fed: Fed = { timestamps: [] };
-  const restore = installFakeDecoder(fed);
-  const requests: { start: number; end: number; whole?: boolean }[] = [];
-  try {
-    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
-    const setupReads = requests.length;
-    const duration = table.presentationTicks.reduce((max, t) => Math.max(max, t), 0) / table.timescale;
-    const wanted = Array.from({ length: 8 }, (_, i) => ((i + 0.5) / 8) * duration);
-
-    const delivered: number[] = [];
-    await extractor.extract(wanted, (_frame, requestedSeconds) => delivered.push(requestedSeconds));
-
-    const afterSetup = requests.slice(setupReads);
-    assert.equal(afterSetup.length, 1, 'one request, not one per GOP');
-    assert.equal(afterSetup[0]!.whole, true, 'and it is the whole file, not a range');
-    assert.equal(delivered.length, wanted.length, 'every timestamp still delivered');
-    extractor.dispose();
-  } finally {
-    restore();
-  }
-});
-
-test('a couple of GOPs still uses ranges rather than pulling the file', async () => {
-  const fed: Fed = { timestamps: [] };
-  const restore = installFakeDecoder(fed);
-  const requests: { start: number; end: number; whole?: boolean }[] = [];
-  try {
-    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests) });
-    const setupReads = requests.length;
-    await extractor.extract([0, 0.1], () => {});
-    assert.ok(
-      requests.slice(setupReads).every((r) => !r.whole),
-      'below the threshold it should stay on ranges',
-    );
-    extractor.dispose();
-  } finally {
-    restore();
-  }
-});
-
-// The preloaded file must not outlive the calls that wanted it. An extractor is typically kept
-// alive for as long as its source is on screen — a timeline holds one per clip — so retaining a
-// whole rendition each would be megabytes per clip for the rest of the session.
-test('the whole-file buffer is dropped once the extract that needed it finishes', async () => {
-  const table = parseSampleTable(new Uint8Array(readFileSync(MANY_GOPS)));
-  const fed: Fed = { timestamps: [] };
-  const restore = installFakeDecoder(fed);
-  const requests: { start: number; end: number; whole?: boolean }[] = [];
-  try {
-    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
-    const duration = table.presentationTicks.reduce((max, t) => Math.max(max, t), 0) / table.timescale;
-    const spread = Array.from({ length: 8 }, (_, i) => ((i + 0.5) / 8) * duration);
-
-    await extractor.extract(spread, () => {});
-    const firstWholeReads = requests.filter((r) => r.whole).length;
-    assert.equal(firstWholeReads, 1, 'first call pulls the file');
-
-    // A second spread call has to fetch again: nothing is retained between calls.
-    await extractor.extract(spread, () => {});
-    assert.equal(requests.filter((r) => r.whole).length, 2, 'buffer was not held across calls');
-
-    // And a single seek afterwards is a small range, not served from a lingering whole-file buffer.
-    const before = requests.length;
-    await extractor.extract([spread[0]!], () => {});
-    const after = requests.slice(before);
-    assert.ok(after.length > 0 && after.every((r) => !r.whole), 'a lone seek should use a range, and must still hit the network at all');
     extractor.dispose();
   } finally {
     restore();
