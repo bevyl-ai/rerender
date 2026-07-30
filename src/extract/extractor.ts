@@ -67,8 +67,9 @@ function lastAtOrBefore(sorted: ArrayLike<number>, target: number): number {
 
 interface GopJob {
   gopIndex: number;
-  /** requested seconds grouped into this GOP, each resolved to a sample's presentation µs */
-  targets: { requestedSeconds: number; presentationMicros: number }[];
+  /** requested seconds grouped into this GOP, each resolved to a sample's presentation µs
+   *  and its decode index (which bounds how much of the GOP has to be read at all) */
+  targets: { requestedSeconds: number; presentationMicros: number; sampleIndex: number }[];
 }
 
 /**
@@ -124,7 +125,11 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
 
   const decodeGop = async (job: GopJob, onFrame: OnFrame, signal: AbortSignal): Promise<void> => {
     const first = keySampleIndices[job.gopIndex]!;
-    const end = job.gopIndex + 1 < keySampleIndices.length ? keySampleIndices[job.gopIndex + 1]! : table.sampleCount;
+    // Samples are fed in decode order and every reference precedes its dependents there, so the
+    // deepest wanted sample bounds the work: nothing after it can be needed to decode it. A
+    // filmstrip thumbnail near the front of a one-second GOP therefore costs a couple of frames
+    // rather than the whole GOP, in bytes off the wire and in decode time.
+    const end = job.targets.reduce((deepest, target) => Math.max(deepest, target.sampleIndex), first) + 1;
     const rangeStart = byteOffsets[first]!;
     const rangeEnd = byteOffsets[end - 1]! + byteSizes[end - 1]!;
     const bytes = await resolveUnlessAborted(source.read(rangeStart, rangeEnd, signal), signal);
@@ -204,10 +209,11 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     });
   };
 
-  const resolveTarget = (seconds: number): { gopIndex: number; presentationMicros: number } => {
+  const resolveTarget = (seconds: number): { gopIndex: number; presentationMicros: number; sampleIndex: number } => {
     const targetTicks = Math.min(Math.max(seconds * timescale, gopStartTicks[0]!), lastTicks);
     const gopIndex = lastAtOrBefore(gopStartTicks, targetTicks);
-    return { gopIndex, presentationMicros: toMicros(presentationTicks[nearestSampleInGop(gopIndex, targetTicks)]!) };
+    const sampleIndex = nearestSampleInGop(gopIndex, targetTicks);
+    return { gopIndex, presentationMicros: toMicros(presentationTicks[sampleIndex]!), sampleIndex };
   };
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
@@ -215,9 +221,9 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     if (signal.aborted) throw signal.reason;
     const byGop = new Map<number, GopJob>();
     for (const seconds of timestampsInSeconds) {
-      const { gopIndex, presentationMicros } = resolveTarget(seconds);
+      const { gopIndex, presentationMicros, sampleIndex } = resolveTarget(seconds);
       const job = byGop.get(gopIndex) ?? { gopIndex, targets: [] };
-      job.targets.push({ requestedSeconds: seconds, presentationMicros });
+      job.targets.push({ requestedSeconds: seconds, presentationMicros, sampleIndex });
       byGop.set(gopIndex, job);
     }
 
