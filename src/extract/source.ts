@@ -9,8 +9,10 @@ export interface RangeSource {
   readThroughMoov(signal?: AbortSignal): Promise<Uint8Array>;
   /** Total file size once a response has reported it, else null. */
   size(): number | null;
-  /** Pull the whole file once; every later read is served from it without touching the network. */
+  /** Pull the whole file once; reads are served from it until `release()`. */
   preload(signal?: AbortSignal): Promise<void>;
+  /** Drop the preloaded bytes. Reads go back to ranged requests. */
+  release(): void;
 }
 
 /** How many bytes to speculatively read when probing box headers. Covers ftyp+free+small moovs in one request. */
@@ -91,5 +93,13 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
     throw new Error(`could not locate moov in ${src} (probed first ${HEAD_PROBE_BYTES} bytes)`);
   };
 
-  return { read, readThroughMoov, size: () => totalSize, preload };
+  return {
+    read,
+    readThroughMoov,
+    size: () => totalSize,
+    preload,
+    release: () => {
+      whole = null;
+    },
+  };
 }

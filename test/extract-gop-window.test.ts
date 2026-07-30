@@ -204,3 +204,35 @@ test('a couple of GOPs still uses ranges rather than pulling the file', async ()
     restore();
   }
 });
+
+// The preloaded file must not outlive the calls that wanted it. An extractor is typically kept
+// alive for as long as its source is on screen — a timeline holds one per clip — so retaining a
+// whole rendition each would be megabytes per clip for the rest of the session.
+test('the whole-file buffer is dropped once the extract that needed it finishes', async () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(MANY_GOPS)));
+  const fed: Fed = { timestamps: [] };
+  const restore = installFakeDecoder(fed);
+  const requests: { start: number; end: number; whole?: boolean }[] = [];
+  try {
+    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
+    const duration = table.presentationTicks.reduce((max, t) => Math.max(max, t), 0) / table.timescale;
+    const spread = Array.from({ length: 8 }, (_, i) => ((i + 0.5) / 8) * duration);
+
+    await extractor.extract(spread, () => {});
+    const firstWholeReads = requests.filter((r) => r.whole).length;
+    assert.equal(firstWholeReads, 1, 'first call pulls the file');
+
+    // A second spread call has to fetch again: nothing is retained between calls.
+    await extractor.extract(spread, () => {});
+    assert.equal(requests.filter((r) => r.whole).length, 2, 'buffer was not held across calls');
+
+    // And a single seek afterwards is a small range, not served from a lingering whole-file buffer.
+    const before = requests.length;
+    await extractor.extract([spread[0]!], () => {});
+    const after = requests.slice(before);
+    assert.ok(after.length > 0 && after.every((r) => !r.whole), 'a lone seek should use a range, and must still hit the network at all');
+    extractor.dispose();
+  } finally {
+    restore();
+  }
+});
