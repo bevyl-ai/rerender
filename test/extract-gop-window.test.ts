@@ -17,6 +17,9 @@ import { createFrameExtractor } from '../src/extract/extractor';
 import { parseSampleTable } from '../src/extract/mp4-sample-table';
 
 const FIXTURE = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures', 'extract-faststart.mp4');
+/** The fixtures have two GOPs each, too few to say anything about grouping reads. The committed
+ *  demo rendition has plenty. */
+const MANY_GOPS = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'public', 'sintel-480p.mp4');
 const SRC = 'https://fixture.test/faststart.mp4';
 
 interface Fed {
@@ -149,6 +152,55 @@ test('every requested timestamp is still delivered exactly once', async () => {
       delivered.slice().sort((a, b) => a - b),
       wanted.slice().sort((a, b) => a - b),
     );
+    extractor.dispose();
+  } finally {
+    restore();
+  }
+});
+
+// Concurrent ranges of one URL serialize at some origins, so each extra request can cost a round
+// trip. Neighbouring reads are merged; scattered ones are not, because merging those would mean
+// fetching the span between them to use a few kilobytes of it.
+test('neighbouring GOPs are fetched as one read', async () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(MANY_GOPS)));
+  const fed: Fed = { timestamps: [] };
+  const restore = installFakeDecoder(fed);
+  const requests: { start: number; end: number }[] = [];
+  try {
+    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
+    const setup = requests.length;
+    // four consecutive GOPs — what a zoomed scrubber or a timeline fill asks for
+    const wanted = [0, 1, 2, 3].map((g) => table.presentationTicks[table.keySampleIndices[g]!]! / table.timescale);
+    const delivered: number[] = [];
+    await extractor.extract(wanted, (_f, seconds) => delivered.push(seconds));
+
+    const reads = requests.slice(setup);
+    assert.equal(reads.length, 1, 'four adjacent GOPs should be one read');
+    assert.equal(delivered.length, 4, 'and every timestamp still arrives');
+    extractor.dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('GOPs far apart stay separate reads', async () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(MANY_GOPS)));
+  const gops = table.keySampleIndices.length;
+  const fed: Fed = { timestamps: [] };
+  const restore = installFakeDecoder(fed);
+  const requests: { start: number; end: number }[] = [];
+  try {
+    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
+    const setup = requests.length;
+    // spread across the file, far enough apart that merging would pull most of it
+    const picks = [0, Math.floor(gops * 0.4), Math.floor(gops * 0.8)];
+    const wanted = picks.map((g) => table.presentationTicks[table.keySampleIndices[g]!]! / table.timescale);
+    await extractor.extract(wanted, () => {});
+
+    const reads = requests.slice(setup);
+    assert.equal(reads.length, picks.length, 'scattered GOPs must not be merged into one span');
+    const fetched = reads.reduce((sum, r) => sum + (r.end - r.start), 0);
+    assert.ok(fetched < readFileSync(MANY_GOPS).byteLength / 4, `should stay small, fetched ${fetched}`);
     extractor.dispose();
   } finally {
     restore();
