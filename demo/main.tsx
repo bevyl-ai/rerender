@@ -57,8 +57,8 @@ createRoot(root).render(
           Frame extraction, fast AF.
         </h1>
         <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
-          That filmstrip was assembled in this tab, from a plain .mp4 on a static host. Drag it and the frame you land on is decoded right
-          then, out of a few kilobytes of the file.
+          Nobody prepared those thumbnails. Every mp4 already knows where its frames live, and this page went and got them, a few kilobytes
+          at a time.
         </p>
       </section>
 
