@@ -243,6 +243,32 @@ export function ExtractShowcase(): JSX.Element {
               {timecode(seek.seconds)}
             </span>
           )}
+          {/* Sits over the frame until the visitor drags, then gets out of the way for good. */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'radial-gradient(ellipse at center, rgba(8,8,11,0.5), rgba(8,8,11,0.12))',
+              pointerEvents: 'none',
+              opacity: supported && !touched ? 1 : 0,
+              transition: 'opacity 0.5s',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 'clamp(15px, 2.4vw, 24px)',
+                fontWeight: 800,
+                letterSpacing: 0.4,
+                color: '#fff',
+                textShadow: '0 2px 24px rgba(0,0,0,0.7)',
+              }}
+            >
+              witness the technology
+            </span>
+          </div>
         </div>
 
         {/* biome-ignore lint/a11y/useSemanticElements: a range input can't carry a filmstrip + playhead */}

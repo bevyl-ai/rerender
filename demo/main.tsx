@@ -60,9 +60,6 @@ createRoot(root).render(
           <code style={{ fontFamily: 'ui-monospace, monospace', color: '#cfcfd8' }}>rerender/extract</code> is a fast, zero-dependency mp4
           frame extractor for the browser, built on Range requests and WebCodecs.
         </p>
-        <p style={{ fontSize: 14, color: '#6a6a76', maxWidth: 660, lineHeight: 1.6, margin: 0 }}>
-          1,253 frames indexed, 2 MB on disk. No sprite sheet, no sidecar index, no server.
-        </p>
       </section>
 
       <ExtractShowcase />
@@ -82,13 +79,6 @@ createRoot(root).render(
         <h2 style={{ fontSize: 'clamp(24px, 4.5vw, 32px)', fontWeight: 850, lineHeight: 1.15, margin: '0 0 14px', letterSpacing: -1 }}>
           10× faster than <code style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 850 }}>@remotion/webcodecs</code>
         </h2>
-        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 6px' }}>
-          Extracting 12 frames from a 30-minute mp4. Same timestamps, same drawing code, run back to back.
-        </p>
-        <p style={{ fontSize: 14, color: '#6a6a76', maxWidth: 660, lineHeight: 1.6, margin: '0 0 22px' }}>
-          43,200 frames indexed, 5 MB on disk. Time in milliseconds, measured in your browser, so the number moves with your machine — 10×
-          is the slowest result we have recorded. The gap scales with the index: on the 52-second file above it is 1.25×.
-        </p>
         <Race />
       </section>
 
