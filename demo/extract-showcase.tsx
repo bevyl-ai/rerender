@@ -49,8 +49,6 @@ interface Seek {
   seconds: number;
   ms: number;
   bytes: number;
-  /** Everything fetched for this source so far, so a zero-byte seek can say where it came from. */
-  fetchedTotal: number;
 }
 
 /** The slice of the file the strip is showing. */
@@ -71,9 +69,6 @@ export function ExtractShowcase(): JSX.Element {
   const painted = useRef(-1);
   /** Running total from the wrapped fetch; a seek snapshots it before and after. */
   const bytes = useRef(0);
-  /** Everything pulled for this source, ever. A seek that costs no bytes is being served out of
-   *  what the filmstrip already fetched, and saying "0 KB" without saying that reads as free. */
-  const fetched = useRef(0);
   /** Bumped per strip build so a slow one can't paint over a newer one. */
   const build = useRef(0);
 
@@ -90,9 +85,7 @@ export function ExtractShowcase(): JSX.Element {
 
   const countingFetch = useCallback<typeof fetch>(async (input, init) => {
     const res = await fetch(input, init);
-    const length = Number(res.headers.get('content-length') ?? 0);
-    bytes.current += length;
-    fetched.current += length;
+    bytes.current += Number(res.headers.get('content-length') ?? 0);
     return res;
   }, []);
 
@@ -112,7 +105,7 @@ export function ExtractShowcase(): JSX.Element {
           frame.close();
         });
         painted.current = live.snapToSampleMicros(seconds);
-        setSeek({ seconds, ms: performance.now() - started, bytes: bytes.current - startedBytes, fetchedTotal: fetched.current });
+        setSeek({ seconds, ms: performance.now() - started, bytes: bytes.current - startedBytes });
         if (target.current === seconds) break; // pointer didn't move while we decoded
       }
     } catch (error) {
@@ -178,7 +171,9 @@ export function ExtractShowcase(): JSX.Element {
     let disposed = false;
     void (async () => {
       try {
-        const live = await createFrameExtractor({ src: SRC, fetchFn: countingFetch });
+        // Ranges only, no whole-file shortcut: this demo's whole claim is that a frame costs a
+        // few kilobytes on demand, so it should pay that rather than quietly pulling the file.
+        const live = await createFrameExtractor({ src: SRC, fetchFn: countingFetch, maxWholeFileBytes: 0 });
         if (disposed) return live.dispose();
         extractor.current = live;
         const whole = { start: 0, span: live.durationSeconds };
@@ -380,16 +375,8 @@ export function ExtractShowcase(): JSX.Element {
           <span style={{ color: '#ff6b6b' }}>{err}</span>
         ) : seek ? (
           <span>
-            <span style={{ color: '#cfcfd8' }}>{seek.ms.toFixed(0)} ms</span> ·{' '}
-            {seek.bytes > 0 ? (
-              <>
-                <span style={{ color: '#cfcfd8' }}>{kb(seek.bytes)}</span> fetched for this frame
-              </>
-            ) : (
-              <>
-                decode only, out of the <span style={{ color: '#cfcfd8' }}>{kb(seek.fetchedTotal)}</span> the filmstrip already pulled
-              </>
-            )}
+            <span style={{ color: '#cfcfd8' }}>{seek.ms.toFixed(0)} ms</span> · <span style={{ color: '#cfcfd8' }}>{kb(seek.bytes)}</span>{' '}
+            per frame
           </span>
         ) : (
           <span>reading index…</span>
