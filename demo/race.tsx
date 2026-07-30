@@ -34,6 +34,11 @@ interface Result {
   frames: number;
 }
 
+interface Warmup {
+  ms: number;
+  bytes: number;
+}
+
 const LABEL: Record<Engine, string> = {
   rerender: 'rerender/extract',
   remotion: '@remotion/webcodecs',
@@ -43,6 +48,7 @@ export function Race(): JSX.Element {
   const canvases = useRef<Record<Engine, HTMLCanvasElement | null>>({ rerender: null, remotion: null });
   const [results, setResults] = useState<Partial<Record<Engine, Result>>>({});
   const [running, setRunning] = useState<Phase | null>(null);
+  const [warmup, setWarmup] = useState<Warmup | null>(null);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
 
@@ -54,6 +60,7 @@ export function Race(): JSX.Element {
     const width = oursCanvas?.clientWidth ?? 0;
     if (!oursCanvas || !theirsCanvas || width === 0) return;
     setResults({});
+    setWarmup(null);
     setErr('');
     setDone(false);
 
@@ -63,7 +70,9 @@ export function Race(): JSX.Element {
       // from disk (~210 ms), so the number would depend on how many times you had clicked rather
       // than on the engines. Not counted against either side.
       setRunning('warming');
-      await (await fetch(SRC)).arrayBuffer();
+      const warmStarted = performance.now();
+      const file = await (await fetch(SRC)).arrayBuffer();
+      setWarmup({ ms: performance.now() - warmStarted, bytes: file.byteLength });
 
       // ── rerender: build the index, then pull the frames ──
       setRunning('rerender');
@@ -142,6 +151,27 @@ export function Race(): JSX.Element {
         )}
         {err && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#ff6b6b' }}>{err}</span>}
       </div>
+      <div
+        style={{
+          fontFamily: 'ui-monospace, monospace',
+          fontSize: 12,
+          color: warmup ? '#8a8a99' : '#55555f',
+          margin: '0 0 12px',
+          minHeight: 18,
+        }}
+      >
+        {running === 'warming' ? (
+          'download · fetching the file…'
+        ) : warmup ? (
+          <>
+            download · <span style={{ color: '#cfcfd8' }}>{(warmup.ms / 1000).toFixed(2)} s</span> for {(warmup.bytes / 1048576).toFixed(1)}{' '}
+            MB · not counted below
+          </>
+        ) : (
+          'download · runs first, and is not counted below'
+        )}
+      </div>
+
       {(['rerender', 'remotion'] as const).map((engine) => (
         <div key={engine} style={{ ...card, marginBottom: 12 }}>
           <div
