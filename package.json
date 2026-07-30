@@ -1,7 +1,7 @@
 {
-  "name": "rerender",
+  "name": "rerender-video",
   "version": "0.1.0",
-  "description": "Drop-in, MIT-licensed Remotion alternative. Renders real DOM to MP4 with WebCodecs and mediabunny, in a browser tab or fanned across parallel headless-Chrome workers. No ffmpeg.",
+  "description": "Zero-dependency random-access frame extraction from mp4 URLs, plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
   "license": "MIT",
   "author": "Noah Lindner",
   "homepage": "https://rerender.video",
@@ -13,11 +13,15 @@
     "url": "https://github.com/bevyl-ai/rerender/issues"
   },
   "keywords": [
-    "remotion",
-    "video",
-    "react",
     "webcodecs",
     "mp4",
+    "frame-extraction",
+    "thumbnails",
+    "filmstrip",
+    "video",
+    "seek",
+    "remotion",
+    "react",
     "animation",
     "renderer"
   ],
@@ -41,8 +45,11 @@
       "types": "./dist/media.d.ts",
       "default": "./dist/media.js"
     },
-    "./package.json": "./package.json",
-    "./audio-engine": "./src/core/audio-engine.ts"
+    "./audio-engine": {
+      "types": "./dist/audio-engine.d.ts",
+      "default": "./dist/audio-engine.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "bin",
