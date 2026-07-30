@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { ExportShowcase } from './export-showcase';
 import { ExtractShowcase } from './extract-showcase';
+import { Race } from './race';
 import { ACCENT, SMOKE_TEST } from './ui';
 
 const root = document.getElementById('root');
@@ -73,8 +74,26 @@ createRoot(root).render(
           Bevyl
         </a>
         's editor timeline runs on it in production, in place of{' '}
-        <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>, which needed seconds for seeks this deep.
+        <code style={{ fontFamily: 'ui-monospace, monospace' }}>@remotion/webcodecs</code>.
       </p>
+
+      <section style={{ marginTop: 72 }}>
+        <h2 style={{ fontSize: 'clamp(24px, 4.5vw, 32px)', fontWeight: 850, lineHeight: 1.15, margin: '0 0 14px', letterSpacing: -1 }}>
+          The same strip, built by the other one.
+        </h2>
+        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 18px' }}>
+          Identical painting code, identical timestamps, same file, run one after the other so neither is competing with the other for the
+          decoder. Remotion gets the generous end of it: its worker-based extractor decodes off the main thread while ours runs on it, every
+          timestamp is in range, and ours rebuilds its index from scratch each run instead of reusing a warm one.
+        </p>
+        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 660, lineHeight: 1.6, margin: '0 0 24px' }}>
+          The source here is a 30-minute 128p rendition, the shape a timeline actually stores: 43,200 frames indexed, 5 MB on disk, and
+          neither engine downloads more than a sliver of it. <span style={{ color: '#cfcfd8' }}>File length is the whole variable.</span> On
+          the 52-second clip above, the two are within about 25% of each other — a short sample table is cheap to walk however you do it.
+          Reading the index up front only starts paying once there is an index worth reading.
+        </p>
+        <Race />
+      </section>
 
       {/* The in-browser export is parked: this page is about extraction. It stays mounted under
           ?smoketest so test/export.test.ts keeps driving the real export flow through the real UI —
