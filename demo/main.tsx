@@ -53,7 +53,7 @@ createRoot(root).render(
             letterSpacing: -1.6,
           }}
         >
-          Nothing was prepared for this video.
+          Any frame of an mp4, in the browser.
         </h1>
         <p style={{ fontSize: 19, color: '#9a9aa6', maxWidth: 640, lineHeight: 1.55, margin: 0 }}>
           It's a plain .mp4 sitting on a static host. Drag the track and each frame is decoded as you land on it, out of a few kilobytes of
