@@ -10,7 +10,8 @@
     "studio/main.tsx",
     "src/transitions/index.ts",
     "src/media-utils/index.ts",
-    "templates/*/src/index.ts"
+    "templates/*/src/index.ts",
+    "worker/index.ts"
   ],
   "project": ["**/*.{ts,tsx,mjs}"],
   "rules": {
