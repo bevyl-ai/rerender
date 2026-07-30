@@ -228,9 +228,25 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
    * pulling the file, pull the file: measured on the demo's 5 MB rendition, twelve windows cost
    * 943 ms where the whole thing cost 211 ms. Bounded by size so this never runs away on a large
    * source, and only when enough GOPs are wanted to pay for it.
+   *
+   * The bytes are held for the duration of the extract() calls that asked for them and dropped
+   * after the last one finishes. An extractor is usually kept alive for as long as its source is
+   * on screen — a timeline holds one per clip — and retaining a whole rendition each would be
+   * megabytes per clip for the rest of the session. A repeat preload is served by the browser's
+   * cache anyway, so the saving was never worth the residency.
    */
   const wholeFileMaxBytes = options.maxWholeFileBytes ?? 12 * 1024 * 1024;
   const WHOLE_FILE_MIN_GOPS = 4;
+
+  /** Concurrent extract() calls share one preload; the last one out drops it. */
+  let preloadHolders = 0;
+  const releasePreload = (): void => {
+    preloadHolders -= 1;
+    if (preloadHolders <= 0) {
+      preloadHolders = 0;
+      source.release();
+    }
+  };
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
     const signal = extractOptions?.signal ? AbortSignal.any([extractorSignal, extractOptions.signal]) : extractorSignal;
@@ -245,15 +261,26 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
 
     const queue = Array.from(byGop.values());
     const total = source.size();
-    if (wholeFileMaxBytes > 0 && queue.length >= WHOLE_FILE_MIN_GOPS && total !== null && total <= wholeFileMaxBytes) {
-      await resolveUnlessAborted(source.preload(signal), signal);
+    const preloading = wholeFileMaxBytes > 0 && queue.length >= WHOLE_FILE_MIN_GOPS && total !== null && total <= wholeFileMaxBytes;
+    if (preloading) {
+      preloadHolders += 1;
+      try {
+        await resolveUnlessAborted(source.preload(signal), signal);
+      } catch (error) {
+        releasePreload();
+        throw error;
+      }
     }
 
-    // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
-    const workers = Array.from({ length: Math.min(maxParallel, queue.length) }, async () => {
-      for (let job = queue.shift(); job; job = queue.shift()) await decodeGop(job, onFrame, signal);
-    });
-    await Promise.all(workers);
+    try {
+      // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
+      const workers = Array.from({ length: Math.min(maxParallel, queue.length) }, async () => {
+        for (let job = queue.shift(); job; job = queue.shift()) await decodeGop(job, onFrame, signal);
+      });
+      await Promise.all(workers);
+    } finally {
+      if (preloading) releasePreload();
+    }
   };
 
   return {
@@ -261,6 +288,9 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     durationSeconds: lastTicks / timescale,
     snapToSampleMicros: (seconds) => resolveTarget(seconds).presentationMicros,
     extract,
-    dispose: () => abort.abort(new Error('frame extractor disposed')),
+    dispose: () => {
+      source.release();
+      abort.abort(new Error('frame extractor disposed'));
+    },
   };
 }
