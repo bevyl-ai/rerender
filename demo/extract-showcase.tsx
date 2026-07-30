@@ -271,7 +271,6 @@ export function ExtractShowcase(): JSX.Element {
           </div>
         </div>
 
-        {/* biome-ignore lint/a11y/useSemanticElements: a range input can't carry a filmstrip + playhead */}
         <div
           ref={track}
           role="slider"

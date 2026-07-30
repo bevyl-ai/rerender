@@ -24,7 +24,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # wranglerVersion must track the `wrangler` devDependency. Left to itself the action
+      # installs its own build — it picked 3.90.0, which does not know `assets.run_worker_first`
+      # and silently dropped it with only a warning ("Unexpected fields found in assets field").
+      # The Worker uploaded fine and then never ran, because assets are served before it.
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.116.0'
