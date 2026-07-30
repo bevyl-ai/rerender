@@ -1,4 +1,4 @@
-# rerender: frame extraction (`rerender/extract`)
+# rerender: frame extraction (`rerender-video/extract`)
 
 Random-access frame extraction from mp4 URLs — the thing every timeline UI needs for
 filmstrips/thumbnails — as a self-contained, zero-dependency module. Fetch ranges over HTTP,
@@ -59,7 +59,7 @@ exists.
 ## Module layout (`src/extract/`)
 
 Self-contained: no imports from the rest of rerender, no dependencies, browser-only Web APIs
-(fetch, DataView, WebCodecs). Consumable as `rerender/extract` without pulling in the renderer.
+(fetch, DataView, WebCodecs). Consumable as `rerender-video/extract` without pulling in the renderer.
 
 - `mp4-sample-table.ts` — box walk (`moov` → `trak` → `stbl`), front- or back-of-file moov,
   `stts`/`ctts`(v0+v1)/`stss`/`stsz`/`stsc`/`stco`/`co64`/`elst`, avcC decoder config. Output:
@@ -75,7 +75,7 @@ Self-contained: no imports from the rest of rerender, no dependencies, browser-o
 ## API
 
 ```ts
-import { createFrameExtractor } from 'rerender/extract';
+import { createFrameExtractor } from 'rerender-video/extract';
 
 // signal (optional) is a LIFETIME signal — aborting it is equivalent to dispose(),
 // so tie it to the owner (e.g. component unmount). Don't pass AbortSignal.timeout
@@ -117,7 +117,7 @@ Design rules:
 `createFrameStore` is the layer every timeline-filmstrip consumer would otherwise rebuild:
 
 ```ts
-import { createFrameStore } from 'rerender/extract';
+import { createFrameStore } from 'rerender-video/extract';
 
 const store = createFrameStore();
 // timestamps in µs; the store snaps them to the sample grid, dedupes in-flight decodes,
@@ -161,18 +161,23 @@ product-agnostic half.
 - Audio.
 - Encrypted media.
 
-## First consumer
+## First consumer (shipped)
 
-Bevyl's editor timeline filmstrips (`apps/web/lib/video-extraction/frame-service.ts`): swaps
-`extractFramesOnWebWorker` for this module and deletes `@remotion/webcodecs` +
-`@remotion/media-parser` from the app in the same change. No server-side work: the module reads
-the filmstrip renditions (and legacy fallback renditions) already in production. Plan doc lives in
-the Bevyl repo (`docs/planning/active/2026-07-10-filmstrip-extraction-rerender-migration.md`).
+Bevyl's editor timeline filmstrips (`apps/web/lib/video-extraction/frame-service.ts`), live since
+2026-07-10 (BEV-4395): swapped `extractFramesOnWebWorker` for this module and deleted
+`@remotion/webcodecs` + `@remotion/media-parser` from the app in the same change. No server-side
+work — the module reads the filmstrip renditions (and legacy fallback renditions) already in
+production.
 
 ## Roadmap after POC
 
 1. Web Worker wrapper (`extract/worker`) so table-flatten + decode never touch the main thread.
 2. Puppeteer E2E in rerender's own test suite (same pattern as `test/export.test.ts`).
-3. Publish story: rerender is currently `private: true`; Bevyl consumes via a pinned git
-   dependency until rerender publishes to npm.
-4. Benchmark page for the README (the vs-remotion table above, reproducible).
+3. ~~Publish story~~ — done. The package publishes to npm as `rerender-video` (the bare
+   `rerender` name belongs to an unrelated 2018 package). Bevyl still consumes a pinned git
+   tarball under the old `rerender` specifier and needs to move to the npm package.
+4. ~~Benchmark page~~ — superseded by something better: [rerender.video](https://rerender.video) is
+   a live scrubber (`demo/extract-showcase.tsx`). Drag the track and the frame under the playhead
+   is fetched and decoded on the spot, with the measured latency and bytes printed underneath
+   (7–10 ms and 20–50 KB per seek, warm, on a 52 s / 2 MB source). The vs-remotion table stays in
+   the README, where a reader who wants numbers will look for them.
