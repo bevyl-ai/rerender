@@ -27,6 +27,7 @@ const SRC = '/filmstrip-30min-128p.mp4';
 const FRAMES = 12;
 
 type Engine = 'rerender' | 'remotion';
+type Phase = Engine | 'warming';
 
 interface Result {
   ms: number;
@@ -41,7 +42,7 @@ const LABEL: Record<Engine, string> = {
 export function Race(): JSX.Element {
   const canvases = useRef<Record<Engine, HTMLCanvasElement | null>>({ rerender: null, remotion: null });
   const [results, setResults] = useState<Partial<Record<Engine, Result>>>({});
-  const [running, setRunning] = useState<Engine | null>(null);
+  const [running, setRunning] = useState<Phase | null>(null);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
 
@@ -57,6 +58,13 @@ export function Race(): JSX.Element {
     setDone(false);
 
     try {
+      // Warm the file into the browser's cache before either engine is timed. Otherwise the first
+      // press measures a 5 MB download (~850 ms cold at the edge) and every press after it reads
+      // from disk (~210 ms), so the number would depend on how many times you had clicked rather
+      // than on the engines. Not counted against either side.
+      setRunning('warming');
+      await (await fetch(SRC)).arrayBuffer();
+
       // ── rerender: build the index, then pull the frames ──
       setRunning('rerender');
       const ours = prepareStrip(oursCanvas, width, FRAMES);
@@ -125,7 +133,7 @@ export function Race(): JSX.Element {
             cursor: running ? 'default' : 'pointer',
           }}
         >
-          {running ? 'Running…' : done ? 'Run again' : 'Run benchmark'}
+          {running === 'warming' ? 'Fetching the file…' : running ? 'Running…' : done ? 'Run again' : 'Run benchmark'}
         </button>
         {done && factor > 0 && (
           <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, color: '#8a8a99' }}>
