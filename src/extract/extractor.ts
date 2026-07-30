@@ -20,6 +20,12 @@ export interface FrameExtractorOptions {
   fetchFn?: typeof fetch;
   /** Max GOP fetches in flight per extract() call. Default 8. */
   maxParallelFetches?: number;
+  /**
+   * Above a handful of scattered GOPs it is cheaper to pull a file this size than to ask for
+   * windows of it, because ranges of one URL serialize at the origin. Default 12 MB; set 0 to
+   * always use ranges, which costs latency but never fetches a byte that was not asked for.
+   */
+  maxWholeFileBytes?: number;
 }
 
 export interface ExtractOptions {
@@ -223,7 +229,7 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
    * 943 ms where the whole thing cost 211 ms. Bounded by size so this never runs away on a large
    * source, and only when enough GOPs are wanted to pay for it.
    */
-  const WHOLE_FILE_MAX_BYTES = 12 * 1024 * 1024;
+  const wholeFileMaxBytes = options.maxWholeFileBytes ?? 12 * 1024 * 1024;
   const WHOLE_FILE_MIN_GOPS = 4;
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
@@ -239,7 +245,7 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
 
     const queue = Array.from(byGop.values());
     const total = source.size();
-    if (queue.length >= WHOLE_FILE_MIN_GOPS && total !== null && total <= WHOLE_FILE_MAX_BYTES) {
+    if (wholeFileMaxBytes > 0 && queue.length >= WHOLE_FILE_MIN_GOPS && total !== null && total <= wholeFileMaxBytes) {
       await resolveUnlessAborted(source.preload(signal), signal);
     }
 
