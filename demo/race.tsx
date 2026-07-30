@@ -151,25 +151,8 @@ export function Race(): JSX.Element {
         )}
         {err && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#ff6b6b' }}>{err}</span>}
       </div>
-      <div
-        style={{
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: 12,
-          color: warmup ? '#8a8a99' : '#55555f',
-          margin: '0 0 12px',
-          minHeight: 18,
-        }}
-      >
-        {running === 'warming' ? (
-          'download · fetching the file…'
-        ) : warmup ? (
-          <>
-            download · <span style={{ color: '#cfcfd8' }}>{(warmup.ms / 1000).toFixed(2)} s</span> for {(warmup.bytes / 1048576).toFixed(1)}{' '}
-            MB · not counted below
-          </>
-        ) : (
-          'download · runs first, and is not counted below'
-        )}
+      <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', margin: '0 0 12px', minHeight: 18 }}>
+        {running === 'warming' ? 'download: …' : warmup ? `download: ${(warmup.ms / 1000).toFixed(2)}s` : ''}
       </div>
 
       {(['rerender', 'remotion'] as const).map((engine) => (
