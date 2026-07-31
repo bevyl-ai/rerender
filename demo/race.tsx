@@ -134,6 +134,9 @@ export function Race(): JSX.Element {
   const ours = results.rerender;
   const theirs = results.remotion;
   const factor = ours && theirs && ours.ms > 0 ? theirs.ms / ours.ms : 0;
+  const won = factor >= 1;
+  /** Always the larger of the two ratios, so it reads as "N× faster" or "N× slower", never "0.9× faster". */
+  const margin = won ? factor : 1 / factor;
 
   return (
     <div>
@@ -202,10 +205,16 @@ export function Race(): JSX.Element {
       {/* The heading above deliberately carries no number. Run to run this lands anywhere from
           2.5x to 3.4x, and a fixed claim printed above a button that disagrees with it is worse
           than no claim at all. This is the number, and the reader is the one who made it. */}
+      {/* The heading above deliberately carries no number. Run to run this lands anywhere from
+          2.5x to 6.7x, and a fixed claim printed above a button that disagrees with it is worse
+          than no claim at all. This is the number, and the reader is the one who made it.
+
+          Below 1.0 it has to invert. "0.9x faster" reads as a win while reporting a loss, which
+          is the one thing a benchmark must never do. */}
       {done && factor > 0 && (
         <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 26, fontWeight: 700, letterSpacing: -0.5, margin: '6px 0 16px' }}>
-          <span style={{ color: ACCENT }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}×</span>
-          <span style={{ color: '#8a8a99' }}> faster</span>
+          <span style={{ color: won ? ACCENT : '#ff6b6b' }}>{margin >= 10 ? margin.toFixed(0) : margin.toFixed(1)}×</span>
+          <span style={{ color: '#8a8a99' }}>{won ? ' faster' : ' slower'}</span>
         </div>
       )}
 
