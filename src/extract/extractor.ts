@@ -18,7 +18,7 @@ export interface FrameExtractorOptions {
   signal?: AbortSignal;
   /** Injectable for tests; defaults to global fetch. */
   fetchFn?: typeof fetch;
-  /** Max GOP fetches in flight per extract() call. Default 8. */
+  /** Max GOP fetches in flight per extract() call. Default 16. */
   maxParallelFetches?: number;
 }
 
@@ -107,11 +107,13 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   const moovBytes = await resolveUnlessAborted(source.readThroughMoov(extractorSignal), extractorSignal);
   const table = parseSampleTable(moovBytes);
   const { presentationTicks, byteOffsets, byteSizes, keySampleIndices, timescale } = table;
-  // Concurrent range requests to the *same* URL do not actually run concurrently. Measured
-  // against the deployed demo: twelve in flight took 943 ms against one URL and 163 ms against
-  // twelve distinct URLs, so they queue roughly one at a time behind the origin's cache lock.
-  // Raising this alone buys nothing; see the whole-file path below for what to do about it.
-  const maxParallel = options.maxParallelFetches ?? 8;
+  // Reads of one URL used to queue behind each other, which made this number a formality — the
+  // note here used to say raising it bought nothing. Since source.ts stopped contending for the
+  // HTTP cache entry they were all waiting on, it is a real concurrency limit again, and 8 was
+  // low enough to show: a 12-thumbnail filmstrip finished in two waves on production, reads at
+  // t=402-590 and then t=554-713, the second wave being frames that waited for a slot rather
+  // than for the network.
+  const maxParallel = options.maxParallelFetches ?? 16;
 
   // Presentation ticks of each GOP's keyframe — ascending, used to route a timestamp to its GOP.
   const gopStartTicks = new Float64Array(keySampleIndices.length);
