@@ -16,24 +16,17 @@ interface Rendition {
   src: string;
   /** What a decoder needs to be asked about before we know the browser can play it. */
   codecString: string;
-  note: string;
 }
 
 /** A rendition per registry id. A codec with no entry here is listed but not raced. */
 const RENDITIONS: Partial<Record<CodecId, Rendition>> = {
-  avc: {
-    src: '/filmstrip-12min-128p.mp4',
-    codecString: 'avc1.64000b',
-    note: 'The rendition the headline benchmark uses. High profile, level 1.1.',
-  },
-  av1: {
-    src: '/filmstrip-12min-av1.mp4',
-    codecString: 'av01.0.00M.08',
-    note: 'Same source, same 24-frame GOP, encoded with SVT-AV1. Main profile, 8-bit.',
-  },
+  avc: { src: '/filmstrip-12min-128p.mp4', codecString: 'avc1.64000b' },
+  hevc: { src: '/filmstrip-12min-hevc.mp4', codecString: 'hvc1.1.6.L30.90' },
+  vp9: { src: '/filmstrip-12min-vp9.mp4', codecString: 'vp09.00.10.08' },
+  av1: { src: '/filmstrip-12min-av1.mp4', codecString: 'av01.0.00M.08' },
 };
 
-const NAMES: Record<CodecId, string> = { avc: 'H.264 / AVC', av1: 'AV1' };
+const NAMES: Record<CodecId, string> = { avc: 'H.264 / AVC', hevc: 'H.265 / HEVC', vp9: 'VP9', av1: 'AV1' };
 
 type Support = 'checking' | 'yes' | 'no' | 'no-webcodecs';
 
@@ -56,13 +49,6 @@ function useSupport(codecString: string): Support {
   return support;
 }
 
-const SUPPORT_LABEL: Record<Support, string> = {
-  checking: 'checking…',
-  yes: 'your browser decodes this',
-  no: 'your browser cannot decode this',
-  'no-webcodecs': 'no WebCodecs in this browser',
-};
-
 function CodecSection({ id }: { id: CodecId }): JSX.Element {
   const handler = CODECS.find((codec) => codec.id === id)!;
   const rendition = RENDITIONS[id];
@@ -70,22 +56,10 @@ function CodecSection({ id }: { id: CodecId }): JSX.Element {
 
   return (
     <section style={{ marginTop: 56 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
         <h2 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 850, letterSpacing: -0.8, margin: 0 }}>{NAMES[id]}</h2>
         <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: ACCENT }}>{handler.sampleEntries.join(', ')}</code>
         <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#55555f' }}>{handler.configBox}</code>
-      </div>
-
-      <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.7, marginBottom: 18 }}>
-        {rendition?.note}
-        {rendition && (
-          <>
-            <br />
-            <span style={{ color: support === 'yes' ? '#6ee7a8' : support === 'checking' ? '#55555f' : '#ff6b6b' }}>
-              {rendition.codecString} — {SUPPORT_LABEL[support]}
-            </span>
-          </>
-        )}
       </div>
 
       {!rendition && (
@@ -133,8 +107,9 @@ export function Codecs(): JSX.Element {
       ))}
 
       <p style={{ margin: '56px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.7 }}>
-        Support is asked of your browser with <code>VideoDecoder.isConfigSupported</code>, not inferred from a user-agent string. AV1
-        decodes in current Chrome, Firefox and Edge; Safari needs hardware support.
+        Support is asked of your browser with <code>VideoDecoder.isConfigSupported</code>, not inferred from a user-agent string. AV1 and
+        VP9 decode in current Chrome, Firefox and Edge; HEVC needs platform support, so it plays on Safari and on Chrome only where hardware
+        provides it.
       </p>
     </>
   );

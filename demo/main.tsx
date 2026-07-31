@@ -94,9 +94,6 @@ createRoot(root).render(
           put it back on the page. */}
       {SMOKE_TEST && (
         <section style={{ marginTop: 96, paddingTop: 40, borderTop: '1px solid #1d1d25' }}>
-          <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, letterSpacing: 1.5, color: '#55555f', marginBottom: 14 }}>
-            THE REST OF THE PACKAGE
-          </div>
           <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 850, lineHeight: 1.1, margin: '0 0 16px', letterSpacing: -1.1 }}>
             Export video <span style={{ color: ACCENT }}>in your browser.</span>
           </h2>
