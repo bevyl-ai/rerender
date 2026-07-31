@@ -65,7 +65,7 @@ createRoot(root).render(
       <ExtractShowcase />
 
       <p style={{ margin: '16px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
-        <a href="https://github.com/bevyl-ai/rerender#extract" style={link}>
+        <a href="https://github.com/bevyl-ai/rerender#what-is-rerender" style={link}>
           rerender/extract
         </a>{' '}
         runs in production in{' '}
