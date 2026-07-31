@@ -10,6 +10,7 @@ out/
 !public/demo-clip.mp4
 !public/sintel-480p.mp4
 !public/filmstrip-12min-128p.mp4
+!public/filmstrip-12min-av1.mp4
 !test/fixtures/*.mp4
 
 compat/out/

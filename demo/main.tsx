@@ -80,6 +80,12 @@ createRoot(root).render(
           Faster than <code style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 850 }}>@remotion/webcodecs</code>
         </h2>
         <Race />
+        <p style={{ margin: '18px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
+          <a href="/codecs" style={link}>
+            Same race per codec
+          </a>{' '}
+          — H.264 and AV1, on renditions cut from one source with one GOP structure.
+        </p>
       </section>
 
       {/* The in-browser export is parked: this page is about extraction. It stays mounted under
