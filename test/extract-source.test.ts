@@ -10,7 +10,7 @@ import test from 'node:test';
 import { createUrlSource } from '../src/extract/source';
 
 const SRC = 'https://fixture.test/synthetic.mp4';
-const PROBE = 64 * 1024;
+const PROBE = 192 * 1024;
 
 function box(type: string, payloadSize: number, fill = 0): Uint8Array {
   const size = 8 + payloadSize;

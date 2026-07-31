@@ -9,8 +9,20 @@ export interface RangeSource {
   readThroughMoov(signal?: AbortSignal): Promise<Uint8Array>;
 }
 
-/** How many bytes to speculatively read when probing box headers. Covers ftyp+free+small moovs in one request. */
-const HEAD_PROBE_BYTES = 64 * 1024;
+/**
+ * How many bytes to speculatively read when probing box headers. Sized so an ordinary clip's whole
+ * index arrives in one request, because missing costs a second round trip: the demo's 12-minute
+ * rendition indexes to 164 KB, and reading it as 64 KB + a 102 KB remainder measured 156 ms against
+ * production where a single 192 KB read measured 68 ms.
+ *
+ * Sample tables run about 8 bytes per frame, so this covers roughly 13 minutes at 30fps. Going
+ * bigger keeps helping longer videos and costs everyone else the extra bytes; the trade turns on
+ * whether those bytes cost less than the round trip they save, which is bandwidth * RTT. At the
+ * 72 ms RTT measured against production that break-even sits near 15 Mbps, and on mobile — higher
+ * latency, so a dearer round trip — nearer 5 Mbps. Overrunning is not a cliff either way, just the
+ * second request this is trying to avoid.
+ */
+const HEAD_PROBE_BYTES = 192 * 1024;
 
 interface TopLevelBox {
   type: string;
