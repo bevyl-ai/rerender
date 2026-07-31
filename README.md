@@ -4,19 +4,19 @@
 Remotion-compatible React runtime, and an MP4 render path built on WebCodecs and
 [mediabunny](https://mediabunny.dev). No ffmpeg anywhere.
 
-Not on npm: the `rerender` name there belongs to an unrelated package from 2018. Install from the
-repo, which is what the production consumer does:
-
 ```sh
-npm install github:bevyl-ai/rerender
+npm i @bevyl/rerender
 ```
+
+Scoped because the bare `rerender` on npm is an unrelated package from 2018. To keep the shorter
+specifier in your own imports, alias it: `npm i rerender@npm:@bevyl/rerender`.
 
 **[rerender.video](https://rerender.video): drag a scrubber and watch each frame get fetched and
 decoded on the spot.**
 
 ---
 
-## `rerender/extract` — any frame of any mp4, in milliseconds
+## `@bevyl/rerender/extract` — any frame of any mp4, in milliseconds
 
 The thing every timeline UI needs for filmstrips and thumbnails, as a self-contained,
 **zero-dependency** module. Range requests + a flattened `moov` sample table + WebCodecs. No
@@ -32,7 +32,7 @@ decode, no matter how deep into the file it lands.
 
 Head-to-head in Chrome against real CloudFront-hosted 128p H.264 filmstrip renditions (2026-07-09):
 
-| scenario | `rerender/extract` | `@remotion/webcodecs` |
+| scenario | `@bevyl/rerender/extract` | `@remotion/webcodecs` |
 | -- | -- | -- |
 | 6 sparse frames, 28 s file, cold | 196 ms | 168 ms |
 | 20 frames @ 0.1 s apart, cold → warm | 341 ms → 14 ms (1 fetch, 23 KB) | 578 ms → 108 ms |
@@ -57,7 +57,7 @@ on it as a muxer/demuxer — rerender depends on it for exactly that.
 ### Using it
 
 ```ts
-import { createFrameExtractor } from 'rerender/extract';
+import { createFrameExtractor } from '@bevyl/rerender/extract';
 
 const extractor = await createFrameExtractor({ src: url });
 
@@ -83,14 +83,14 @@ architecture, the edges it handles (B-frames, edit lists, `co64`, moov-at-end), 
 **In production**: Bevyl's editor timeline filmstrips, since July 2026, where it replaced
 `@remotion/webcodecs` and `@remotion/media-parser` in the same change.
 
-## `rerender/media-parser` — `@remotion/media-parser`'s `parseMedia`, over mediabunny
+## `@bevyl/rerender/media-parser` — `@remotion/media-parser`'s `parseMedia`, over mediabunny
 
 The metadata call an editor needs for drag-and-drop import — codec, duration, dimensions, fps —
 with the same field-selection contract as Remotion's, so the requested fields are the ones you get
 back in the type.
 
 ```ts
-import { parseMedia } from 'rerender/media-parser';
+import { parseMedia } from '@bevyl/rerender/media-parser';
 
 const { dimensions, videoCodec } = await parseMedia({ src: file, fields: { dimensions: true, videoCodec: true } });
 ```
@@ -112,7 +112,7 @@ import {
   AbsoluteFill, Img, Video, OffthreadVideo, Audio,
   registerRoot, Composition, Still, Folder,
   Player,
-} from 'rerender';
+} from '@bevyl/rerender';
 ```
 
 Point an existing Remotion entry point at these instead and it should run.
@@ -167,12 +167,12 @@ function, so it runs on Fly.io Firecracker microVMs, a plain AWS box, Docker, or
 | import | what it is |
 | -- | -- |
 | `rerender` | the Remotion-compatible runtime, primitives, and `<Player>` |
-| `rerender/extract` | zero-dependency mp4 frame extraction + frame store |
-| `rerender/media-parser` | `@remotion/media-parser`'s `parseMedia`, over mediabunny |
-| `rerender/media` | `@remotion/media`'s `<Video>`/`<Audio>`, over mediabunny sinks |
+| `@bevyl/rerender/extract` | zero-dependency mp4 frame extraction + frame store |
+| `@bevyl/rerender/media-parser` | `@remotion/media-parser`'s `parseMedia`, over mediabunny |
+| `@bevyl/rerender/media` | `@remotion/media`'s `<Video>`/`<Audio>`, over mediabunny sinks |
 | `rerender/audio-engine` | the Web Audio preview scheduler, for external players |
 
-Requires Node >=20.3 for the CLI; `react`/`react-dom` >=18 are peer dependencies. `rerender/extract`
+Requires Node >=20.3 for the CLI; `react`/`react-dom` >=18 are peer dependencies. `@bevyl/rerender/extract`
 is browser-only (fetch + WebCodecs) and pulls in nothing else.
 
 ## License
