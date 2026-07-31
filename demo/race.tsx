@@ -199,9 +199,13 @@ export function Race(): JSX.Element {
         </div>
       ))}
 
+      {/* The heading above deliberately carries no number. Run to run this lands anywhere from
+          2.5x to 3.4x, and a fixed claim printed above a button that disagrees with it is worse
+          than no claim at all. This is the number, and the reader is the one who made it. */}
       {done && factor > 0 && (
-        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 15, color: '#8a8a99', margin: '2px 0 14px' }}>
-          <span style={{ color: '#cfcfd8' }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}× faster</span>
+        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 26, fontWeight: 700, letterSpacing: -0.5, margin: '6px 0 16px' }}>
+          <span style={{ color: ACCENT }}>{factor >= 10 ? factor.toFixed(0) : factor.toFixed(1)}×</span>
+          <span style={{ color: '#8a8a99' }}> faster</span>
         </div>
       )}
 
