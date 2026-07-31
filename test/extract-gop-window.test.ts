@@ -206,3 +206,35 @@ test('GOPs far apart stay separate reads', async () => {
     restore();
   }
 });
+
+test('a long chain of cheap merges is split before it swallows the file', async () => {
+  const file = readFileSync(MANY_GOPS);
+  const table = parseSampleTable(new Uint8Array(file));
+  const gops = table.keySampleIndices.length;
+  const fed: Fed = { timestamps: [] };
+  const restore = installFakeDecoder(fed);
+  const requests: { start: number; end: number }[] = [];
+  try {
+    const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
+    const setup = requests.length;
+    // every GOP in the file: each neighbour is within the gap cap, so the gap rule on its own
+    // would chain all of them into a single read spanning the whole mdat
+    const wanted = Array.from({ length: gops }, (_, g) => table.presentationTicks[table.keySampleIndices[g]!]! / table.timescale);
+    const delivered: number[] = [];
+    await extractor.extract(wanted, (_f, seconds) => delivered.push(seconds));
+
+    const reads = requests.slice(setup);
+    assert.ok(reads.length > 1, 'the whole file in one read is what the budget exists to prevent');
+    assert.equal(delivered.length, gops, 'and every frame still arrives');
+
+    // A request for every GOP legitimately touches most of the file, so the invariant worth
+    // pinning is not how much was fetched but how much of it nobody asked for.
+    const fetched = reads.reduce((sum, r) => sum + (r.end - r.start), 0);
+    const asked = table.keySampleIndices.reduce((sum, i) => sum + table.byteSizes[i]!, 0);
+    const wastePerRead = (fetched - asked) / reads.length;
+    assert.ok(wastePerRead <= 384 * 1024, `${Math.round(wastePerRead / 1024)} KB wasted per read exceeds the budget`);
+    extractor.dispose();
+  } finally {
+    restore();
+  }
+});

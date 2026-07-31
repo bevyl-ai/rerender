@@ -53,10 +53,15 @@ export interface FrameExtractor {
 
 const MICROSECONDS = 1_000_000;
 
-/** Two wanted byte runs closer than this are fetched as one. Small enough that the bytes in
- *  between are cheaper than the round trip they save, and far below the size at which merging
- *  would amount to downloading the file. */
+/** Two wanted byte runs closer than this are fetched as one: the bytes in between cost less than
+ *  the round trip they save. */
 const COALESCE_GAP_BYTES = 128 * 1024;
+
+/** How many unwanted bytes one merged read may accumulate before it is split. The gap rule alone
+ *  bounds each step, not the total — sixteen thumbnails 100 KB apart chain into one span covering
+ *  the lot, which on the demo rendition meant pulling 59% of the file. This is the actual ceiling
+ *  on waste, and it is per read, so it does not grow with how much of the video is on screen. */
+const COALESCE_WASTE_BUDGET_BYTES = 384 * 1024;
 
 /** Index of the last element <= target in a sorted ascending array-like, or 0. */
 function lastAtOrBefore(sorted: ArrayLike<number>, target: number): number {
@@ -239,21 +244,23 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     // Reads that sit close together become one read. Concurrent ranges of a single URL serialize
     // at some origins, so each extra request can cost a whole round trip: measured against the
     // deployed demo, eight adjacent GOPs cost 323 ms as separate ranges and 42 ms as one, for
-    // 14 KB of bytes nobody asked for. The gap is capped so this only ever merges neighbours —
-    // the same eight GOPs spread across the file stay eight reads, because merging those would
-    // mean pulling 3.5 MB to use 48 KB.
+    // 14 KB of bytes nobody asked for. Two caps decide where merging stops — the gap, so a run
+    // far from its neighbour is never dragged in, and the running total of unwanted bytes, so a
+    // long chain of individually-cheap merges cannot add up to downloading the file.
     const ranges = Array.from(byGop.values())
       .map((job) => ({ job, ...jobRange(job) }))
       .sort((a, b) => a.start - b.start);
 
-    const spans: { start: number; end: number; jobs: GopJob[] }[] = [];
+    const spans: { start: number; end: number; jobs: GopJob[]; wasted: number }[] = [];
     for (const range of ranges) {
       const open = spans[spans.length - 1];
-      if (open && range.start - open.end <= COALESCE_GAP_BYTES) {
+      const gap = open ? range.start - open.end : 0;
+      if (open && gap <= COALESCE_GAP_BYTES && open.wasted + Math.max(gap, 0) <= COALESCE_WASTE_BUDGET_BYTES) {
+        open.wasted += Math.max(gap, 0);
         open.end = Math.max(open.end, range.end);
         open.jobs.push(range.job);
       } else {
-        spans.push({ start: range.start, end: range.end, jobs: [range.job] });
+        spans.push({ start: range.start, end: range.end, jobs: [range.job], wasted: 0 });
       }
     }
 
