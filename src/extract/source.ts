@@ -28,16 +28,32 @@ function readTopLevelBox(view: DataView, at: number): TopLevelBox | null {
 }
 
 export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): RangeSource {
-  const read = async (start: number, end: number, signal?: AbortSignal): Promise<Uint8Array> => {
-    const res = await fetchFn(src, { headers: { Range: `bytes=${start}-${end - 1}` }, signal });
+  const fetchRange = async (start: number, end: number, signal?: AbortSignal, cache?: RequestCache): Promise<Uint8Array> => {
+    const res = await fetchFn(src, { headers: { Range: `bytes=${start}-${end - 1}` }, signal, ...(cache ? { cache } : {}) });
     if (res.status !== 206 && res.status !== 200) throw new Error(`range request failed for ${src}: ${res.status}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
     // A 200 means the server ignored the Range header; slice locally so callers still work.
     return res.status === 200 ? bytes.slice(start, end) : bytes;
   };
 
+  // Concurrent range requests for one URL queue behind that URL's cache entry, so twelve reads
+  // issued at once come back one at a time: measured on the deployed demo, 12 scattered reads took
+  // 642-805 ms under default cache mode and 129-166 ms bypassing it. Repeating the same twelve
+  // ranges under default mode took 907 ms, so the entry we are queueing for never serves us
+  // anyway — the cost is real and the benefit it was supposed to buy is not.
+  //
+  // force-cache is faster still (4 ms on a repeat) but returns stale bodies whatever the server
+  // said about freshness, and a frame extractor that quietly decodes last week's file is a worse
+  // bug than a slow one.
+  const read = (start: number, end: number, signal?: AbortSignal): Promise<Uint8Array> => fetchRange(start, end, signal, 'no-store');
+
+  // The index reads go the other way: they run one after another, so they never queue behind each
+  // other, and every new extractor over a URL asks for the same head bytes. Default cache mode is
+  // what makes the second extractor over a file cheap.
+  const readIndex = (start: number, end: number, signal?: AbortSignal): Promise<Uint8Array> => fetchRange(start, end, signal);
+
   const readThroughMoov = async (signal?: AbortSignal): Promise<Uint8Array> => {
-    const head = await read(0, HEAD_PROBE_BYTES, signal);
+    const head = await readIndex(0, HEAD_PROBE_BYTES, signal);
     const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
 
     // Walk top-level boxes from the front until we find moov or hit mdat (moov-at-end layout).
@@ -51,7 +67,7 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
         // Only the part the probe didn't already cover. Re-reading from 0 costs the probe's
         // bytes a second time, which is most of a round trip's worth on a long file's moov
         // (a 30-minute rendition indexes ~400 KB of sample table).
-        const rest = await read(head.byteLength, moovEnd, signal);
+        const rest = await readIndex(head.byteLength, moovEnd, signal);
         const moov = new Uint8Array(moovEnd);
         moov.set(head, 0);
         moov.set(rest, head.byteLength);
@@ -60,12 +76,12 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
       if (box.type === 'mdat') {
         // moov is behind the media data: probe the box header right after mdat.
         const afterMdat = box.start + box.size;
-        const tailProbe = await read(afterMdat, afterMdat + 16, signal);
+        const tailProbe = await readIndex(afterMdat, afterMdat + 16, signal);
         const tailBox = readTopLevelBox(new DataView(tailProbe.buffer, tailProbe.byteOffset, tailProbe.byteLength), 0);
         if (tailBox?.type !== 'moov') throw new Error(`no moov after mdat in ${src}`);
         // The moov box alone is a valid buffer for parseSampleTable (it walks whatever
         // top-level boxes it's given), and stco offsets are file-absolute so no rebasing.
-        return read(afterMdat, afterMdat + tailBox.size, signal);
+        return readIndex(afterMdat, afterMdat + tailBox.size, signal);
       }
       at = box.start + box.size;
     }

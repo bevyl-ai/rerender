@@ -33,16 +33,17 @@ function concat(...parts: Uint8Array[]): Uint8Array {
 interface Call {
   start: number;
   end: number;
+  cache?: string;
 }
 
 /** Serves `bytes` over ranged reads, recording every range. `ignoreRange` mimics a server that
  *  answers 200 with the entire body regardless of what was asked for. */
 function serve(bytes: Uint8Array, calls: Call[], ignoreRange = false) {
-  return ((_input: unknown, init?: { headers?: Record<string, string> }) => {
+  return ((_input: unknown, init?: { headers?: Record<string, string>; cache?: string }) => {
     const match = /bytes=(\d+)-(\d+)/.exec(init?.headers?.Range ?? '');
     const start = Number(match![1]);
     const end = Math.min(Number(match![2]) + 1, bytes.byteLength);
-    calls.push({ start, end });
+    calls.push(init?.cache ? { start, end, cache: init.cache } : { start, end });
     const body = ignoreRange ? bytes : bytes.subarray(start, end);
     return Promise.resolve({
       status: ignoreRange ? 200 : 206,
@@ -101,4 +102,38 @@ test('a server that ignores Range and returns 200 still yields the requested sli
 test('a file with no moov fails loudly', async () => {
   const file = concat(box('ftyp', 24), box('free', 1024));
   await assert.rejects(() => createUrlSource(SRC, serve(file, [])).readThroughMoov(), /could not locate moov/);
+});
+
+// Concurrent range requests for one URL queue behind that URL's cache entry, so media reads opt
+// out of it — measured on the deployed demo, 12 scattered reads went from 642-805 ms to 129-166 ms.
+// Index reads run sequentially and never contend, so they keep normal caching and a second
+// extractor over the same file gets the head bytes for free.
+test('media reads bypass the cache, index reads do not', async () => {
+  const file = concat(box('ftyp', 24), box('moov', 4096, 0x33), box('mdat', 16384, 0x44));
+  const calls: Call[] = [];
+  const source = createUrlSource(SRC, serve(file, calls));
+
+  await source.readThroughMoov();
+  assert.ok(calls.length > 0, 'the index was read');
+  assert.ok(
+    calls.every((c) => c.cache === undefined),
+    'index reads must keep default cache semantics',
+  );
+
+  const indexCalls = calls.length;
+  await source.read(40, 104);
+  assert.equal(calls.length, indexCalls + 1);
+  assert.equal(calls[indexCalls]!.cache, 'no-store', 'media reads must not queue on the cache entry');
+});
+
+test('a moov past the probe still caches every one of its reads', async () => {
+  const file = concat(box('ftyp', 24), box('moov', 300 * 1024, 0x5c), box('mdat', 4096));
+  const calls: Call[] = [];
+  await createUrlSource(SRC, serve(file, calls)).readThroughMoov();
+
+  assert.equal(calls.length, 2, 'probe, then the remainder');
+  assert.deepEqual(
+    calls.map((c) => c.cache),
+    [undefined, undefined],
+  );
 });
