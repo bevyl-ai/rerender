@@ -1,4 +1,4 @@
-# rerender: frame extraction (`rerender/extract`)
+# rerender: frame extraction (`@bevyl-ai/rerender/extract`)
 
 Random-access frame extraction from mp4 URLs — the thing every timeline UI needs for
 filmstrips/thumbnails — as a self-contained, zero-dependency module. Fetch ranges over HTTP,
@@ -59,7 +59,7 @@ exists.
 ## Module layout (`src/extract/`)
 
 Self-contained: no imports from the rest of rerender, no dependencies, browser-only Web APIs
-(fetch, DataView, WebCodecs). Consumable as `rerender/extract` without pulling in the renderer.
+(fetch, DataView, WebCodecs). Consumable as `@bevyl-ai/rerender/extract` without pulling in the renderer.
 
 - `mp4-sample-table.ts` — box walk (`moov` → `trak` → `stbl`), front- or back-of-file moov,
   `stts`/`ctts`(v0+v1)/`stss`/`stsz`/`stsc`/`stco`/`co64`/`elst`, avcC decoder config. Output:
@@ -154,6 +154,43 @@ product-agnostic half.
 - `co64`, v1 `ctts` (signed offsets), uniform `stsz`.
 - Fractional/unsorted/duplicate/past-end timestamps.
 
+## Benchmarks
+
+Against `@remotion/webcodecs` in Chrome, on CloudFront-hosted 128p H.264 renditions:
+
+| | `extract` | `@remotion/webcodecs` |
+| -- | -- | -- |
+| 6 sparse frames, 28 s file, cold | 196 ms | 168 ms |
+| 20 frames 0.1 s apart, cold -> warm | 341 ms -> 14 ms | 578 ms -> 108 ms |
+| 5 seeks across a 2-hour file, cold | **125 ms** | 15.9 s |
+| the same seeks, fully cached | **51 ms** | 16.6 s |
+
+Short files are a fair fight. The gap opens with duration, because one design re-walks the index on
+every seek and the other reads it once. Caching does not rescue the last row: that cost is parsing,
+and it is paid again every time.
+
+Correctness was checked alongside speed. Pixel-diff is 0.000 against Remotion's own decoder output
+at identical timestamps, and byte offset, size, PTS and keyframe flag match ffprobe's packet tables
+560/560.
+
+[rerender.video](https://rerender.video) runs the same head-to-head live, in your browser, on your
+connection.
+
+mediabunny was measured too. It is excellent on short files, but its lazy sample-table walk makes
+deep seeks O(distance) - `getSample(7000)` did not finish in two minutes. That is not its job, and
+it is no knock on it as a muxer/demuxer; rerender depends on it for exactly that.
+
+## Migrating
+
+Three `@remotion/webcodecs` behaviours differ here. Each is a regression test in this repo.
+
+- It **mutates the `timestampsInSeconds` array you pass it** - sorts it in place, then empties it -
+  so reusing one array across two calls throws. `extract` never touches the caller's array.
+- Past-end timestamps are **silently dropped**: request 4, receive 2, no error. `extract` clamps
+  them, and every requested timestamp gets exactly one callback.
+- It forces `cache: 'no-store'` on every fetch, a server-side guard applied in the browser, so
+  nothing it downloads is ever HTTP-cached.
+
 ## Non-goals (for now)
 
 - Codecs beyond H.264/AVC (HEVC/AV1/VP9 are additive: same sample table, different decoder
@@ -173,10 +210,8 @@ production.
 
 1. Web Worker wrapper (`extract/worker`) so table-flatten + decode never touch the main thread.
 2. Puppeteer E2E in rerender's own test suite (same pattern as `test/export.test.ts`).
-3. Publish story: still open, and blocked on the name. `rerender` on npm is an unrelated package
-   last published in 2018, so `npm publish` 403s and the release workflow can't complete a `v*`
-   tag. Consumers install from the GitHub tarball, which is what Bevyl already does. Publishing
-   needs either a different npm name or the existing one transferred.
+3. ~~Publish story~~ — shipped as `@bevyl-ai/rerender`. The bare `rerender` on npm is an
+   unrelated package last published in 2018, so the package took the existing org scope.
 4. ~~Benchmark page~~ — superseded by something better: [rerender.video](https://rerender.video) is
    a live scrubber (`demo/extract-showcase.tsx`). Drag the track and the frame under the playhead
    is fetched and decoded on the spot, with the measured latency and bytes printed underneath
