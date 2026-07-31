@@ -1,5 +1,5 @@
 {
-  "name": "rerender",
+  "name": "@bevyl-ai/rerender",
   "version": "0.1.0",
   "description": "Zero-dependency random-access frame extraction from mp4 URLs, plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
   "license": "MIT",
@@ -26,6 +26,9 @@
     "renderer"
   ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
