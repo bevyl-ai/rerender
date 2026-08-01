@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { rerenderAliases } from './render/aliases';
@@ -20,5 +21,7 @@ export default defineConfig({
   // ("Detected Vite pre-bundling, which will break the worker") if it has been rewritten into
   // .vite/deps. Its own error message asks for exactly this.
   optimizeDeps: { exclude: ['@remotion/media-parser/worker'] },
+  // Two pages: the demo, and one section per supported codec.
+  build: { rollupOptions: { input: { main: resolve(__dirname, 'index.html'), codecs: resolve(__dirname, 'codecs.html') } } },
   server: { open: false },
 });

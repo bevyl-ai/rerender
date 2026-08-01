@@ -32,6 +32,25 @@ test('AV1 parses, and its codec string matches the bytes the encoder wrote', () 
   assert.equal(table.description[0], 0x81, 'av1C marker/version byte');
 });
 
+// Derived by hand from each file's configuration record, then checked against what ffprobe reports
+// about the same file. The bit-reversed HEVC compatibility field is the one that would fail quietly.
+test('HEVC parses, and its codec string matches the bytes x265 wrote', () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(fixture('extract-hevc.mp4'))));
+  assert.equal(table.codecId, 'hevc');
+  // hvcC: profile_space 0, tier L, profile_idc 1 (Main), compat 0x60000000 reversed = 6, level 30
+  assert.equal(table.codec, 'hvc1.1.6.L30.90');
+  assert.equal(table.sampleCount, 20);
+  assert.equal(table.description[0], 0x01, 'hvcC configurationVersion');
+});
+
+test('VP9 parses, and reads past the FullBox header it sits behind', () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(fixture('extract-vp9.mp4'))));
+  assert.equal(table.codecId, 'vp9');
+  // vpcC is a FullBox: 4 bytes of version/flags, then profile 0, level 10, bit depth in the top nibble
+  assert.equal(table.codec, 'vp09.00.10.08');
+  assert.equal(table.sampleCount, 20);
+});
+
 test('every sample entry is claimed by exactly one handler', () => {
   const seen = new Set<string>();
   for (const codec of CODECS) {
@@ -42,6 +61,26 @@ test('every sample entry is claimed by exactly one handler', () => {
     }
   }
   assert.equal(handlerFor('mp4v'), null, 'an unknown entry is unclaimed, not a wrong guess');
+});
+
+test('every registry entry produces a well-formed codec string', () => {
+  // Shape only — a browser is the authority on whether it can decode one, and the demo asks it.
+  const shapes: Record<string, RegExp> = {
+    avc: /^avc1\.[0-9a-f]{6}$/,
+    hevc: /^hvc1\.[ABC]?\d+\.[0-9a-f]+\.[LH]\d+(\.[0-9a-f]{2})*$/,
+    vp9: /^vp09\.\d{2}\.\d{2}\.\d{2}$/,
+    av1: /^av01\.\d\.\d{2}[MH]\.\d{2}$/,
+  };
+  const files: Record<string, string> = {
+    avc: 'extract-faststart.mp4',
+    hevc: 'extract-hevc.mp4',
+    vp9: 'extract-vp9.mp4',
+    av1: 'extract-av1.mp4',
+  };
+  for (const codec of CODECS) {
+    const table = parseSampleTable(new Uint8Array(readFileSync(fixture(files[codec.id]!))));
+    assert.match(table.codec, shapes[codec.id]!, `${codec.id} codec string`);
+  }
 });
 
 // ── synthetic layouts ──
@@ -101,9 +140,9 @@ test('a fragmented mp4 says so instead of reporting an empty video', () => {
 
 test('an unsupported codec names itself and what is supported', () => {
   assert.throws(
-    () => parseSampleTable(moovWith('hvc1', 'hvcC')),
+    () => parseSampleTable(moovWith('mp4v', 'esds')),
     (error: Error) => {
-      assert.match(error.message, /unsupported codec 'hvc1'/);
+      assert.match(error.message, /unsupported codec 'mp4v'/);
       assert.match(error.message, /avc1/, 'lists what it does support');
       return true;
     },

@@ -27,6 +27,12 @@ import { ACCENT, card } from './ui';
 // frames spread over the file land at arbitrary points in the loop, so the credits showed up
 // fourth and the sequence ran backwards.
 const SRC = '/filmstrip-12min-128p.mp4';
+
+export interface RaceProps {
+  /** Which rendition to race on. Defaults to the H.264 one the headline number is measured against;
+   *  /codecs passes a per-codec rendition cut from the same source with the same GOP structure. */
+  src?: string;
+}
 /** Fixed so the numbers mean the same thing on every screen size. */
 const FRAMES = 12;
 /** Narrowest a thumbnail may get before the strip scrolls instead of shrinking. Twelve frames
@@ -51,7 +57,7 @@ const LABEL: Record<Engine, string> = {
   remotion: '@remotion/webcodecs',
 };
 
-export function Race(): JSX.Element {
+export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
   const canvases = useRef<Record<Engine, HTMLCanvasElement | null>>({ rerender: null, remotion: null });
   const [results, setResults] = useState<Partial<Record<Engine, Result>>>({});
   const [running, setRunning] = useState<Phase | null>(null);
@@ -82,7 +88,7 @@ export function Race(): JSX.Element {
       // than on the engines. Not counted against either side.
       setRunning('warming');
       const warmStarted = performance.now();
-      const file = await (await fetch(SRC)).arrayBuffer();
+      const file = await (await fetch(source)).arrayBuffer();
       setWarmup({ ms: performance.now() - warmStarted, bytes: file.byteLength });
 
       // ── rerender: build the index, then pull the frames ──
@@ -90,7 +96,7 @@ export function Race(): JSX.Element {
       const ours = prepareStrip(oursCanvas, width, FRAMES);
       if (!ours) throw new Error('no 2d context');
       let started = performance.now();
-      const extractor = await createFrameExtractor({ src: SRC });
+      const extractor = await createFrameExtractor({ src: source });
       const wanted = stripTimestamps(FRAMES, 0, extractor.durationSeconds);
       const byTime = new Map(wanted.map((seconds, i) => [seconds, i]));
       let painted = 0;
@@ -113,7 +119,7 @@ export function Race(): JSX.Element {
       started = performance.now();
       let theirPainted = 0;
       await extractFramesOnWebWorker({
-        src: new URL(SRC, location.href).href,
+        src: new URL(source, location.href).href,
         timestampsInSeconds: [...wanted], // their extractor mutates what it is handed
         acknowledgeRemotionLicense: true,
         onFrame: (frame) => {
@@ -129,7 +135,7 @@ export function Race(): JSX.Element {
     } finally {
       setRunning(null);
     }
-  }, []);
+  }, [source]);
 
   const ours = results.rerender;
   const theirs = results.remotion;

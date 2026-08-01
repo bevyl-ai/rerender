@@ -80,6 +80,12 @@ createRoot(root).render(
           Faster than <code style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 850 }}>@remotion/webcodecs</code>
         </h2>
         <Race />
+        <p style={{ margin: '18px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
+          <a href="/codecs" style={link}>
+            Same race per codec
+          </a>{' '}
+          — H.264 and AV1, on renditions cut from one source with one GOP structure.
+        </p>
       </section>
 
       {/* The in-browser export is parked: this page is about extraction. It stays mounted under
@@ -88,9 +94,6 @@ createRoot(root).render(
           put it back on the page. */}
       {SMOKE_TEST && (
         <section style={{ marginTop: 96, paddingTop: 40, borderTop: '1px solid #1d1d25' }}>
-          <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, letterSpacing: 1.5, color: '#55555f', marginBottom: 14 }}>
-            THE REST OF THE PACKAGE
-          </div>
           <h2 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 850, lineHeight: 1.1, margin: '0 0 16px', letterSpacing: -1.1 }}>
             Export video <span style={{ color: ACCENT }}>in your browser.</span>
           </h2>

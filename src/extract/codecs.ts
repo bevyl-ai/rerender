@@ -9,7 +9,7 @@
 // So a codec is three facts and one function, and adding one is adding a row.
 
 /** Discriminant for a codec family. Sample entry types map many-to-one onto these. */
-export type CodecId = 'avc' | 'av1';
+export type CodecId = 'avc' | 'hevc' | 'vp9' | 'av1';
 
 export interface CodecHandler {
   readonly id: CodecId;
@@ -28,8 +28,9 @@ const dec2 = (n: number) => String(n).padStart(2, '0');
  * avcC: `[configurationVersion, AVCProfileIndication, profile_compatibility, AVCLevelIndication]`.
  * The codec string is those three indication bytes as hex — `avc1.4d4014` is Main@4.0.
  *
- * `avc3` differs only in carrying parameter sets in-band rather than in avcC; the box and the
- * string are identical, and the decoder is told which by the sample entry type it came from.
+ * `avc3` differs only in carrying parameter sets in-band rather than in avcC. Both spell the codec
+ * string `avc1.`, and so does `hev1` spell `hvc1.`: the prefix says which form the decoder is being
+ * handed, and extraction always hands it the configuration record as `description`.
  */
 const avc: CodecHandler = {
   id: 'avc',
@@ -62,7 +63,57 @@ const av1: CodecHandler = {
   },
 };
 
-export const CODECS: readonly CodecHandler[] = [avc, av1];
+/**
+ * hvcC packs the profile three ways at once, and the codec string spells each differently:
+ *
+ *   byte 1     profile_space (2) | tier_flag (1) | profile_idc (5)
+ *   bytes 2-5  profile_compatibility_flags, written MSB-first, spelled LSB-first
+ *   bytes 6-11 constraint flags, trailing zero bytes omitted from the string
+ *   byte 12    level_idc, printed in decimal after L or H
+ *
+ * giving `hvc1.1.6.L30.90` for Main tier L level 3.0. The bit reversal is the part worth knowing
+ * about: 0x60000000 in the box is `6` in the string.
+ */
+const hevc: CodecHandler = {
+  id: 'hevc',
+  sampleEntries: ['hvc1', 'hev1'],
+  configBox: 'hvcC',
+  codecString: (config) => {
+    const profileSpace = (config[1]! >> 6) & 0b11;
+    const tier = (config[1]! >> 5) & 1 ? 'H' : 'L';
+    const profileIdc = config[1]! & 0b11111;
+    const compatibility = reverseBits32(((config[2]! << 24) | (config[3]! << 16) | (config[4]! << 8) | config[5]!) >>> 0);
+    const constraints = [...config.subarray(6, 12)];
+    while (constraints.length > 0 && constraints[constraints.length - 1] === 0) constraints.pop();
+    return [
+      `hvc1.${['', 'A', 'B', 'C'][profileSpace]}${profileIdc}`,
+      compatibility.toString(16),
+      `${tier}${config[12]!}`,
+      ...constraints.map(hex2),
+    ].join('.');
+  },
+};
+
+/** Reverses the bit order of a 32-bit value — what the HEVC codec string wants of the compatibility flags. */
+function reverseBits32(value: number): number {
+  let out = 0;
+  for (let i = 0; i < 32; i++) out = ((out << 1) | ((value >>> i) & 1)) >>> 0;
+  return out >>> 0;
+}
+
+/**
+ * vpcC is a FullBox, so its four version/flags bytes come first and everything below is offset by
+ * them: profile, then level, then a byte whose top nibble is the bit depth. `vp09.00.10.08` is
+ * profile 0, level 1.0, 8-bit.
+ */
+const vp9: CodecHandler = {
+  id: 'vp9',
+  sampleEntries: ['vp09'],
+  configBox: 'vpcC',
+  codecString: (config) => `vp09.${dec2(config[4]!)}.${dec2(config[5]!)}.${dec2(config[6]! >> 4)}`,
+};
+
+export const CODECS: readonly CodecHandler[] = [avc, hevc, vp9, av1];
 
 /** The handler claiming a `stsd` sample entry type, or null if no codec here knows it. */
 export function handlerFor(sampleEntry: string): CodecHandler | null {
