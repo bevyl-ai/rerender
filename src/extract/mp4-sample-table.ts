@@ -1,12 +1,16 @@
+import { type CodecId, type CodecResolution, describeFailure, handlerFor } from './codecs';
+
 // Flattens an mp4's moov sample table into typed arrays so time→byte-range is a binary
 // search instead of a per-seek box walk. This is the whole trick behind rerender/extract:
 // the moov already indexes every frame (offset, size, timestamps, keyflag) — parsers are
 // slow only because they consume it lazily. Parsing 140k samples flat takes ~100ms once.
 
 export interface SampleTable {
-  /** e.g. 'avc1.4d4014' — WebCodecs codec string derived from avcC. */
+  /** Which codec family the track is, from the registry in ./codecs. */
+  codecId: CodecId;
+  /** e.g. 'avc1.4d4014' or 'av01.0.00M.08' — the WebCodecs codec string. */
   codec: string;
-  /** avcC box payload — the VideoDecoder `description`. */
+  /** The decoder configuration record verbatim — the VideoDecoder `description`. */
   description: Uint8Array;
   /** mdia timescale (ticks per second). */
   timescale: number;
@@ -84,26 +88,45 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   const moov = top.find((box) => box.type === 'moov');
   if (!moov) throw new Error('mp4 sample table: no moov in provided bytes');
 
+  // Every video trak with a sample entry, whether or not a codec here claims it — an unknown
+  // codec has to be distinguishable from no video at all.
   const video = readBoxes(view, moov.start, moov.end)
     .filter((box) => box.type === 'trak')
     .flatMap((trak) => {
       const stbl = child(view, trak, 'mdia', 'minf', 'stbl');
       const stsd = stbl && child(view, stbl, 'stsd');
       // stsd payload: version/flags (4) + entry_count (4), then sample entries
-      const avc1 = stsd && readBoxes(view, stsd.start + 8, stsd.end).find((entry) => entry.type === 'avc1');
-      return stbl && avc1 ? [{ trak, stbl, avc1 }] : [];
-    })[0];
-  if (!video) throw new Error('mp4 sample table: no avc1 video trak (only H.264 is supported)');
-  const { trak, stbl, avc1 } = video;
+      const entry = stsd && readBoxes(view, stsd.start + 8, stsd.end)[0];
+      return stbl && entry ? [{ trak, stbl, entry }] : [];
+    });
+  // A fragmented file's moov is well-formed and indexes nothing; mvex is what says so.
+  const fragmented = readBoxes(view, moov.start, moov.end).some((box) => box.type === 'mvex');
+  const claimed = video.find((track) => handlerFor(track.entry.type));
+
+  const resolution = ((): CodecResolution => {
+    if (fragmented) return { ok: false, reason: 'fragmented' };
+    if (!claimed) {
+      const unknown = video[0];
+      return unknown
+        ? { ok: false, reason: 'unsupported-codec', sampleEntry: unknown.entry.type }
+        : { ok: false, reason: 'no-video-track' };
+    }
+    const handler = handlerFor(claimed.entry.type)!;
+    // VisualSampleEntry is 78 bytes of fixed fields, then child boxes.
+    const config = readBoxes(view, claimed.entry.start + 78, claimed.entry.end).find((box) => box.type === handler.configBox);
+    if (!config) {
+      return { ok: false, reason: 'missing-config', sampleEntry: claimed.entry.type, configBox: handler.configBox };
+    }
+    const description = moovBytes.slice(config.start, config.end);
+    return { ok: true, id: handler.id, codec: handler.codecString(description), description };
+  })();
+
+  if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
+  const { id: codecId, codec, description } = resolution;
+  const { trak, stbl } = claimed!;
 
   const mdhd = expectBox(child(view, trak, 'mdia', 'mdhd'), 'mdhd');
   const timescale = view.getUint8(mdhd.start) === 1 ? view.getUint32(mdhd.start + 20) : view.getUint32(mdhd.start + 12);
-
-  // avcC: VisualSampleEntry is 78 bytes of fixed fields, then child boxes.
-  const avcC = readBoxes(view, avc1.start + 78, avc1.end).find((box) => box.type === 'avcC');
-  if (!avcC) throw new Error('mp4 sample table: avc1 entry has no avcC');
-  const description = moovBytes.slice(avcC.start, avcC.end);
-  const codec = `avc1.${[1, 2, 3].map((i) => description[i]!.toString(16).padStart(2, '0')).join('')}`;
 
   const boxes = readBoxes(view, stbl.start, stbl.end);
   const find = (type: string) => boxes.find((box) => box.type === type) ?? null;
@@ -187,5 +210,5 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
     if (sample !== sampleCount) throw new Error(`mp4 sample table: chunk map covered ${sample} of ${sampleCount} samples`);
   }
 
-  return { codec, description, timescale, sampleCount, presentationTicks, byteOffsets, byteSizes, keySampleIndices };
+  return { codecId, codec, description, timescale, sampleCount, presentationTicks, byteOffsets, byteSizes, keySampleIndices };
 }
