@@ -118,12 +118,15 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
       const { extractFramesOnWebWorker } = await import('@remotion/webcodecs/worker');
       started = performance.now();
       let theirPainted = 0;
+      // Their API returns a frame, not the request it answers, so the slot has to be inferred —
+      // and inferred without collisions, or a thumbnail goes missing from their strip.
+      const theirSlots = new Set<number>();
       await extractFramesOnWebWorker({
         src: new URL(source, location.href).href,
         timestampsInSeconds: [...wanted], // their extractor mutates what it is handed
         acknowledgeRemotionLicense: true,
         onFrame: (frame) => {
-          paintThumb(theirs, frame, nearestIndex(wanted, frame.timestamp));
+          paintThumb(theirs, frame, nearestIndex(wanted, frame.timestamp, theirSlots));
           theirPainted += 1;
           frame.close();
         },
@@ -223,11 +226,6 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
           <span style={{ color: '#8a8a99' }}>{won ? ' faster' : ' slower'}</span>
         </div>
       )}
-
-      <p style={{ margin: '4px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
-        Remotion runs in a web worker; ours runs on the main thread. It gets a fresh timestamp array, in-range timestamps only, and our
-        index is rebuilt cold on every run.
-      </p>
     </div>
   );
 }

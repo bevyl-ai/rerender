@@ -40,10 +40,24 @@ export function stripTimestamps(count: number, start: number, span: number): num
 }
 
 /** Index of the requested timestamp nearest a delivered frame's presentation time (µs). */
-export function nearestIndex(times: readonly number[], micros: number): number {
-  let best = 0;
-  for (let i = 1; i < times.length; i++) {
-    if (Math.abs(times[i]! * 1e6 - micros) < Math.abs(times[best]! * 1e6 - micros)) best = i;
+/**
+ * Which strip slot a decoded frame belongs in, for engines whose API hands back a frame without
+ * saying which request produced it.
+ *
+ * `taken` makes the assignment a bijection. Nearest-by-time alone can map two decoded frames to the
+ * same slot — a decoder that snaps to a slightly different sample than the slot's ideal time is
+ * enough — and the loser silently overwrites the winner, leaving some other slot blank. That is a
+ * bug in the harness, not in the engine being measured, and it made one of twelve thumbnails
+ * disappear from the comparison strip.
+ */
+export function nearestIndex(times: readonly number[], micros: number, taken?: Set<number>): number {
+  let best = -1;
+  for (let i = 0; i < times.length; i++) {
+    if (taken?.has(i)) continue;
+    if (best < 0 || Math.abs(times[i]! * 1e6 - micros) < Math.abs(times[best]! * 1e6 - micros)) best = i;
   }
+  // Every slot taken already: fall back to plain nearest rather than dropping the frame.
+  if (best < 0) return nearestIndex(times, micros);
+  taken?.add(best);
   return best;
 }

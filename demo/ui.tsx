@@ -61,3 +61,7 @@ export function useNarrow(maxWidth = 640): boolean {
   }, [maxWidth]);
   return narrow;
 }
+
+/** How the race is set up, stated once per page rather than once per race. */
+export const RACE_TERMS =
+  'Remotion runs in a web worker; ours runs on the main thread. It gets a fresh timestamp array, in-range timestamps only, and our index is rebuilt cold on every run.';

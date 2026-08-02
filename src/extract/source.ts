@@ -7,6 +7,13 @@ export interface RangeSource {
   read(start: number, end: number, signal?: AbortSignal): Promise<Uint8Array>;
   /** Bytes spanning file offset 0 through the end of the moov box. */
   readThroughMoov(signal?: AbortSignal): Promise<Uint8Array>;
+  /**
+   * The last `length` bytes, and the offset they start at. A fragmented file keeps its random-access
+   * index (`mfra`) at the very end, and the only way to find it without knowing the file's length is
+   * the suffix range this sends. Optional: a custom source that cannot express one simply cannot
+   * read fragmented files.
+   */
+  readSuffix?(length: number, signal?: AbortSignal): Promise<{ bytes: Uint8Array; start: number }>;
 }
 
 /**
@@ -64,6 +71,20 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
   // what makes the second extractor over a file cheap.
   const readIndex = (start: number, end: number, signal?: AbortSignal): Promise<Uint8Array> => fetchRange(start, end, signal);
 
+  /** `Range: bytes=-N`, whose 206 reports where the tail actually began. */
+  const readSuffix = async (length: number, signal?: AbortSignal): Promise<{ bytes: Uint8Array; start: number }> => {
+    const res = await fetchFn(src, { cache: 'no-store', headers: { Range: `bytes=-${length}` }, signal });
+    if (res.status !== 206 && res.status !== 200) throw new Error(`suffix request failed for ${src}: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    // A server that ignored the Range handed back the whole file; the tail is still in there.
+    if (res.status === 200)
+      return { bytes: bytes.slice(Math.max(0, bytes.byteLength - length)), start: Math.max(0, bytes.byteLength - length) };
+    const contentRange = res.headers.get('content-range');
+    const start = contentRange ? Number(/bytes (\d+)-/.exec(contentRange)?.[1] ?? Number.NaN) : Number.NaN;
+    if (!Number.isFinite(start)) throw new Error(`suffix request for ${src} answered 206 without a usable Content-Range`);
+    return { bytes, start };
+  };
+
   const readThroughMoov = async (signal?: AbortSignal): Promise<Uint8Array> => {
     const head = await readIndex(0, HEAD_PROBE_BYTES, signal);
     const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
@@ -100,5 +121,5 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
     throw new Error(`could not locate moov in ${src} (probed first ${HEAD_PROBE_BYTES} bytes)`);
   };
 
-  return { read, readThroughMoov };
+  return { read, readThroughMoov, readSuffix };
 }

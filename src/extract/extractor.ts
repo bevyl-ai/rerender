@@ -3,7 +3,11 @@
 // requested timestamps by presentation time. Never mutates the caller's timestamp array;
 // out-of-range timestamps clamp; every requested timestamp gets exactly one frame callback.
 
-import { parseSampleTable, type SampleTable } from './mp4-sample-table';
+import { decodeRun } from './decode';
+import { type FrameIndex, lastAtOrBefore } from './frame-index';
+import { mfraIndexAdapter } from './fmp4';
+import { moovIndexAdapter } from './moov-index';
+import { parseTrackConfig, type SampleTable } from './mp4-sample-table';
 import { createUrlSource, type RangeSource } from './source';
 
 export interface FrameExtractorOptions {
@@ -63,25 +67,6 @@ const COALESCE_GAP_BYTES = 128 * 1024;
  *  on waste, and it is per read, so it does not grow with how much of the video is on screen. */
 const COALESCE_WASTE_BUDGET_BYTES = 384 * 1024;
 
-/** Index of the last element <= target in a sorted ascending array-like, or 0. */
-function lastAtOrBefore(sorted: ArrayLike<number>, target: number): number {
-  let lo = 0;
-  let hi = sorted.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1;
-    if (sorted[mid]! <= target) lo = mid;
-    else hi = mid - 1;
-  }
-  return lo;
-}
-
-interface GopJob {
-  gopIndex: number;
-  /** requested seconds grouped into this GOP, each resolved to a sample's presentation µs
-   *  and its decode index (which bounds how much of the GOP has to be read at all) */
-  targets: { requestedSeconds: number; presentationMicros: number; sampleIndex: number }[];
-}
-
 /**
  * Resolve `promise`, then fail if `signal` aborted while it settled. Every abortable
  * read must come through here: a read can settle with bytes in the same tick its
@@ -96,6 +81,18 @@ async function resolveUnlessAborted<T>(promise: Promise<T>, signal: AbortSignal)
   return value;
 }
 
+/**
+ * Every index shape this build can read. The first to claim a file gets it; adding a shape — a
+ * WebM `Cues` table, a DASH `sidx` — is adding a row, and the extractor below never learns which
+ * one answered.
+ */
+const INDEX_ADAPTERS = [moovIndexAdapter, mfraIndexAdapter] as const;
+
+interface GopJob {
+  gopIndex: number;
+  targets: { requestedSeconds: number; targetTicks: number }[];
+}
+
 export async function createFrameExtractor(options: FrameExtractorOptions): Promise<FrameExtractor> {
   const abort = new AbortController();
   // dispose() and the caller's signal compose into one extractor-level signal.
@@ -105,8 +102,12 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   const extractorSignal = options.signal ? AbortSignal.any([abort.signal, options.signal]) : abort.signal;
   const source: RangeSource = createUrlSource(options.src, options.fetchFn);
   const moovBytes = await resolveUnlessAborted(source.readThroughMoov(extractorSignal), extractorSignal);
-  const table = parseSampleTable(moovBytes);
-  const { presentationTicks, byteOffsets, byteSizes, keySampleIndices, timescale } = table;
+  const config = parseTrackConfig(moovBytes);
+
+  const adapter = INDEX_ADAPTERS.find((candidate) => candidate.claims(config));
+  if (!adapter) throw new Error(`mp4: no index adapter claims this file (fragmented: ${config.fragmented})`);
+  const index: FrameIndex = await resolveUnlessAborted(adapter.open(source, moovBytes, config, extractorSignal), extractorSignal);
+
   // Reads of one URL used to queue behind each other, which made this number a formality — the
   // note here used to say raising it bought nothing. Since source.ts stopped contending for the
   // HTTP cache entry they were all waiting on, it is a real concurrency limit again, and 8 was
@@ -115,121 +116,19 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   // than for the network.
   const maxParallel = options.maxParallelFetches ?? 16;
 
-  // Presentation ticks of each GOP's keyframe — ascending, used to route a timestamp to its GOP.
-  const gopStartTicks = new Float64Array(keySampleIndices.length);
-  for (let i = 0; i < keySampleIndices.length; i++) gopStartTicks[i] = presentationTicks[keySampleIndices[i]!]!;
-  // Max presentation tick, not the last decode-order sample: with B-frames the file's
-  // final decoded sample presents *before* the last displayed frame, and clamping to it
-  // would resolve past-end requests to the second-to-last displayed frame.
-  const lastTicks = presentationTicks.reduce((max, ticks) => Math.max(max, ticks), 0);
-
-  const toMicros = (ticks: number) => Math.round((ticks / timescale) * MICROSECONDS);
-
-  const nearestSampleInGop = (gopIndex: number, targetTicks: number): number => {
-    const first = keySampleIndices[gopIndex]!;
-    const end = gopIndex + 1 < keySampleIndices.length ? keySampleIndices[gopIndex + 1]! : table.sampleCount;
-    let best = first;
-    for (let i = first; i < end; i++) {
-      if (Math.abs(presentationTicks[i]! - targetTicks) < Math.abs(presentationTicks[best]! - targetTicks)) best = i;
-    }
-    return best;
-  };
-
-  /** Byte run a job needs: its GOP's keyframe through the deepest sample any of its targets wants.
-   *  Samples are fed in decode order and every reference precedes its dependents there, so nothing
-   *  past that sample can be needed to decode it. A thumbnail near the front of a one-second GOP
-   *  therefore costs a couple of frames rather than the whole GOP, on the wire and in decode time. */
-  const jobRange = (job: GopJob): { start: number; end: number } => {
-    const first = keySampleIndices[job.gopIndex]!;
-    const last = job.targets.reduce((deepest, target) => Math.max(deepest, target.sampleIndex), first);
-    return { start: byteOffsets[first]!, end: byteOffsets[last]! + byteSizes[last]! };
-  };
-
   const decodeGop = async (job: GopJob, bytes: Uint8Array, bytesStart: number, onFrame: OnFrame, signal: AbortSignal): Promise<void> => {
-    const first = keySampleIndices[job.gopIndex]!;
-    const end = job.targets.reduce((deepest, target) => Math.max(deepest, target.sampleIndex), first) + 1;
-    const rangeStart = bytesStart;
+    const targetTicks = job.targets.map((target) => target.targetTicks);
+    const { run, micros } = index.resolve(job.gopIndex, targetTicks, bytes, bytesStart);
 
     // presentation µs → requested seconds still waiting on that frame
     const wanted = new Map<number, number[]>();
-    for (const target of job.targets) {
-      const list = wanted.get(target.presentationMicros) ?? [];
+    job.targets.forEach((target, i) => {
+      const list = wanted.get(micros[i]!) ?? [];
       list.push(target.requestedSeconds);
-      wanted.set(target.presentationMicros, list);
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      const decoder = new VideoDecoder({
-        output: (frame) => {
-          const requesters = wanted.get(frame.timestamp);
-          if (!requesters) {
-            frame.close();
-            return;
-          }
-          wanted.delete(frame.timestamp);
-          for (let i = 0; i < requesters.length; i++) {
-            // Last requester gets the frame itself; earlier ones get clones. Receiver closes all.
-            onFrame(i === requesters.length - 1 ? frame : frame.clone(), requesters[i]!);
-          }
-          // Early resolve keeps GOP pipelining: the worker moves on while the
-          // flush drains. The abort listener stays armed until the flush-side
-          // close — the decoder can outlive this promise.
-          if (wanted.size === 0) resolve();
-        },
-        error: reject,
-      });
-      const closeDecoder = () => {
-        try {
-          decoder.close();
-        } catch {
-          // already closed
-        }
-      };
-      const onAbort = () => {
-        // Close eagerly: a wedged decode never settles flush(), so waiting for
-        // the flush-side close would leak the hardware decoder past the abort.
-        closeDecoder();
-        reject(signal.reason);
-      };
-      signal.addEventListener('abort', onAbort, { once: true });
-      const detach = () => signal.removeEventListener('abort', onAbort);
-      try {
-        decoder.configure({ codec: table.codec, description: table.description });
-        for (let i = first; i < end; i++) {
-          decoder.decode(
-            new EncodedVideoChunk({
-              type: i === first ? 'key' : 'delta',
-              timestamp: toMicros(presentationTicks[i]!),
-              data: bytes.subarray(byteOffsets[i]! - rangeStart, byteOffsets[i]! - rangeStart + byteSizes[i]!),
-            }),
-          );
-        }
-      } catch (error) {
-        detach();
-        closeDecoder();
-        throw error;
-      }
-      // The decoder-lifecycle finally owns both the close and the listener
-      // removal, so an abort can reach a still-open decoder even after the
-      // early resolve above. Aborting closes the decoder, which settles a
-      // pending flush, which runs this cleanup.
-      decoder
-        .flush()
-        .then(() => {
-          if (wanted.size > 0) reject(new Error(`decoder flushed with ${wanted.size} requested timestamps undelivered`));
-        }, reject)
-        .finally(() => {
-          closeDecoder();
-          detach();
-        });
+      wanted.set(micros[i]!, list);
     });
-  };
 
-  const resolveTarget = (seconds: number): { gopIndex: number; presentationMicros: number; sampleIndex: number } => {
-    const targetTicks = Math.min(Math.max(seconds * timescale, gopStartTicks[0]!), lastTicks);
-    const gopIndex = lastAtOrBefore(gopStartTicks, targetTicks);
-    const sampleIndex = nearestSampleInGop(gopIndex, targetTicks);
-    return { gopIndex, presentationMicros: toMicros(presentationTicks[sampleIndex]!), sampleIndex };
+    await decodeRun({ codec: index.config.codec, description: index.config.description }, run, bytes, bytesStart, wanted, onFrame, signal);
   };
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {
@@ -237,9 +136,10 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     if (signal.aborted) throw signal.reason;
     const byGop = new Map<number, GopJob>();
     for (const seconds of timestampsInSeconds) {
-      const { gopIndex, presentationMicros, sampleIndex } = resolveTarget(seconds);
+      const targetTicks = index.clampTicks(seconds);
+      const gopIndex = lastAtOrBefore(index.gopStartTicks, targetTicks);
       const job = byGop.get(gopIndex) ?? { gopIndex, targets: [] };
-      job.targets.push({ requestedSeconds: seconds, presentationMicros, sampleIndex });
+      job.targets.push({ requestedSeconds: seconds, targetTicks });
       byGop.set(gopIndex, job);
     }
 
@@ -250,7 +150,13 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     // far from its neighbour is never dragged in, and the running total of unwanted bytes, so a
     // long chain of individually-cheap merges cannot add up to downloading the file.
     const ranges = Array.from(byGop.values())
-      .map((job) => ({ job, ...jobRange(job) }))
+      .map((job) => ({
+        job,
+        ...index.planRead(
+          job.gopIndex,
+          job.targets.map((target) => target.targetTicks),
+        ),
+      }))
       .sort((a, b) => a.start - b.start);
 
     const spans: { start: number; end: number; jobs: GopJob[]; wasted: number }[] = [];
@@ -278,10 +184,10 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   };
 
   return {
-    sampleTable: table,
-    durationSeconds: lastTicks / timescale,
-    snapToSampleMicros: (seconds) => resolveTarget(seconds).presentationMicros,
+    sampleTable: index.sampleTable,
+    durationSeconds: index.durationSeconds,
+    snapToSampleMicros: (seconds) => index.snapMicros(index.clampTicks(seconds)),
     extract,
-    dispose: () => abort.abort(new Error('frame extractor disposed')),
+    dispose: () => abort.abort(),
   };
 }
