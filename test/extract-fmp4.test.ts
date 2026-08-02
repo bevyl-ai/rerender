@@ -170,7 +170,11 @@ test('the extractor reads a fragmented file through the same public contract', a
   const reads: { start: number; end: number; suffix?: boolean }[] = [];
   try {
     const extractor = await createFrameExtractor({ src: 'https://fixture.test/frag.mp4', fetchFn: fetchFor(FRAGMENTED, reads) });
-    assert.equal(extractor.sampleTable.codec, 'avc1.4d400b', 'codec came from the moov, as for any file');
+    // A fragmented file cannot state a whole-file table, and says so rather than handing back one
+    // whose fields all type-check and all mean something else.
+    assert.equal(extractor.indexKind, 'mfra');
+    assert.equal(extractor.sampleTable, null);
+    assert.equal(extractor.snapGranularity, 'gop');
 
     const wanted = [0, 0.5, 1.2];
     const delivered: number[] = [];

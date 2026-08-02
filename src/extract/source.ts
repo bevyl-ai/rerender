@@ -2,6 +2,8 @@
 // fetch GOP byte ranges. Uses default fetch cache semantics on purpose — immutable/cacheable
 // video URLs get browser disk-cache hits on repeat ranges for free.
 
+import { ExtractError } from './errors';
+
 export interface RangeSource {
   /** Bytes from `start` (inclusive) to `end` (exclusive). */
   read(start: number, end: number, signal?: AbortSignal): Promise<Uint8Array>;
@@ -49,7 +51,9 @@ function readTopLevelBox(view: DataView, at: number): TopLevelBox | null {
 export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): RangeSource {
   const fetchRange = async (start: number, end: number, signal?: AbortSignal, cache?: RequestCache): Promise<Uint8Array> => {
     const res = await fetchFn(src, { headers: { Range: `bytes=${start}-${end - 1}` }, signal, ...(cache ? { cache } : {}) });
-    if (res.status !== 206 && res.status !== 200) throw new Error(`range request failed for ${src}: ${res.status}`);
+    if (res.status !== 206 && res.status !== 200) {
+      throw new ExtractError('range-request-failed', `range request failed for ${src}: ${res.status}`, { src });
+    }
     const bytes = new Uint8Array(await res.arrayBuffer());
     // A 200 means the server ignored the Range header; slice locally so callers still work.
     return res.status === 200 ? bytes.slice(start, end) : bytes;
@@ -74,14 +78,18 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
   /** `Range: bytes=-N`, whose 206 reports where the tail actually began. */
   const readSuffix = async (length: number, signal?: AbortSignal): Promise<{ bytes: Uint8Array; start: number }> => {
     const res = await fetchFn(src, { cache: 'no-store', headers: { Range: `bytes=-${length}` }, signal });
-    if (res.status !== 206 && res.status !== 200) throw new Error(`suffix request failed for ${src}: ${res.status}`);
+    if (res.status !== 206 && res.status !== 200) {
+      throw new ExtractError('range-request-failed', `suffix request failed for ${src}: ${res.status}`, { src });
+    }
     const bytes = new Uint8Array(await res.arrayBuffer());
     // A server that ignored the Range handed back the whole file; the tail is still in there.
     if (res.status === 200)
       return { bytes: bytes.slice(Math.max(0, bytes.byteLength - length)), start: Math.max(0, bytes.byteLength - length) };
     const contentRange = res.headers.get('content-range');
     const start = contentRange ? Number(/bytes (\d+)-/.exec(contentRange)?.[1] ?? Number.NaN) : Number.NaN;
-    if (!Number.isFinite(start)) throw new Error(`suffix request for ${src} answered 206 without a usable Content-Range`);
+    if (!Number.isFinite(start)) {
+      throw new ExtractError('range-request-failed', `suffix request for ${src} answered 206 without a usable Content-Range`, { src });
+    }
     return { bytes, start };
   };
 
@@ -111,14 +119,14 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
         const afterMdat = box.start + box.size;
         const tailProbe = await readIndex(afterMdat, afterMdat + 16, signal);
         const tailBox = readTopLevelBox(new DataView(tailProbe.buffer, tailProbe.byteOffset, tailProbe.byteLength), 0);
-        if (tailBox?.type !== 'moov') throw new Error(`no moov after mdat in ${src}`);
+        if (tailBox?.type !== 'moov') throw new ExtractError('no-moov', `no moov after mdat in ${src}`, { src });
         // The moov box alone is a valid buffer for parseSampleTable (it walks whatever
         // top-level boxes it's given), and stco offsets are file-absolute so no rebasing.
         return readIndex(afterMdat, afterMdat + tailBox.size, signal);
       }
       at = box.start + box.size;
     }
-    throw new Error(`could not locate moov in ${src} (probed first ${HEAD_PROBE_BYTES} bytes)`);
+    throw new ExtractError('no-moov', `could not locate moov in ${src} (probed first ${HEAD_PROBE_BYTES} bytes)`, { src });
   };
 
   return { read, readThroughMoov, readSuffix };

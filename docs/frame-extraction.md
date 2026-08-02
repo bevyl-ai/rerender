@@ -28,8 +28,9 @@ regression cases:
   `expected at least one timestamp to extract but found zero`.
 - Past-end timestamps **silently drop frames** (4 requested → 2 delivered, no error). This module
   clamps to the last sample and dedupes, so every requested timestamp resolves to a frame.
-- It forces `cache: 'no-store'` on every fetch (a Next.js server-side guard applied in the
-  browser), so nothing it downloads is ever HTTP-cached. This module uses default fetch semantics;
+- It forces `cache: 'no-store'` on every fetch — a Next.js server-side guard applied in the
+  browser. We ended up doing the same thing for media reads, for a different and measured reason
+  (see "Cache modes" below), so this is no longer a criticism, only a difference in why. This module uses default fetch semantics;
   immutable/cacheable URLs get browser-disk-cache behavior for free.
 
 mediabunny (already a rerender dependency, and excellent as a muxer/demuxer) was also benchmarked:
@@ -53,7 +54,7 @@ lazily, re-walking structures per seek. This module does the boring thing instea
    presentation timestamps were requested.
 
 Nothing here is a format: the moov IS the index, standardized since ISO 14496-12. There is no
-sidecar, no fragmenting, no re-encoding, and it works on any progressive H.264 mp4 that already
+sidecar, no re-encoding, and it works on any mp4 whose codec WebCodecs can decode, that already
 exists.
 
 ## Module layout (`src/extract/`)
@@ -75,7 +76,7 @@ Self-contained: no imports from the rest of rerender, no dependencies, browser-o
 ## API
 
 ```ts
-import { createFrameExtractor } from 'rerender/extract';
+import { createFrameExtractor } from '@bevyl-ai/rerender/extract';
 
 // signal (optional) is a LIFETIME signal — aborting it is equivalent to dispose(),
 // so tie it to the owner (e.g. component unmount). Don't pass AbortSignal.timeout
@@ -117,7 +118,7 @@ Design rules:
 `createFrameStore` is the layer every timeline-filmstrip consumer would otherwise rebuild:
 
 ```ts
-import { createFrameStore } from 'rerender/extract';
+import { createFrameStore } from '@bevyl-ai/rerender/extract';
 
 const store = createFrameStore();
 // timestamps in µs; the store snaps them to the sample grid, dedupes in-flight decodes,
@@ -188,13 +189,30 @@ Three `@remotion/webcodecs` behaviours differ here. Each is a regression test in
   so reusing one array across two calls throws. `extract` never touches the caller's array.
 - Past-end timestamps are **silently dropped**: request 4, receive 2, no error. `extract` clamps
   them, and every requested timestamp gets exactly one callback.
-- It forces `cache: 'no-store'` on every fetch, a server-side guard applied in the browser, so
-  nothing it downloads is ever HTTP-cached.
+- It forces `cache: 'no-store'` on every fetch, a server-side guard applied in the browser.
+
+  This one stopped being a criticism. Concurrent Range requests for a URL queue behind that URL's
+  HTTP cache entry, so twelve scattered reads took 642-805 ms under default cache mode and
+  129-166 ms bypassing it — and asking for the same twelve a second time took 907 ms, so the entry
+  we were queueing for never served us anyway. Media reads now use `no-store` for that reason.
+  Index reads keep default caching: they run sequentially, never contend, and are what makes a
+  second extractor over the same URL cheap.
+
+## Cache modes
+
+| read | mode | why |
+| -- | -- | -- |
+| index (`moov`, `mfra`) | default | sequential, never contends, and repeats across extractors |
+| media (GOPs, fragments) | `no-store` | concurrent, so the cache entry is pure contention |
+
+`force-cache` is faster still — 4 ms on a repeat — and rejected: it returns stale bodies whatever
+the server said about freshness, and an extractor that quietly decodes last week's file is a worse
+bug than a slow one.
 
 ## Non-goals (for now)
 
-- Codecs beyond H.264/AVC (HEVC/AV1/VP9 are additive: same sample table, different decoder
-  config box) and containers beyond mp4/mov.
+- Containers beyond mp4/mov. Fragmented mp4 is supported when the file carries an `mfra` index;
+  without one, seeking would cost a request per fragment, so it is refused rather than crawled.
 - Audio.
 - Encrypted media.
 

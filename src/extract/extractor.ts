@@ -4,6 +4,7 @@
 // out-of-range timestamps clamp; every requested timestamp gets exactly one frame callback.
 
 import { decodeRun } from './decode';
+import { ExtractError } from './errors';
 import { type FrameIndex, lastAtOrBefore } from './frame-index';
 import { mfraIndexAdapter } from './fmp4';
 import { moovIndexAdapter } from './moov-index';
@@ -34,7 +35,24 @@ export interface ExtractOptions {
 export type OnFrame = (frame: VideoFrame, requestedSeconds: number) => void;
 
 export interface FrameExtractor {
-  readonly sampleTable: SampleTable;
+  /**
+   * Which index the file turned out to carry.
+   *
+   * `'moov'` is a progressive file: one sample table for the whole thing, so every sample's time
+   * and size is known up front. `'mfra'` is a fragmented one, where each fragment keeps its own
+   * table and only the sync samples are known before a read. Everything below that says "exact for
+   * moov, coarser for mfra" is keyed off this.
+   */
+  readonly indexKind: 'moov' | 'mfra';
+  /**
+   * The file's own sample table, or `null` when the index cannot state one.
+   *
+   * Null for `'mfra'`: a fragmented file's per-sample detail lives inside the fragments, and
+   * materialising it would mean reading the whole file to answer a question nobody asked. It is
+   * null rather than a table full of zeros, because a shape that type-checks and means something
+   * else is worse than an absence you have to handle.
+   */
+  readonly sampleTable: SampleTable | null;
   /** Presentation time of the last displayed frame, in seconds — the media's duration
    *  (loop points and end-of-clip clamping key off this, not the container's stated duration). */
   readonly durationSeconds: number;
@@ -44,6 +62,13 @@ export interface FrameExtractor {
    * so it works as a cache key for the requested time at any granularity.
    */
   snapToSampleMicros(seconds: number): number;
+  /**
+   * What {@link snapToSampleMicros} resolves to: `'sample'` when the index knows every sample —
+   * and the returned value is then exactly the `VideoFrame.timestamp` `extract` will deliver — or
+   * `'gop'` when it can only name the group's keyframe without a read, which is the fragmented
+   * case. A cache keyed on the snapped value is exact in the first case and coarse in the second.
+   */
+  readonly snapGranularity: 'sample' | 'gop';
   /**
    * Decodes the frame nearest each requested timestamp and delivers it via `onFrame`.
    * Frames arrive as they decode (not in request order); the receiver owns each frame
@@ -105,7 +130,9 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   const config = parseTrackConfig(moovBytes);
 
   const adapter = INDEX_ADAPTERS.find((candidate) => candidate.claims(config));
-  if (!adapter) throw new Error(`mp4: no index adapter claims this file (fragmented: ${config.fragmented})`);
+  if (!adapter) {
+    throw new ExtractError('malformed', `mp4: no index adapter claims this file (fragmented: ${config.fragmented})`, { src: options.src });
+  }
   const index: FrameIndex = await resolveUnlessAborted(adapter.open(source, moovBytes, config, extractorSignal), extractorSignal);
 
   // Reads of one URL used to queue behind each other, which made this number a formality — the
@@ -217,6 +244,8 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   };
 
   return {
+    indexKind: index.kind,
+    snapGranularity: index.kind === 'moov' ? 'sample' : 'gop',
     sampleTable: index.sampleTable,
     durationSeconds: index.durationSeconds,
     snapToSampleMicros: (seconds) => index.snapMicros(index.clampTicks(seconds)),

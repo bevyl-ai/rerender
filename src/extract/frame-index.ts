@@ -21,8 +21,8 @@ export interface FrameIndex {
   readonly kind: IndexKind;
   readonly config: TrackConfig;
   readonly durationSeconds: number;
-  /** What the index can state up front. Complete for moov; sync samples only for mfra. */
-  readonly sampleTable: SampleTable;
+  /** The file's own table, or null when the index cannot state one without reading everything. */
+  readonly sampleTable: SampleTable | null;
   /** Presentation ticks of each group's first sample, ascending — the routing key. */
   readonly gopStartTicks: Float64Array;
   /**
