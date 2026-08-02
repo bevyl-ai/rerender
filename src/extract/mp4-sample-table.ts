@@ -86,6 +86,8 @@ export interface TrackConfig {
   codecId: CodecId;
   codec: string;
   description: Uint8Array;
+  /** Whether `description` is meaningful to a decoder for this codec. */
+  describes: boolean;
   timescale: number;
   /** elst media_time, in media ticks. Both index shapes subtract it so a caller's seconds mean the
    *  same thing whether the file is progressive or fragmented. */
@@ -143,7 +145,7 @@ function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
       return { ok: false, reason: 'missing-config', sampleEntry: claimed.entry.type, configBox: handler.configBox };
     }
     const description = moovBytes.slice(config.start, config.end);
-    return { ok: true, id: handler.id, codec: handler.codecString(description), description };
+    return { ok: true, id: handler.id, codec: handler.codecString(description), description, describes: handler.describes ?? true };
   })();
 
   let timescale = 0;
@@ -160,7 +162,15 @@ function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
 export function parseTrackConfig(moovBytes: Uint8Array): TrackConfig {
   const { resolution, fragmented, timescale, editShiftTicks } = resolveTrack(moovBytes);
   if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
-  return { codecId: resolution.id, codec: resolution.codec, description: resolution.description, timescale, editShiftTicks, fragmented };
+  return {
+    codecId: resolution.id,
+    codec: resolution.codec,
+    description: resolution.description,
+    describes: resolution.describes,
+    timescale,
+    editShiftTicks,
+    fragmented,
+  };
 }
 
 export function parseSampleTable(moovBytes: Uint8Array): SampleTable {

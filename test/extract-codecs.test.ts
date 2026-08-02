@@ -51,6 +51,24 @@ test('VP9 parses, and reads past the FullBox header it sits behind', () => {
   assert.equal(table.sampleCount, 20);
 });
 
+// ffmpeg will not mux VP8 into mp4 — "codec not currently supported in container" — but the
+// binding is specified, so the file is legal and just needs writing. scripts/mux-vp8-mp4.py writes
+// this fixture; the tool's gap was never the format's.
+test('VP8 parses, and asks for no description because it has none', () => {
+  const table = parseSampleTable(new Uint8Array(readFileSync(fixture('extract-vp8.mp4'))));
+  assert.equal(table.codecId, 'vp8');
+  // WebCodecs registers VP8 with no parameters at all, so nothing in vpcC changes this
+  assert.equal(table.codec, 'vp8');
+  assert.equal(table.sampleCount, 20);
+  assert.equal(table.keySampleIndices.length, 2);
+});
+
+test('only VP8 declines to describe itself', () => {
+  for (const codec of CODECS) {
+    assert.equal(codec.describes ?? true, codec.id !== 'vp8', `${codec.id}.describes`);
+  }
+});
+
 test('every sample entry is claimed by exactly one handler', () => {
   const seen = new Set<string>();
   for (const codec of CODECS) {
@@ -68,12 +86,14 @@ test('every registry entry produces a well-formed codec string', () => {
   const shapes: Record<string, RegExp> = {
     avc: /^avc1\.[0-9a-f]{6}$/,
     hevc: /^hvc1\.[ABC]?\d+\.[0-9a-f]+\.[LH]\d+(\.[0-9a-f]{2})*$/,
+    vp8: /^vp8$/,
     vp9: /^vp09\.\d{2}\.\d{2}\.\d{2}$/,
     av1: /^av01\.\d\.\d{2}[MH]\.\d{2}$/,
   };
   const files: Record<string, string> = {
     avc: 'extract-faststart.mp4',
     hevc: 'extract-hevc.mp4',
+    vp8: 'extract-vp8.mp4',
     vp9: 'extract-vp9.mp4',
     av1: 'extract-av1.mp4',
   };

@@ -12,6 +12,7 @@ out/
 !public/filmstrip-12min-128p.mp4
 !public/filmstrip-12min-av1.mp4
 !public/filmstrip-12min-hevc.mp4
+!public/filmstrip-12min-vp8.mp4
 !public/filmstrip-12min-vp9.mp4
 !public/filmstrip-12min-frag.mp4
 !test/fixtures/*.mp4

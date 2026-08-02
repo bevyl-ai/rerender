@@ -128,7 +128,11 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
       wanted.set(micros[i]!, list);
     });
 
-    await decodeRun({ codec: index.config.codec, description: index.config.description }, run, bytes, bytesStart, wanted, onFrame, signal);
+    // A codec with no out-of-band configuration gets no description; see CodecHandler.describes.
+    const decoderConfig: VideoDecoderConfig = index.config.describes
+      ? { codec: index.config.codec, description: index.config.description }
+      : { codec: index.config.codec };
+    await decodeRun(decoderConfig, run, bytes, bytesStart, wanted, onFrame, signal);
   };
 
   const extract: FrameExtractor['extract'] = async (timestampsInSeconds, onFrame, extractOptions) => {

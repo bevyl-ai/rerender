@@ -22,11 +22,12 @@ interface Rendition {
 const RENDITIONS: Partial<Record<CodecId, Rendition>> = {
   avc: { src: '/filmstrip-12min-128p.mp4', codecString: 'avc1.64000b' },
   hevc: { src: '/filmstrip-12min-hevc.mp4', codecString: 'hvc1.1.6.L30.90' },
+  vp8: { src: '/filmstrip-12min-vp8.mp4', codecString: 'vp8' },
   vp9: { src: '/filmstrip-12min-vp9.mp4', codecString: 'vp09.00.10.08' },
   av1: { src: '/filmstrip-12min-av1.mp4', codecString: 'av01.0.00M.08' },
 };
 
-const NAMES: Record<CodecId, string> = { avc: 'H.264 / AVC', hevc: 'H.265 / HEVC', vp9: 'VP9', av1: 'AV1' };
+const NAMES: Record<CodecId, string> = { avc: 'H.264 / AVC', hevc: 'H.265 / HEVC', vp8: 'VP8', vp9: 'VP9', av1: 'AV1' };
 
 type Support = 'checking' | 'yes' | 'no' | 'no-webcodecs';
 
