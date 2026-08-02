@@ -25,7 +25,14 @@ export interface FrameIndex {
   readonly sampleTable: SampleTable;
   /** Presentation ticks of each group's first sample, ascending — the routing key. */
   readonly gopStartTicks: Float64Array;
-  /** A requested time in ticks, clamped into the media's range. */
+  /**
+   * A requested time in ticks, clamped into the media's range and rounded to a whole tick.
+   *
+   * The rounding is load-bearing. Ticks are integers, but `seconds * timescale` is not: at the
+   * NTSC timescale of 30000, `1.001 * 30000` is 30029.999999999996, and a GOP starting at exactly
+   * 30030 would be missed by the `<=` search and the request routed to the previous GOP — a whole
+   * frame wrong on a progressive file, and a whole fragment wrong on a fragmented one.
+   */
   clampTicks(seconds: number): number;
   /**
    * Presentation µs this index would deliver for a target, answerable without a read. Exact where

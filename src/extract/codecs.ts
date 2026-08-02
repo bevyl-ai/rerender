@@ -20,6 +20,13 @@ export interface CodecHandler {
   /** WebCodecs codec string, derived from that record's payload. */
   codecString(config: Uint8Array): string;
   /**
+   * Shortest configuration record this handler can read. A truncated one otherwise reads
+   * `undefined` at a fixed offset, and JavaScript obliges: `undefined >> 5` is 0, so a zero-byte
+   * av1C produced the perfectly plausible `av01.0.00M.08` and a 4-byte hvcC produced
+   * `hvc1.0.0.Lundefined`. A fabricated codec string is worse than a refusal.
+   */
+  readonly minConfigBytes: number;
+  /**
    * Whether the configuration record is also the decoder's `description`. True for every codec that
    * carries parameter sets out of band; false for one that does not, where passing the record along
    * would be inventing a meaning for it. Defaults to true.
@@ -40,6 +47,7 @@ const dec2 = (n: number) => String(n).padStart(2, '0');
  */
 const avc: CodecHandler = {
   id: 'avc',
+  minConfigBytes: 4,
   sampleEntries: ['avc1', 'avc3'],
   configBox: 'avcC',
   codecString: (config) => `avc1.${hex2(config[1]!)}${hex2(config[2]!)}${hex2(config[3]!)}`,
@@ -56,6 +64,7 @@ const avc: CodecHandler = {
  */
 const av1: CodecHandler = {
   id: 'av1',
+  minConfigBytes: 4,
   sampleEntries: ['av01'],
   configBox: 'av1C',
   codecString: (config) => {
@@ -82,6 +91,7 @@ const av1: CodecHandler = {
  */
 const hevc: CodecHandler = {
   id: 'hevc',
+  minConfigBytes: 13,
   sampleEntries: ['hvc1', 'hev1'],
   configBox: 'hvcC',
   codecString: (config) => {
@@ -114,6 +124,7 @@ function reverseBits32(value: number): number {
  */
 const vp9: CodecHandler = {
   id: 'vp9',
+  minConfigBytes: 7,
   sampleEntries: ['vp09'],
   configBox: 'vpcC',
   codecString: (config) => `vp09.${dec2(config[4]!)}.${dec2(config[5]!)}.${dec2(config[6]! >> 4)}`,
@@ -129,6 +140,7 @@ const vp9: CodecHandler = {
  */
 const vp8: CodecHandler = {
   id: 'vp8',
+  minConfigBytes: 0,
   sampleEntries: ['vp08'],
   configBox: 'vpcC',
   codecString: () => 'vp8',
@@ -152,7 +164,14 @@ export type CodecResolution =
   | { readonly ok: false; readonly reason: 'no-video-track' }
   | { readonly ok: false; readonly reason: 'fragmented' }
   | { readonly ok: false; readonly reason: 'unsupported-codec'; readonly sampleEntry: string }
-  | { readonly ok: false; readonly reason: 'missing-config'; readonly sampleEntry: string; readonly configBox: string };
+  | { readonly ok: false; readonly reason: 'missing-config'; readonly sampleEntry: string; readonly configBox: string }
+  | {
+      readonly ok: false;
+      readonly reason: 'truncated-config';
+      readonly configBox: string;
+      readonly bytes: number;
+      readonly needed: number;
+    };
 
 export type CodecFailure = Extract<CodecResolution, { ok: false }>;
 
@@ -170,5 +189,7 @@ export function describeFailure(failure: CodecFailure): string {
       return `unsupported codec '${failure.sampleEntry}' (supported: ${CODECS.flatMap((c) => c.sampleEntries).join(', ')})`;
     case 'missing-config':
       return `'${failure.sampleEntry}' sample entry has no ${failure.configBox} box`;
+    case 'truncated-config':
+      return `${failure.configBox} is ${failure.bytes} bytes, too short to describe a decoder (needs ${failure.needed})`;
   }
 }

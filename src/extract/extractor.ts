@@ -114,7 +114,10 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
   // low enough to show: a 12-thumbnail filmstrip finished in two waves on production, reads at
   // t=402-590 and then t=554-713, the second wave being frames that waited for a slot rather
   // than for the network.
-  const maxParallel = options.maxParallelFetches ?? 16;
+  // Math.min(0 | NaN | -1, n) feeds Array.from a length it treats as zero, which made extract()
+  // resolve having fetched nothing — a blank filmstrip and no error, from `Number(env.X)` being NaN.
+  const requestedParallel = options.maxParallelFetches ?? 16;
+  const maxParallel = Number.isFinite(requestedParallel) ? Math.max(1, Math.floor(requestedParallel)) : 16;
 
   const decodeGop = async (job: GopJob, bytes: Uint8Array, bytesStart: number, onFrame: OnFrame, signal: AbortSignal): Promise<void> => {
     const targetTicks = job.targets.map((target) => target.targetTicks);
@@ -177,14 +180,40 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     }
 
     // Bounded parallelism without a scheduler dependency: N workers draining a shared queue.
+    //
+    // Promise.all rejects on the first failure but cannot cancel: without this controller the
+    // surviving workers drain the whole queue, issuing every remaining fetch and pushing frames
+    // into onFrame long after the caller saw the rejection — at an owner that has already torn down.
+    const failed = new AbortController();
+    const callSignal = AbortSignal.any([signal, failed.signal]);
     const queue = spans;
     const workers = Array.from({ length: Math.min(maxParallel, queue.length) }, async () => {
       for (let span = queue.shift(); span; span = queue.shift()) {
-        const bytes = await resolveUnlessAborted(source.read(span.start, span.end, signal), signal);
-        for (const job of span.jobs) await decodeGop(job, bytes, span.start, onFrame, signal);
+        const bytes = await resolveUnlessAborted(source.read(span.start, span.end, callSignal), callSignal);
+        for (const job of span.jobs) {
+          if (callSignal.aborted) throw callSignal.reason;
+          // Each job gets its OWN window of the span, not the whole span. An index that reads its
+          // sample table out of the bytes — a fragmented file's, which lives in the moof at the
+          // front of each fragment — would otherwise find the FIRST fragment in the merged buffer
+          // and decode that one for every job sharing the span. Fragments abut exactly, so they
+          // always merge, so that was every adjacent pair.
+          const window = index.planRead(
+            job.gopIndex,
+            job.targets.map((target) => target.targetTicks),
+          );
+          await decodeGop(job, bytes.subarray(window.start - span.start, window.end - span.start), window.start, onFrame, callSignal);
+        }
       }
     });
-    await Promise.all(workers);
+    try {
+      await Promise.all(workers);
+    } catch (error) {
+      failed.abort(error);
+      // Let the siblings unwind against the tripped signal before the rejection reaches the caller,
+      // so no fetch or frame lands after it. Their rejections are already owned by Promise.all.
+      await Promise.allSettled(workers);
+      throw error;
+    }
   };
 
   return {

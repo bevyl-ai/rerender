@@ -55,8 +55,13 @@ test('the index comes out of mfra, not by walking the file', async () => {
   assert.equal(index.keyframeTicks.length, progressive.keySampleIndices.length, 'one fragment per GOP of the same media');
   assert.equal(index.moofOffsets.length, index.keyframeTicks.length);
   assert.ok(index.mediaEnd > index.moofOffsets[index.moofOffsets.length - 1]!, 'the last fragment ends before mfra');
-  // setup reads nothing from the body: two suffix reads for mfro and mfra, and that is the point
-  assert.equal(reads.length, 0, 'no ranged body reads were needed to build the index');
+  // The index itself costs no body reads — two suffix reads for mfro and mfra, and that is the
+  // point. The one body read setup does make is the last fragment, and only because this file
+  // states no mehd, so its true end time is knowable nowhere else.
+  assert.ok(reads.length <= 1, `index setup should not walk the file, made ${reads.length} body reads`);
+  if (reads.length === 1) {
+    assert.equal(reads[0]!.start, index.moofOffsets[index.moofOffsets.length - 1], 'the only body read is the last fragment');
+  }
 });
 
 // ffmpeg's fragmented remux drops the edit list the progressive file carries, so the two declare

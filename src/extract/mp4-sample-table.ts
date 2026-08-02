@@ -25,6 +25,9 @@ export interface SampleTable {
   keySampleIndices: Uint32Array;
 }
 
+/** Refuse to index more samples than any real rendition holds; see the stts guard. */
+const MAX_SAMPLES = 20_000_000;
+
 export interface BoxRange {
   type: string;
   /** payload start (after the 8- or 16-byte header) */
@@ -57,6 +60,25 @@ export function child(view: DataView, parent: BoxRange, ...path: string[]): BoxR
   return current;
 }
 
+/**
+ * How many entries a box can actually hold, whatever it claims.
+ *
+ * Every table in an stbl states its own entry count, and a malformed or hostile file states
+ * whatever it likes. Believing it is how a 322-byte file gets to allocate gigabytes or spin a loop
+ * four billion times, so the declared count is capped by what the box's own length can contain.
+ */
+function boundedCount(view: DataView, box: BoxRange, headerBytes: number, entryBytes: number): number {
+  const declared = view.getUint32(box.start + headerBytes - 4);
+  const room = Math.max(0, Math.floor((box.end - box.start - headerBytes) / entryBytes));
+  return Math.min(declared, room);
+}
+
+/** Reads a field only if the box is long enough to contain it. */
+function readUint32Within(view: DataView, box: BoxRange, offset: number, what: string): number {
+  if (box.start + offset + 4 > box.end) throw new Error(`mp4 sample table: ${what} runs past the end of its box`);
+  return view.getUint32(box.start + offset);
+}
+
 function expectBox(box: BoxRange | null, type: string): BoxRange {
   if (!box) throw new Error(`mp4 sample table: missing ${type}`);
   return box;
@@ -67,7 +89,7 @@ function readEditShift(view: DataView, trak: BoxRange): number {
   const elst = child(view, trak, 'edts', 'elst');
   if (!elst) return 0;
   const version = view.getUint8(elst.start);
-  const entryCount = view.getUint32(elst.start + 4);
+  const entryCount = boundedCount(view, elst, 8, version === 1 ? 20 : 12);
   let at = elst.start + 8;
   for (let i = 0; i < entryCount; i++) {
     const mediaTime = version === 1 ? Number(view.getBigInt64(at + 8)) : view.getInt32(at + 4);
@@ -88,6 +110,9 @@ export interface TrackConfig {
   description: Uint8Array;
   /** Whether `description` is meaningful to a decoder for this codec. */
   describes: boolean;
+  /** tkhd track_ID of the video track. A fragmented file's index and fragments are per-track, and
+   *  picking "the first" is wrong the moment a file muxes audio ahead of video. */
+  trackId: number;
   timescale: number;
   /** elst media_time, in media ticks. Both index shapes subtract it so a caller's seconds mean the
    *  same thing whether the file is progressive or fragmented. */
@@ -103,6 +128,7 @@ interface ResolvedTrack {
   track: { trak: BoxRange; stbl: BoxRange } | null;
   timescale: number;
   editShiftTicks: number;
+  trackId: number;
 }
 
 /**
@@ -144,23 +170,46 @@ function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
     if (!config) {
       return { ok: false, reason: 'missing-config', sampleEntry: claimed.entry.type, configBox: handler.configBox };
     }
+    if (config.end > moovBytes.byteLength) {
+      return { ok: false, reason: 'truncated-config', configBox: handler.configBox, bytes: 0, needed: handler.minConfigBytes };
+    }
     const description = moovBytes.slice(config.start, config.end);
+    if (description.byteLength < handler.minConfigBytes) {
+      return {
+        ok: false,
+        reason: 'truncated-config',
+        configBox: handler.configBox,
+        bytes: description.byteLength,
+        needed: handler.minConfigBytes,
+      };
+    }
     return { ok: true, id: handler.id, codec: handler.codecString(description), description, describes: handler.describes ?? true };
   })();
 
   let timescale = 0;
   let editShiftTicks = 0;
+  let trackId = 0;
   if (claimed) {
+    const tkhd = child(view, claimed.trak, 'tkhd');
+    // tkhd payload: version/flags(4), then creation+modification (4+4 at v0, 8+8 at v1), then track_ID
+    if (tkhd) trackId = readUint32Within(view, tkhd, view.getUint8(tkhd.start) === 1 ? 20 : 12, 'tkhd track_ID');
     const mdhd = expectBox(child(view, claimed.trak, 'mdia', 'mdhd'), 'mdhd');
-    timescale = view.getUint8(mdhd.start) === 1 ? view.getUint32(mdhd.start + 20) : view.getUint32(mdhd.start + 12);
+    timescale = readUint32Within(view, mdhd, view.getUint8(mdhd.start) === 1 ? 20 : 12, 'mdhd timescale');
     editShiftTicks = readEditShift(view, claimed.trak);
   }
-  return { resolution, fragmented, track: claimed ? { trak: claimed.trak, stbl: claimed.stbl } : null, timescale, editShiftTicks };
+  return {
+    resolution,
+    fragmented,
+    track: claimed ? { trak: claimed.trak, stbl: claimed.stbl } : null,
+    timescale,
+    editShiftTicks,
+    trackId,
+  };
 }
 
 /** Codec configuration and timescale, whether or not the moov indexes any samples. */
 export function parseTrackConfig(moovBytes: Uint8Array): TrackConfig {
-  const { resolution, fragmented, timescale, editShiftTicks } = resolveTrack(moovBytes);
+  const { resolution, fragmented, timescale, editShiftTicks, trackId } = resolveTrack(moovBytes);
   if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
   return {
     codecId: resolution.id,
@@ -169,6 +218,7 @@ export function parseTrackConfig(moovBytes: Uint8Array): TrackConfig {
     describes: resolution.describes,
     timescale,
     editShiftTicks,
+    trackId,
     fragmented,
   };
 }
@@ -186,16 +236,22 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   const { trak, stbl } = track!;
 
   const mdhd = expectBox(child(view, trak, 'mdia', 'mdhd'), 'mdhd');
-  const timescale = view.getUint8(mdhd.start) === 1 ? view.getUint32(mdhd.start + 20) : view.getUint32(mdhd.start + 12);
+  const timescale = readUint32Within(view, mdhd, view.getUint8(mdhd.start) === 1 ? 20 : 12, 'mdhd timescale');
 
   const boxes = readBoxes(view, stbl.start, stbl.end);
   const find = (type: string) => boxes.find((box) => box.type === type) ?? null;
 
   // stts → decode timestamps
   const stts = expectBox(find('stts'), 'stts');
-  const sttsEntryCount = view.getUint32(stts.start + 4);
+  const sttsEntryCount = boundedCount(view, stts, 8, 8);
   let sampleCount = 0;
   for (let i = 0; i < sttsEntryCount; i++) sampleCount += view.getUint32(stts.start + 8 + i * 8);
+  // Five arrays are about to be sized by this. A 300-byte stts can claim four billion samples,
+  // which is 32 GB of Float64Array — an OOM-killed tab rather than a catchable error. Refuse
+  // instead: no real rendition is anywhere near this, and a file that claims it is lying.
+  if (sampleCount > MAX_SAMPLES) {
+    throw new Error(`mp4 sample table: stts claims ${sampleCount} samples, more than the ${MAX_SAMPLES} this will index`);
+  }
 
   const decodeTicks = new Float64Array(sampleCount);
   {
@@ -219,11 +275,16 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
     let sample = 0;
     if (ctts) {
       const version = view.getUint8(ctts.start);
-      const entryCount = view.getUint32(ctts.start + 4);
-      for (let i = 0; i < entryCount; i++) {
+      const entryCount = boundedCount(view, ctts, 8, 8);
+      for (let i = 0; i < entryCount && sample < sampleCount; i++) {
         const count = view.getUint32(ctts.start + 8 + i * 8);
         const offset = version === 1 ? view.getInt32(ctts.start + 12 + i * 8) : view.getUint32(ctts.start + 12 + i * 8);
-        for (let j = 0; j < count; j++, sample++) presentationTicks[sample] = decodeTicks[sample]! + offset - editShift;
+        // Bounded by sampleCount, not just by `count`. Past the end the writes were silent no-ops
+        // and the reads were undefined, so an entry claiming a run of four billion spun the main
+        // thread for as long as the file asked, with no error and no allocation to trip an OOM.
+        for (let j = 0; j < count && sample < sampleCount; j++, sample++) {
+          presentationTicks[sample] = decodeTicks[sample]! + offset - editShift;
+        }
       }
     }
     for (; sample < sampleCount; sample++) presentationTicks[sample] = decodeTicks[sample]! - editShift;
@@ -233,9 +294,16 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   const stss = find('stss');
   let keySampleIndices: Uint32Array;
   if (stss) {
-    const entryCount = view.getUint32(stss.start + 4);
-    keySampleIndices = new Uint32Array(entryCount);
-    for (let i = 0; i < entryCount; i++) keySampleIndices[i] = view.getUint32(stss.start + 8 + i * 4) - 1;
+    const entryCount = boundedCount(view, stss, 8, 4);
+    // stss sample numbers are 1-based. A 0 wraps to 4294967295 and an out-of-range one becomes a
+    // NaN GOP start, which poisons the binary search for every seek, not just that GOP.
+    const sync: number[] = [];
+    for (let i = 0; i < entryCount; i++) {
+      const sampleNumber = view.getUint32(stss.start + 8 + i * 4);
+      if (sampleNumber >= 1 && sampleNumber <= sampleCount) sync.push(sampleNumber - 1);
+    }
+    if (sync.length === 0) throw new Error('mp4 sample table: stss lists no sync sample inside the track');
+    keySampleIndices = Uint32Array.from(sync);
   } else {
     keySampleIndices = new Uint32Array(sampleCount);
     for (let i = 0; i < sampleCount; i++) keySampleIndices[i] = i;
@@ -244,15 +312,20 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   // stsz → sizes
   const stsz = expectBox(find('stsz'), 'stsz');
   const uniformSize = view.getUint32(stsz.start + 4);
+  const sizeEntries = uniformSize !== 0 ? sampleCount : boundedCount(view, stsz, 12, 4);
+  if (sizeEntries < sampleCount) {
+    throw new Error(`mp4 sample table: stsz holds ${sizeEntries} sizes for ${sampleCount} samples`);
+  }
   const byteSizes = new Uint32Array(sampleCount);
   for (let i = 0; i < sampleCount; i++) byteSizes[i] = uniformSize !== 0 ? uniformSize : view.getUint32(stsz.start + 12 + i * 4);
 
   // stsc + stco/co64 → per-sample absolute offsets
   const stsc = expectBox(find('stsc'), 'stsc');
-  const stscEntryCount = view.getUint32(stsc.start + 4);
+  const stscEntryCount = boundedCount(view, stsc, 8, 12);
+  if (stscEntryCount === 0) throw new Error('mp4 sample table: stsc maps no chunks');
   const co64 = find('co64');
   const stco = co64 ?? expectBox(find('stco'), 'stco');
-  const chunkCount = view.getUint32(stco.start + 4);
+  const chunkCount = boundedCount(view, stco, 8, co64 ? 8 : 4);
   const byteOffsets = new Float64Array(sampleCount);
   {
     let sample = 0;
