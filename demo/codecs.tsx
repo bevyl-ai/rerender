@@ -106,6 +106,20 @@ export function Codecs(): JSX.Element {
         <CodecSection key={codec.id} id={codec.id} />
       ))}
 
+      <section style={{ marginTop: 72, paddingTop: 40, borderTop: '1px solid #1d1d25' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 850, letterSpacing: -0.8, margin: 0 }}>Fragmented</h2>
+          <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: ACCENT }}>moof, trun</code>
+          <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#55555f' }}>mfra</code>
+        </div>
+        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: '0 0 18px' }}>
+          The same media again, remuxed so the moov indexes nothing and every fragment carries its own table — the shape HLS and DASH ship.
+          The index moves to <code style={{ fontFamily: 'ui-monospace, monospace' }}>mfra</code> at the end of the file, which is still one
+          read, so a seek still costs one request.
+        </p>
+        <Race src="/filmstrip-12min-frag.mp4" />
+      </section>
+
       <p style={{ margin: '56px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.7 }}>
         Support is asked of your browser with <code>VideoDecoder.isConfigSupported</code>, not inferred from a user-agent string. AV1 and
         VP9 decode in current Chrome, Firefox and Edge; HEVC needs platform support, so it plays on Safari and on Chrome only where hardware

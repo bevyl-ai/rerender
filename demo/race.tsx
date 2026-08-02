@@ -118,12 +118,15 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
       const { extractFramesOnWebWorker } = await import('@remotion/webcodecs/worker');
       started = performance.now();
       let theirPainted = 0;
+      // Their API returns a frame, not the request it answers, so the slot has to be inferred —
+      // and inferred without collisions, or a thumbnail goes missing from their strip.
+      const theirSlots = new Set<number>();
       await extractFramesOnWebWorker({
         src: new URL(source, location.href).href,
         timestampsInSeconds: [...wanted], // their extractor mutates what it is handed
         acknowledgeRemotionLicense: true,
         onFrame: (frame) => {
-          paintThumb(theirs, frame, nearestIndex(wanted, frame.timestamp));
+          paintThumb(theirs, frame, nearestIndex(wanted, frame.timestamp, theirSlots));
           theirPainted += 1;
           frame.close();
         },

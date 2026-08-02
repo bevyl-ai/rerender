@@ -81,7 +81,7 @@
     "check": "biome check .",
     "knip": "knip",
     "publint": "publint",
-    "test:extract": "tsx test/extract-sample-table.test.ts && tsx test/extract-codecs.test.ts && tsx test/extract-source.test.ts && tsx test/extract-gop-window.test.ts && tsx test/extract-abort.test.ts && tsx test/frame-store.test.ts",
+    "test:extract": "tsx test/extract-sample-table.test.ts && tsx test/extract-codecs.test.ts && tsx test/extract-fmp4.test.ts && tsx test/extract-source.test.ts && tsx test/extract-gop-window.test.ts && tsx test/extract-abort.test.ts && tsx test/frame-store.test.ts",
     "build:lib": "tsup && node scripts/check-dist.mjs",
     "prepack": "npm run build:lib",
     "attw": "attw --pack . --profile esm-only"

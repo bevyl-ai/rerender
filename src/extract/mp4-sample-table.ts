@@ -25,14 +25,14 @@ export interface SampleTable {
   keySampleIndices: Uint32Array;
 }
 
-interface BoxRange {
+export interface BoxRange {
   type: string;
   /** payload start (after the 8- or 16-byte header) */
   start: number;
   end: number;
 }
 
-function readBoxes(view: DataView, start: number, end: number): BoxRange[] {
+export function readBoxes(view: DataView, start: number, end: number): BoxRange[] {
   const boxes: BoxRange[] = [];
   let at = start;
   while (at + 8 <= end) {
@@ -47,7 +47,7 @@ function readBoxes(view: DataView, start: number, end: number): BoxRange[] {
   return boxes;
 }
 
-function child(view: DataView, parent: BoxRange, ...path: string[]): BoxRange | null {
+export function child(view: DataView, parent: BoxRange, ...path: string[]): BoxRange | null {
   let current = parent;
   for (const type of path) {
     const found = readBoxes(view, current.start, current.end).find((box) => box.type === type);
@@ -82,7 +82,33 @@ function readEditShift(view: DataView, trak: BoxRange): number {
  * of the moov box — leading ftyp/free boxes are fine) into a flat {@link SampleTable}.
  * H.264 (avc1) only for now; other codecs are additive.
  */
-export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
+export interface TrackConfig {
+  codecId: CodecId;
+  codec: string;
+  description: Uint8Array;
+  timescale: number;
+  /** elst media_time, in media ticks. Both index shapes subtract it so a caller's seconds mean the
+   *  same thing whether the file is progressive or fragmented. */
+  editShiftTicks: number;
+  /** The moov carries mvex, so the sample tables live in the fragments rather than here. */
+  fragmented: boolean;
+}
+
+interface ResolvedTrack {
+  resolution: CodecResolution;
+  fragmented: boolean;
+  /** Null when no track was claimed, in which case `resolution` says why. */
+  track: { trak: BoxRange; stbl: BoxRange } | null;
+  timescale: number;
+  editShiftTicks: number;
+}
+
+/**
+ * The half of a moov that both index shapes need: which codec, its configuration record, and the
+ * media timescale. A fragmented file's moov is exactly this and nothing else, which is why this is
+ * separate from flattening a sample table it does not have.
+ */
+function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
   const view = new DataView(moovBytes.buffer, moovBytes.byteOffset, moovBytes.byteLength);
   const top = readBoxes(view, 0, moovBytes.byteLength);
   const moov = top.find((box) => box.type === 'moov');
@@ -104,7 +130,6 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   const claimed = video.find((track) => handlerFor(track.entry.type));
 
   const resolution = ((): CodecResolution => {
-    if (fragmented) return { ok: false, reason: 'fragmented' };
     if (!claimed) {
       const unknown = video[0];
       return unknown
@@ -121,9 +146,34 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
     return { ok: true, id: handler.id, codec: handler.codecString(description), description };
   })();
 
+  let timescale = 0;
+  let editShiftTicks = 0;
+  if (claimed) {
+    const mdhd = expectBox(child(view, claimed.trak, 'mdia', 'mdhd'), 'mdhd');
+    timescale = view.getUint8(mdhd.start) === 1 ? view.getUint32(mdhd.start + 20) : view.getUint32(mdhd.start + 12);
+    editShiftTicks = readEditShift(view, claimed.trak);
+  }
+  return { resolution, fragmented, track: claimed ? { trak: claimed.trak, stbl: claimed.stbl } : null, timescale, editShiftTicks };
+}
+
+/** Codec configuration and timescale, whether or not the moov indexes any samples. */
+export function parseTrackConfig(moovBytes: Uint8Array): TrackConfig {
+  const { resolution, fragmented, timescale, editShiftTicks } = resolveTrack(moovBytes);
+  if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
+  return { codecId: resolution.id, codec: resolution.codec, description: resolution.description, timescale, editShiftTicks, fragmented };
+}
+
+export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
+  const view = new DataView(moovBytes.buffer, moovBytes.byteOffset, moovBytes.byteLength);
+  const top = readBoxes(view, 0, moovBytes.byteLength);
+  const moov = top.find((box) => box.type === 'moov');
+  if (!moov) throw new Error('mp4 sample table: no moov in provided bytes');
+
+  const { resolution, fragmented, track } = resolveTrack(moovBytes);
+  if (fragmented) throw new Error(`mp4 sample table: ${describeFailure({ ok: false, reason: 'fragmented' })}`);
   if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
   const { id: codecId, codec, description } = resolution;
-  const { trak, stbl } = claimed!;
+  const { trak, stbl } = track!;
 
   const mdhd = expectBox(child(view, trak, 'mdia', 'mdhd'), 'mdhd');
   const timescale = view.getUint8(mdhd.start) === 1 ? view.getUint32(mdhd.start + 20) : view.getUint32(mdhd.start + 12);
