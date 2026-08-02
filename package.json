@@ -1,7 +1,7 @@
 {
   "name": "@bevyl-ai/rerender",
-  "version": "0.2.0",
-  "description": "Random-access frame extraction from mp4 URLs \u2014 any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
+  "version": "0.3.0",
+  "description": "Random-access frame extraction from mp4 URLs — any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
   "license": "MIT",
   "author": "Noah Lindner",
   "homepage": "https://rerender.video",
