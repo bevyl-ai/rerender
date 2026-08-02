@@ -1,8 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "vite.config.ts",
-    "demo/main.tsx",
     "demo/codecs-main.tsx",
     "cloud/handler.mjs",
     "cloud/lambda-client.ts",
@@ -13,11 +11,13 @@
     "studio/main.tsx",
     "src/transitions/index.ts",
     "src/media-utils/index.ts",
-    "templates/*/src/index.ts"
+    "templates/*/src/index.ts",
+    "src/media/index.ts",
+    "src/index.ts",
+    "src/core/audio-engine.ts"
   ],
   "project": ["**/*.{ts,tsx,mjs}"],
   "rules": {
     "duplicates": "off"
-  },
-  "ignoreBinaries": ["vite", "tsx"]
+  }
 }

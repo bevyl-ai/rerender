@@ -1,7 +1,7 @@
 {
   "name": "@bevyl-ai/rerender",
   "version": "0.3.0",
-  "description": "Random-access frame extraction from mp4 URLs — any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
+  "description": "Random-access frame extraction from mp4 URLs \u2014 any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
   "license": "MIT",
   "author": "Noah Lindner",
   "homepage": "https://rerender.video",
@@ -29,12 +29,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/extract.js",
+  "types": "./dist/extract.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/extract.d.ts",
+      "default": "./dist/extract.js"
     },
     "./extract": {
       "types": "./dist/extract.d.ts",
@@ -44,32 +44,14 @@
       "types": "./dist/media-parser.d.ts",
       "default": "./dist/media-parser.js"
     },
-    "./media": {
-      "types": "./dist/media.d.ts",
-      "default": "./dist/media.js"
-    },
-    "./audio-engine": {
-      "types": "./dist/audio-engine.d.ts",
-      "default": "./dist/audio-engine.js"
-    },
     "./package.json": "./package.json"
   },
-  "sideEffects": [
-    "./dist/index.js"
-  ],
+  "sideEffects": false,
   "files": [
-    "bin",
     "dist",
-    "src",
-    "render",
-    "cloud",
-    "tsconfig.json",
     "README.md",
     "LICENSE"
   ],
-  "bin": {
-    "rerender": "bin/rerender.mjs"
-  },
   "scripts": {
     "rerender": "tsx src/cli.ts",
     "studio": "tsx src/cli.ts studio",
@@ -89,43 +71,44 @@
     "prepack": "npm run build:lib",
     "attw": "attw --pack . --profile esm-only"
   },
-  "dependencies": {
-    "@mediabunny/aac-encoder": "^1.49.0",
-    "mediabunny": "^1.49.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
+    "@aws-sdk/client-lambda": "^3.1075.0",
+    "@aws-sdk/client-s3": "^3.1075.0",
     "@biomejs/biome": "^2.5.1",
+    "@mediabunny/aac-encoder": "^1.49.0",
+    "@puppeteer/browsers": "^3.0.5",
     "@remotion/webcodecs": "^4.0.501",
+    "@remotion/zod-types": "^4.0.484",
     "@types/node": "^26.0.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.28.1",
     "knip": "^6.23.0",
+    "mediabunny": "^1.49.0",
     "publint": "^0.3.21",
+    "puppeteer-core": "^25.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "remotion": "^4.0.484",
     "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.6.0",
-    "wrangler": "^4.116.0"
+    "vite": "^6.4.3",
+    "wrangler": "^4.116.0",
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=20.3"
   },
   "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
+    "mediabunny": "^1.49.0"
   },
-  "optionalDependencies": {
-    "@aws-sdk/client-lambda": "^3.1075.0",
-    "@aws-sdk/client-s3": "^3.1075.0",
-    "@puppeteer/browsers": "^3.0.5",
-    "@remotion/zod-types": "^4.0.484",
-    "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.28.1",
-    "puppeteer-core": "^25.2.1",
-    "tsx": "^4.22.4",
-    "vite": "^6.4.3",
-    "zod": "^3.25.76"
+  "peerDependenciesMeta": {
+    "mediabunny": {
+      "optional": true
+    }
   }
 }

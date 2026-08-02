@@ -3,7 +3,7 @@
 <p align="center">
 <a href="https://www.npmjs.com/package/@bevyl-ai/rerender"><img src="https://img.shields.io/npm/v/@bevyl-ai/rerender" alt="npm"></a>
 <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT">
-<img src="https://img.shields.io/badge/extract%20dependencies-0-success" alt="extract has zero dependencies">
+<img src="https://img.shields.io/badge/dependencies-0-success" alt="zero dependencies">
 <img src="https://img.shields.io/github/stars/bevyl-ai/rerender" alt="stars">
 </p>
 
@@ -23,9 +23,9 @@
 rerender pulls any frame of any mp4 in milliseconds. One HTTP Range request, one decode, however
 deep into the file you seek.
 
-Browser-only, on fetch and WebCodecs. **`extract` pulls in nothing** — `dist/extract.js` has no
-imports at all. The renderer half of the package needs mediabunny, and its server-side path needs a
-toolchain that installs only if you ask for it.
+Browser-only, on fetch and WebCodecs. **Zero dependencies** — the npm package ships `extract` and
+`parseMedia`, nothing else; `dist/extract.js` has no imports at all. `parseMedia` needs mediabunny,
+declared as an optional peer, so you only install it if you use it.
 
 No server, no sidecar index, no ffmpeg.
 
