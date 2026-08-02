@@ -1,4 +1,5 @@
 import { type CodecId, type CodecResolution, describeFailure, handlerFor } from './codecs';
+import { ExtractError } from './errors';
 
 // Flattens an mp4's moov sample table into typed arrays so time→byte-range is a binary
 // search instead of a per-seek box walk. This is the whole trick behind rerender/extract:
@@ -43,7 +44,7 @@ export function readBoxes(view: DataView, start: number, end: number): BoxRange[
     const type = String.fromCharCode(view.getUint8(at + 4), view.getUint8(at + 5), view.getUint8(at + 6), view.getUint8(at + 7));
     const headerSize = size32 === 1 ? 16 : 8;
     const size = size32 === 1 ? Number(view.getBigUint64(at + 8)) : size32 === 0 ? end - at : size32;
-    if (size < headerSize) throw new Error(`malformed box '${type}' at ${at}: size ${size}`);
+    if (size < headerSize) throw new ExtractError('malformed', `malformed box '${type}' at ${at}: size ${size}`);
     boxes.push({ type, start: at + headerSize, end: at + size });
     at += size;
   }
@@ -75,12 +76,12 @@ function boundedCount(view: DataView, box: BoxRange, headerBytes: number, entryB
 
 /** Reads a field only if the box is long enough to contain it. */
 function readUint32Within(view: DataView, box: BoxRange, offset: number, what: string): number {
-  if (box.start + offset + 4 > box.end) throw new Error(`mp4 sample table: ${what} runs past the end of its box`);
+  if (box.start + offset + 4 > box.end) throw new ExtractError('malformed', `mp4 sample table: ${what} runs past the end of its box`);
   return view.getUint32(box.start + offset);
 }
 
 function expectBox(box: BoxRange | null, type: string): BoxRange {
-  if (!box) throw new Error(`mp4 sample table: missing ${type}`);
+  if (!box) throw new ExtractError('malformed', `mp4 sample table: missing ${type}`);
   return box;
 }
 
@@ -140,7 +141,7 @@ function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
   const view = new DataView(moovBytes.buffer, moovBytes.byteOffset, moovBytes.byteLength);
   const top = readBoxes(view, 0, moovBytes.byteLength);
   const moov = top.find((box) => box.type === 'moov');
-  if (!moov) throw new Error('mp4 sample table: no moov in provided bytes');
+  if (!moov) throw new ExtractError('no-moov', 'mp4 sample table: no moov in provided bytes');
 
   // Every video trak with a sample entry, whether or not a codec here claims it — an unknown
   // codec has to be distinguishable from no video at all.
@@ -207,10 +208,25 @@ function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
   };
 }
 
+/** The registry's failure vocabulary, carried through to the error a caller can branch on. */
+function failureToError(failure: Extract<CodecResolution, { ok: false }>): ExtractError {
+  const code =
+    failure.reason === 'no-video-track'
+      ? 'no-video-track'
+      : failure.reason === 'unsupported-codec'
+        ? 'unsupported-codec'
+        : failure.reason === 'missing-config'
+          ? 'missing-config'
+          : failure.reason === 'truncated-config'
+            ? 'truncated-config'
+            : 'malformed';
+  return new ExtractError(code, `mp4 sample table: ${describeFailure(failure)}`);
+}
+
 /** Codec configuration and timescale, whether or not the moov indexes any samples. */
 export function parseTrackConfig(moovBytes: Uint8Array): TrackConfig {
   const { resolution, fragmented, timescale, editShiftTicks, trackId } = resolveTrack(moovBytes);
-  if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
+  if (!resolution.ok) throw failureToError(resolution);
   return {
     codecId: resolution.id,
     codec: resolution.codec,
@@ -227,11 +243,11 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   const view = new DataView(moovBytes.buffer, moovBytes.byteOffset, moovBytes.byteLength);
   const top = readBoxes(view, 0, moovBytes.byteLength);
   const moov = top.find((box) => box.type === 'moov');
-  if (!moov) throw new Error('mp4 sample table: no moov in provided bytes');
+  if (!moov) throw new ExtractError('no-moov', 'mp4 sample table: no moov in provided bytes');
 
   const { resolution, fragmented, track } = resolveTrack(moovBytes);
-  if (fragmented) throw new Error(`mp4 sample table: ${describeFailure({ ok: false, reason: 'fragmented' })}`);
-  if (!resolution.ok) throw new Error(`mp4 sample table: ${describeFailure(resolution)}`);
+  if (fragmented) throw new ExtractError('malformed', `mp4 sample table: ${describeFailure({ ok: false, reason: 'fragmented' })}`);
+  if (!resolution.ok) throw failureToError(resolution);
   const { id: codecId, codec, description } = resolution;
   const { trak, stbl } = track!;
 
@@ -250,7 +266,10 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   // which is 32 GB of Float64Array — an OOM-killed tab rather than a catchable error. Refuse
   // instead: no real rendition is anywhere near this, and a file that claims it is lying.
   if (sampleCount > MAX_SAMPLES) {
-    throw new Error(`mp4 sample table: stts claims ${sampleCount} samples, more than the ${MAX_SAMPLES} this will index`);
+    throw new ExtractError(
+      'malformed',
+      `mp4 sample table: stts claims ${sampleCount} samples, more than the ${MAX_SAMPLES} this will index`,
+    );
   }
 
   const decodeTicks = new Float64Array(sampleCount);
@@ -302,7 +321,7 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
       const sampleNumber = view.getUint32(stss.start + 8 + i * 4);
       if (sampleNumber >= 1 && sampleNumber <= sampleCount) sync.push(sampleNumber - 1);
     }
-    if (sync.length === 0) throw new Error('mp4 sample table: stss lists no sync sample inside the track');
+    if (sync.length === 0) throw new ExtractError('malformed', 'mp4 sample table: stss lists no sync sample inside the track');
     keySampleIndices = Uint32Array.from(sync);
   } else {
     keySampleIndices = new Uint32Array(sampleCount);
@@ -314,7 +333,7 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   const uniformSize = view.getUint32(stsz.start + 4);
   const sizeEntries = uniformSize !== 0 ? sampleCount : boundedCount(view, stsz, 12, 4);
   if (sizeEntries < sampleCount) {
-    throw new Error(`mp4 sample table: stsz holds ${sizeEntries} sizes for ${sampleCount} samples`);
+    throw new ExtractError('malformed', `mp4 sample table: stsz holds ${sizeEntries} sizes for ${sampleCount} samples`);
   }
   const byteSizes = new Uint32Array(sampleCount);
   for (let i = 0; i < sampleCount; i++) byteSizes[i] = uniformSize !== 0 ? uniformSize : view.getUint32(stsz.start + 12 + i * 4);
@@ -322,7 +341,7 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   // stsc + stco/co64 → per-sample absolute offsets
   const stsc = expectBox(find('stsc'), 'stsc');
   const stscEntryCount = boundedCount(view, stsc, 8, 12);
-  if (stscEntryCount === 0) throw new Error('mp4 sample table: stsc maps no chunks');
+  if (stscEntryCount === 0) throw new ExtractError('malformed', 'mp4 sample table: stsc maps no chunks');
   const co64 = find('co64');
   const stco = co64 ?? expectBox(find('stco'), 'stco');
   const chunkCount = boundedCount(view, stco, 8, co64 ? 8 : 4);
@@ -340,7 +359,9 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
         offset += byteSizes[sample]!;
       }
     }
-    if (sample !== sampleCount) throw new Error(`mp4 sample table: chunk map covered ${sample} of ${sampleCount} samples`);
+    if (sample !== sampleCount) {
+      throw new ExtractError('malformed', `mp4 sample table: chunk map covered ${sample} of ${sampleCount} samples`);
+    }
   }
 
   return { codecId, codec, description, timescale, sampleCount, presentationTicks, byteOffsets, byteSizes, keySampleIndices };

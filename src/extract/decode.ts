@@ -6,6 +6,7 @@
 // samples after it in decode order, and which presentation timestamps somebody is waiting for — so
 // that is the seam.
 
+import { ExtractError } from './errors';
 import type { OnFrame } from './extractor';
 
 export interface RunSample {
@@ -111,7 +112,9 @@ export async function decodeRun(
     decoder
       .flush()
       .then(() => {
-        if (wanted.size > 0) reject(new Error(`decoder flushed with ${wanted.size} requested timestamps undelivered`));
+        if (wanted.size > 0) {
+          reject(new ExtractError('malformed', `decoder flushed with ${wanted.size} requested timestamps undelivered`));
+        }
       }, reject)
       .finally(() => {
         closeDecoder();

@@ -15,6 +15,7 @@
 // one round trip per fragment, which is the thing this module exists to avoid.
 
 import type { RunSample } from './decode';
+import { ExtractError } from './errors';
 import { type FrameIndex, type IndexAdapter, lastAtOrBefore } from './frame-index';
 import { type BoxRange, child, readBoxes, type TrackConfig } from './mp4-sample-table';
 import type { RangeSource } from './source';
@@ -81,21 +82,27 @@ export async function readFragmentIndex(
   signal?: AbortSignal,
 ): Promise<FragmentIndex> {
   if (!source.readSuffix) {
-    throw new Error('fragmented mp4: this source cannot read from the end of the file, where the fragment index lives');
+    throw new ExtractError(
+      'source-unsupported',
+      'fragmented mp4: this source cannot read from the end of the file, where the fragment index lives',
+    );
   }
 
   const tail = await source.readSuffix(MFRO_SIZE, signal);
   const tailView = view(tail.bytes);
   const isMfro = tail.bytes.byteLength === MFRO_SIZE && String.fromCharCode(...tail.bytes.subarray(4, 8)) === 'mfro';
   if (!isMfro) {
-    throw new Error('fragmented mp4: no mfra index at the end of the file, so seeking it would cost one request per fragment');
+    throw new ExtractError(
+      'no-fragment-index',
+      'fragmented mp4: no mfra index at the end of the file, so seeking it would cost one request per fragment',
+    );
   }
   const mfraSize = tailView.getUint32(12);
   const mfra = await source.readSuffix(mfraSize, signal);
   const mfraView = view(mfra.bytes);
 
   const mfraBox = readBoxes(mfraView, 0, mfra.bytes.byteLength).find((box) => box.type === 'mfra');
-  if (!mfraBox) throw new Error('fragmented mp4: mfro pointed at bytes that are not an mfra');
+  if (!mfraBox) throw new ExtractError('no-fragment-index', 'fragmented mp4: mfro pointed at bytes that are not an mfra');
   // mfra carries one tfra per track. Taking the first hands you the audio track's index — its
   // times are in the audio timescale and its moof offsets point at AAC — so match the track the
   // codec configuration came from.
@@ -103,7 +110,10 @@ export async function readFragmentIndex(
   const tfra = tfras.find((box) => mfraView.getUint32(box.start + 4) === config.trackId);
   if (!tfra) {
     const found = tfras.map((box) => mfraView.getUint32(box.start + 4)).join(', ');
-    throw new Error(`fragmented mp4: mfra indexes track(s) ${found || '(none)'}, not the video track ${config.trackId}`);
+    throw new ExtractError(
+      'index-track-mismatch',
+      `fragmented mp4: mfra indexes track(s) ${found || '(none)'}, not the video track ${config.trackId}`,
+    );
   }
 
   // Where mfra actually begins in the file. Using the suffix read's start assumes the read landed
@@ -111,7 +121,7 @@ export async function readFragmentIndex(
   // runs backwards.
   const mediaEnd = mfra.start + mfraBox.start - 8;
   const { keyframeTicks, moofOffsets } = readTfra(mfraView, tfra);
-  if (keyframeTicks.length === 0) throw new Error('fragmented mp4: tfra indexes no sync samples');
+  if (keyframeTicks.length === 0) throw new ExtractError('no-fragment-index', 'fragmented mp4: tfra indexes no sync samples');
   const defaults = readTrexDefaults(moovBytes, config.trackId);
   let totalTicks = readFragmentDuration(moovBytes, config.timescale);
   if (totalTicks === 0) {
@@ -181,13 +191,13 @@ export function parseFragment(
 ): FragmentSample[] {
   const v = view(bytes);
   const moof = readBoxes(v, 0, bytes.byteLength).find((box) => box.type === 'moof');
-  if (!moof) throw new Error(`fragmented mp4: no moof at byte ${fragmentStart}`);
+  if (!moof) throw new ExtractError('malformed', `fragmented mp4: no moof at byte ${fragmentStart}`);
   const traf = readBoxes(v, moof.start, moof.end).find((box) => box.type === 'traf');
-  if (!traf) throw new Error(`fragmented mp4: moof at byte ${fragmentStart} has no traf`);
+  if (!traf) throw new ExtractError('malformed', `fragmented mp4: moof at byte ${fragmentStart} has no traf`);
 
   const children = readBoxes(v, traf.start, traf.end);
   const tfhd = children.find((box) => box.type === 'tfhd');
-  if (!tfhd) throw new Error(`fragmented mp4: traf at byte ${fragmentStart} has no tfhd`);
+  if (!tfhd) throw new ExtractError('malformed', `fragmented mp4: traf at byte ${fragmentStart} has no tfhd`);
   const tfhdFlags = v.getUint32(tfhd.start) & 0xffffff;
 
   let at = tfhd.start + 8; // version/flags + track_ID
@@ -288,19 +298,8 @@ export const mfraIndexAdapter: IndexAdapter = {
       kind: 'mfra',
       config,
       durationSeconds: lastTicks / timescale,
-      // Sync samples only. Materialising the rest would mean reading every fragment to answer a
-      // question nobody asked.
-      sampleTable: {
-        codecId: config.codecId,
-        codec: config.codec,
-        description: config.description,
-        timescale,
-        sampleCount: gopStartTicks.length,
-        presentationTicks: gopStartTicks,
-        byteOffsets: moofOffsets,
-        byteSizes: new Uint32Array(gopStartTicks.length),
-        keySampleIndices: Uint32Array.from({ length: gopStartTicks.length }, (_, i) => i),
-      },
+      // A fragmented file states no whole-file table; see FrameExtractor.sampleTable.
+      sampleTable: null,
       gopStartTicks,
       clampTicks: (seconds) => Math.min(Math.max(Math.round(seconds * timescale), firstTicks), lastTicks),
       // Fragment granularity: the exact sample is inside bytes we have not fetched.
@@ -308,7 +307,7 @@ export const mfraIndexAdapter: IndexAdapter = {
       planRead: (gopIndex) => range(gopIndex),
       resolve: (gopIndex, targetTicks, bytes, bytesStart) => {
         const samples = parseFragment(bytes, bytesStart, defaults, editShiftTicks);
-        if (samples.length === 0) throw new Error(`fragmented mp4: fragment ${gopIndex} declared no samples`);
+        if (samples.length === 0) throw new ExtractError('malformed', `fragmented mp4: fragment ${gopIndex} declared no samples`);
         const nearest = targetTicks.map((ticks) => {
           let best = 0;
           for (let i = 1; i < samples.length; i++) {

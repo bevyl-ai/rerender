@@ -1,7 +1,7 @@
 {
   "name": "@bevyl-ai/rerender",
   "version": "0.2.0",
-  "description": "Zero-dependency random-access frame extraction from mp4 URLs, plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
+  "description": "Random-access frame extraction from mp4 URLs \u2014 any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
   "license": "MIT",
   "author": "Noah Lindner",
   "homepage": "https://rerender.video",
@@ -54,6 +54,9 @@
     },
     "./package.json": "./package.json"
   },
+  "sideEffects": [
+    "./dist/index.js"
+  ],
   "files": [
     "bin",
     "dist",
@@ -87,19 +90,8 @@
     "attw": "attw --pack . --profile esm-only"
   },
   "dependencies": {
-    "@aws-sdk/client-lambda": "^3.1075.0",
-    "@aws-sdk/client-s3": "^3.1075.0",
     "@mediabunny/aac-encoder": "^1.49.0",
-    "@puppeteer/browsers": "^3.0.5",
-    "@remotion/google-fonts": "^4.0.484",
-    "@remotion/zod-types": "^4.0.484",
-    "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.28.1",
-    "mediabunny": "^1.49.0",
-    "puppeteer-core": "^25.2.1",
-    "tsx": "^4.22.4",
-    "vite": "^6.4.3",
-    "zod": "^3.25.76"
+    "mediabunny": "^1.49.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
@@ -123,5 +115,17 @@
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "optionalDependencies": {
+    "@aws-sdk/client-lambda": "^3.1075.0",
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "@puppeteer/browsers": "^3.0.5",
+    "@remotion/zod-types": "^4.0.484",
+    "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.28.1",
+    "puppeteer-core": "^25.2.1",
+    "tsx": "^4.22.4",
+    "vite": "^6.4.3",
+    "zod": "^3.25.76"
   }
 }

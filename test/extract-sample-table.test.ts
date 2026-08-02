@@ -82,7 +82,7 @@ console.log('extract-sample-table: PASS');
     src: 'https://fixture.test/faststart.mp4',
     fetchFn: fileFetch(join(FIXTURES, 'extract-faststart.mp4')),
   });
-  const lastMicros = Math.round((Math.max(...extractor.sampleTable.presentationTicks) / extractor.sampleTable.timescale) * 1_000_000);
+  const lastMicros = Math.round((Math.max(...extractor.sampleTable!.presentationTicks) / extractor.sampleTable!.timescale) * 1_000_000);
 
   // 20 fps fixture: samples every 50_000 µs. Nearest-sample rounding in both directions.
   assert.equal(extractor.snapToSampleMicros(0), 0, 'snap: exact first sample');

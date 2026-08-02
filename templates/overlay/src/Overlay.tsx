@@ -1,12 +1,10 @@
-import { loadFont } from '@remotion/google-fonts/Roboto';
 import type React from 'react';
 import { useMemo } from 'react';
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-const { fontFamily } = loadFont('normal', {
-  subsets: ['latin'],
-  weights: ['400', '700'],
-});
+// A system stack rather than @remotion/google-fonts: that package is 63 MB and is not MIT, and a
+// starter template is not worth either. Swap in whatever font loader you like.
+const fontFamily = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 const title: React.CSSProperties = {
   fontFamily,
