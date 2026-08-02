@@ -9,7 +9,7 @@
 // So a codec is three facts and one function, and adding one is adding a row.
 
 /** Discriminant for a codec family. Sample entry types map many-to-one onto these. */
-export type CodecId = 'avc' | 'hevc' | 'vp9' | 'av1';
+export type CodecId = 'avc' | 'hevc' | 'vp8' | 'vp9' | 'av1';
 
 export interface CodecHandler {
   readonly id: CodecId;
@@ -19,6 +19,12 @@ export interface CodecHandler {
   readonly configBox: string;
   /** WebCodecs codec string, derived from that record's payload. */
   codecString(config: Uint8Array): string;
+  /**
+   * Whether the configuration record is also the decoder's `description`. True for every codec that
+   * carries parameter sets out of band; false for one that does not, where passing the record along
+   * would be inventing a meaning for it. Defaults to true.
+   */
+  readonly describes?: boolean;
 }
 
 const hex2 = (n: number) => n.toString(16).padStart(2, '0');
@@ -113,7 +119,23 @@ const vp9: CodecHandler = {
   codecString: (config) => `vp09.${dec2(config[4]!)}.${dec2(config[5]!)}.${dec2(config[6]! >> 4)}`,
 };
 
-export const CODECS: readonly CodecHandler[] = [avc, hevc, vp9, av1];
+/**
+ * VP8 shares VP9's configuration box and has no codec-string parameters at all — WebCodecs
+ * registers it as the bare `vp8`, so nothing in vpcC changes the answer.
+ *
+ * It also has no out-of-band configuration, which is the one place a codec here needs to say so:
+ * `description` is what an mp4's configuration record means to a decoder, and VP8 does not have
+ * one. Handing vpcC over as though it did is the kind of thing a decoder is entitled to reject.
+ */
+const vp8: CodecHandler = {
+  id: 'vp8',
+  sampleEntries: ['vp08'],
+  configBox: 'vpcC',
+  codecString: () => 'vp8',
+  describes: false,
+};
+
+export const CODECS: readonly CodecHandler[] = [avc, hevc, vp8, vp9, av1];
 
 /** The handler claiming a `stsd` sample entry type, or null if no codec here knows it. */
 export function handlerFor(sampleEntry: string): CodecHandler | null {
@@ -126,7 +148,7 @@ export function handlerFor(sampleEntry: string): CodecHandler | null {
  * the fragmented-mp4 one — has to be handled everywhere it matters.
  */
 export type CodecResolution =
-  | { readonly ok: true; readonly id: CodecId; readonly codec: string; readonly description: Uint8Array }
+  | { readonly ok: true; readonly id: CodecId; readonly codec: string; readonly description: Uint8Array; readonly describes: boolean }
   | { readonly ok: false; readonly reason: 'no-video-track' }
   | { readonly ok: false; readonly reason: 'fragmented' }
   | { readonly ok: false; readonly reason: 'unsupported-codec'; readonly sampleEntry: string }

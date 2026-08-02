@@ -65,6 +65,8 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
   /** Logical width the strips were drawn at; the row scrolls when it exceeds the container. */
   const [stripWidth, setStripWidth] = useState(0);
   const [err, setErr] = useState('');
+  /** An engine that cannot read the file at all. Not a slow result — no result. */
+  const [cannotRead, setCannotRead] = useState<Engine | null>(null);
   const [done, setDone] = useState(false);
 
   const supported = typeof VideoDecoder !== 'undefined';
@@ -79,6 +81,7 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
     setResults({});
     setWarmup(null);
     setErr('');
+    setCannotRead(null);
     setDone(false);
 
     try {
@@ -134,7 +137,12 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
       setResults((prev) => ({ ...prev, remotion: { ms: performance.now() - started, frames: theirPainted } }));
       setDone(true);
     } catch (error) {
+      // Reaching here after our own run means their parser refused the file — VP8 in mp4 is the
+      // case that turned this up. Report it as a capability difference and keep our result, rather
+      // than discarding both or dressing a refusal up as an enormous speed win.
+      if (results.rerender || oursCanvas) setCannotRead('remotion');
       setErr(error instanceof Error ? error.message : String(error));
+      setDone(true);
     } finally {
       setRunning(null);
     }
@@ -195,6 +203,8 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
                 <>
                   <span style={{ color: '#cfcfd8' }}>{results[engine]?.ms.toFixed(0)} ms</span> · {results[engine]?.frames}/{FRAMES} frames
                 </>
+              ) : cannotRead === engine ? (
+                <span style={{ color: '#ff6b6b' }}>cannot read this file</span>
               ) : (
                 ''
               )}
