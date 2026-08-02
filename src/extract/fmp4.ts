@@ -32,7 +32,8 @@ export interface FragmentIndex {
   mediaEnd: number;
   /** trex defaults, applied when a `tfhd` declines to state them. */
   defaults: { duration: number; size: number };
-  /** mehd fragment_duration when the moov states one; 0 when it does not. */
+  /** Presentation ticks of the last displayed frame — from mehd when the moov states it, otherwise
+   *  read out of the last fragment. Never 0 for a file with samples. */
   totalTicks: number;
 }
 
@@ -58,12 +59,14 @@ function readFragmentDuration(moovBytes: Uint8Array, mediaTimescale: number): nu
 }
 
 /** mvex/trex carries the defaults a tfhd may omit. */
-function readTrexDefaults(moovBytes: Uint8Array): { duration: number; size: number } {
+function readTrexDefaults(moovBytes: Uint8Array, trackId: number): { duration: number; size: number } {
   const v = view(moovBytes);
   const moov = readBoxes(v, 0, moovBytes.byteLength).find((box) => box.type === 'moov');
-  const trex = moov && child(v, moov, 'mvex', 'trex');
-  if (!trex) return { duration: 0, size: 0 };
+  const mvex = moov && child(v, moov, 'mvex');
+  if (!mvex) return { duration: 0, size: 0 };
   // version/flags(4) track_ID(4) sample_description_index(4) duration(4) size(4) flags(4)
+  const trex = readBoxes(v, mvex.start, mvex.end).find((box) => box.type === 'trex' && v.getUint32(box.start + 4) === trackId);
+  if (!trex) return { duration: 0, size: 0 };
   return { duration: v.getUint32(trex.start + 12), size: v.getUint32(trex.start + 16) };
 }
 
@@ -93,18 +96,36 @@ export async function readFragmentIndex(
 
   const mfraBox = readBoxes(mfraView, 0, mfra.bytes.byteLength).find((box) => box.type === 'mfra');
   if (!mfraBox) throw new Error('fragmented mp4: mfro pointed at bytes that are not an mfra');
-  const tfra = readBoxes(mfraView, mfraBox.start, mfraBox.end).find((box) => box.type === 'tfra');
-  if (!tfra) throw new Error('fragmented mp4: mfra contains no tfra, so it indexes no track');
+  // mfra carries one tfra per track. Taking the first hands you the audio track's index — its
+  // times are in the audio timescale and its moof offsets point at AAC — so match the track the
+  // codec configuration came from.
+  const tfras = readBoxes(mfraView, mfraBox.start, mfraBox.end).filter((box) => box.type === 'tfra');
+  const tfra = tfras.find((box) => mfraView.getUint32(box.start + 4) === config.trackId);
+  if (!tfra) {
+    const found = tfras.map((box) => mfraView.getUint32(box.start + 4)).join(', ');
+    throw new Error(`fragmented mp4: mfra indexes track(s) ${found || '(none)'}, not the video track ${config.trackId}`);
+  }
 
+  // Where mfra actually begins in the file. Using the suffix read's start assumes the read landed
+  // exactly on the box, which a bogus mfro size makes false — and then the last fragment's range
+  // runs backwards.
+  const mediaEnd = mfra.start + mfraBox.start - 8;
   const { keyframeTicks, moofOffsets } = readTfra(mfraView, tfra);
-  return {
-    config,
-    keyframeTicks,
-    moofOffsets,
-    mediaEnd: mfra.start,
-    defaults: readTrexDefaults(moovBytes),
-    totalTicks: readFragmentDuration(moovBytes, config.timescale),
-  };
+  if (keyframeTicks.length === 0) throw new Error('fragmented mp4: tfra indexes no sync samples');
+  const defaults = readTrexDefaults(moovBytes, config.trackId);
+  let totalTicks = readFragmentDuration(moovBytes, config.timescale);
+  if (totalTicks === 0) {
+    // No mehd — which is what ffmpeg writes — so the presentation's end is not stated anywhere but
+    // inside the last fragment. Stopping at the last sync sample instead would put everything from
+    // that keyframe to the end of the file out of reach: half the video on a two-fragment file.
+    // One extra read at setup, once per extractor, buys back the tail.
+    const lastStart = moofOffsets[moofOffsets.length - 1]!;
+    const lastBytes = await source.read(lastStart, mediaEnd, signal);
+    const lastSamples = parseFragment(lastBytes, lastStart, defaults, 0);
+    totalTicks = lastSamples.reduce((max, sample) => Math.max(max, sample.presentationTicks), 0);
+  }
+
+  return { config, keyframeTicks, moofOffsets, mediaEnd, defaults, totalTicks };
 }
 
 function readTfra(v: DataView, tfra: BoxRange): { keyframeTicks: Float64Array; moofOffsets: Float64Array } {
@@ -114,7 +135,10 @@ function readTfra(v: DataView, tfra: BoxRange): { keyframeTicks: Float64Array; m
   const trafSize = ((sizes >> 4) & 0b11) + 1;
   const trunSize = ((sizes >> 2) & 0b11) + 1;
   const sampleSize = (sizes & 0b11) + 1;
-  const count = v.getUint32(tfra.start + 12);
+  const declared = v.getUint32(tfra.start + 12);
+  // A hostile or truncated tfra can claim 4 billion entries; allocate for what is actually there.
+  const entrySize = (version === 1 ? 16 : 8) + trafSize + trunSize + sampleSize;
+  const count = Math.min(declared, Math.max(0, Math.floor((tfra.end - tfra.start - 16) / entrySize)));
 
   const keyframeTicks = new Float64Array(count);
   const moofOffsets = new Float64Array(count);
@@ -191,6 +215,9 @@ export function parseFragment(
   }
 
   const samples: FragmentSample[] = [];
+  // "If the data-offset is not present, then the data for this run starts immediately after the
+  // data of the previous run" — so the cursor carries across runs rather than resetting to base.
+  let byteCursor = baseOffset;
   for (const trun of children.filter((box) => box.type === 'trun')) {
     const version = v.getUint8(trun.start);
     const flags = v.getUint32(trun.start) & 0xffffff;
@@ -208,7 +235,7 @@ export function parseFragment(
     }
     void firstSampleFlags; // every fragment here starts on a sync sample; kept for shape
 
-    let byteCursor = baseOffset + dataOffset;
+    if (flags & 0x000001) byteCursor = baseOffset + dataOffset;
     for (let i = 0; i < count; i++) {
       let duration = defaultDuration;
       let size = defaultSize;
@@ -275,7 +302,7 @@ export const mfraIndexAdapter: IndexAdapter = {
         keySampleIndices: Uint32Array.from({ length: gopStartTicks.length }, (_, i) => i),
       },
       gopStartTicks,
-      clampTicks: (seconds) => Math.min(Math.max(seconds * timescale, firstTicks), lastTicks),
+      clampTicks: (seconds) => Math.min(Math.max(Math.round(seconds * timescale), firstTicks), lastTicks),
       // Fragment granularity: the exact sample is inside bytes we have not fetched.
       snapMicros: (targetTicks) => toMicros(gopStartTicks[lastAtOrBefore(gopStartTicks, targetTicks)]!),
       planRead: (gopIndex) => range(gopIndex),

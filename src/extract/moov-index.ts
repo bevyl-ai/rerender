@@ -48,7 +48,7 @@ export const moovIndexAdapter: IndexAdapter = {
       sampleTable: table,
       durationSeconds: lastTicks / timescale,
       gopStartTicks,
-      clampTicks: (seconds) => Math.min(Math.max(seconds * timescale, gopStartTicks[0]!), lastTicks),
+      clampTicks: (seconds) => Math.min(Math.max(Math.round(seconds * timescale), gopStartTicks[0]!), lastTicks),
       snapMicros: (targetTicks) =>
         toMicros(presentationTicks[nearestSampleInGop(lastAtOrBefore(gopStartTicks, targetTicks), targetTicks)]!),
       planRead: (gopIndex, targetTicks) => {

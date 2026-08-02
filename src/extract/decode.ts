@@ -32,6 +32,9 @@ export async function decodeRun(
   onFrame: OnFrame,
   signal: AbortSignal,
 ): Promise<void> {
+  // Abort events are not replayed, so a signal that fired before we armed the listener below would
+  // never be seen — and decodeRun is reached through a chain of microtasks after an early resolve.
+  if (signal.aborted) throw signal.reason;
   await new Promise<void>((resolve, reject) => {
     const decoder = new VideoDecoder({
       output: (frame) => {
@@ -41,9 +44,26 @@ export async function decodeRun(
           return;
         }
         wanted.delete(frame.timestamp);
-        for (let i = 0; i < requesters.length; i++) {
-          // Last requester gets the frame itself; earlier ones get clones. Receiver closes all.
-          onFrame(i === requesters.length - 1 ? frame : frame.clone(), requesters[i]!);
+        // onFrame belongs to the caller and may throw. Unguarded, the throw escapes into the
+        // WebCodecs output task — which neither rejects flush() nor reaches this promise — leaving
+        // extract() pending forever and the undelivered frame open. Hand out what we can, close
+        // what nobody took, and fail the run.
+        const handed: { close(): void }[] = [];
+        try {
+          for (let i = 0; i < requesters.length; i++) {
+            // Last requester gets the frame itself; earlier ones get clones. Receiver closes all.
+            const forRequester = i === requesters.length - 1 ? frame : frame.clone();
+            handed.push(forRequester);
+            onFrame(forRequester, requesters[i]!);
+          }
+        } catch (error) {
+          // A callback that threw did not take ownership of what it was given. close() on an
+          // already-closed frame is a no-op, so closing every frame in play is the leak-free
+          // choice even if the caller managed to close some of them first.
+          for (const inFlight of handed) inFlight.close();
+          if (!handed.includes(frame)) frame.close();
+          reject(error);
+          return;
         }
         // Early resolve keeps GOP pipelining: the worker moves on while the
         // flush drains. The abort listener stays armed until the flush-side
