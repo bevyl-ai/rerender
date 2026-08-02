@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { ExportShowcase } from './export-showcase';
 import { ExtractShowcase } from './extract-showcase';
 import { Race } from './race';
-import { ACCENT, SMOKE_TEST } from './ui';
+import { ACCENT, RACE_TERMS, SMOKE_TEST } from './ui';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('no #root');
@@ -84,7 +84,9 @@ createRoot(root).render(
           <a href="/codecs" style={link}>
             Same race per codec
           </a>{' '}
-          — H.264 and AV1, on renditions cut from one source with one GOP structure.
+          — H.264, HEVC, VP9, AV1 and a fragmented remux, on renditions cut from one source with one GOP structure.
+          <br />
+          {RACE_TERMS}
         </p>
       </section>
 

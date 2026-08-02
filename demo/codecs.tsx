@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { CODECS, type CodecId } from '../src/extract/codecs';
 import { Race } from './race';
-import { ACCENT, card } from './ui';
+import { ACCENT, card, RACE_TERMS } from './ui';
 
 interface Rendition {
   src: string;
@@ -121,9 +121,9 @@ export function Codecs(): JSX.Element {
       </section>
 
       <p style={{ margin: '56px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.7 }}>
-        Support is asked of your browser with <code>VideoDecoder.isConfigSupported</code>, not inferred from a user-agent string. AV1 and
-        VP9 decode in current Chrome, Firefox and Edge; HEVC needs platform support, so it plays on Safari and on Chrome only where hardware
-        provides it.
+        {RACE_TERMS} Support is asked of your browser with <code>VideoDecoder.isConfigSupported</code>, not inferred from a user-agent
+        string. AV1 and VP9 decode in current Chrome, Firefox and Edge; HEVC needs platform support, so it plays on Safari and on Chrome
+        only where hardware provides it.
       </p>
     </>
   );

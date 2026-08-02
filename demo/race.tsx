@@ -226,11 +226,6 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
           <span style={{ color: '#8a8a99' }}>{won ? ' faster' : ' slower'}</span>
         </div>
       )}
-
-      <p style={{ margin: '4px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
-        Remotion runs in a web worker; ours runs on the main thread. It gets a fresh timestamp array, in-range timestamps only, and our
-        index is rebuilt cold on every run.
-      </p>
     </div>
   );
 }
