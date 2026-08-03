@@ -21,7 +21,8 @@
 ## What is rerender?
 
 rerender pulls any frame of any mp4 in milliseconds. One HTTP Range request, one decode, however
-deep into the file you seek.
+deep into the file you seek. H.264, HEVC, VP8, VP9 and AV1 — progressive or fragmented — with typed
+errors you can branch on.
 
 Browser-only, on fetch and WebCodecs. **Zero dependencies** — the npm package ships `extract` and
 `parseMedia`, nothing else; `dist/extract.js` has no imports at all. `parseMedia` needs mediabunny,
