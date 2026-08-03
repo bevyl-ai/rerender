@@ -92,14 +92,10 @@ export function Codecs(): JSX.Element {
             letterSpacing: -1.4,
           }}
         >
-          One index, every codec
+          Codecs
         </h1>
-        <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: '0 0 8px' }}>
-          An mp4 stores every codec the same way: a sample entry naming it, holding one box of decoder configuration. Everything expensive —
-          the flattened sample table, the byte-range maths, the GOP window — never learns which codec it is looking at.
-        </p>
         <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: 0 }}>
-          So each section below runs the same benchmark on a rendition of the same film, cut with the same 24-frame GOP.
+          The same film, the same 24-frame GOP, five codecs. Every codec WebCodecs can decode.
         </p>
       </section>
 
@@ -114,17 +110,13 @@ export function Codecs(): JSX.Element {
           <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#55555f' }}>mfra</code>
         </div>
         <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: '0 0 18px' }}>
-          The same media again, remuxed so the moov indexes nothing and every fragment carries its own table — the shape HLS and DASH ship.
-          The index moves to <code style={{ fontFamily: 'ui-monospace, monospace' }}>mfra</code> at the end of the file, which is still one
-          read, so a seek still costs one request.
+          The same media, remuxed the way HLS and DASH ship it.
         </p>
         <Race src="/filmstrip-12min-frag.mp4" />
       </section>
 
       <p style={{ margin: '56px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.7 }}>
-        {RACE_TERMS} Support is asked of your browser with <code>VideoDecoder.isConfigSupported</code>, not inferred from a user-agent
-        string. AV1 and VP9 decode in current Chrome, Firefox and Edge; HEVC needs platform support, so it plays on Safari and on Chrome
-        only where hardware provides it.
+        {RACE_TERMS}
       </p>
     </>
   );
