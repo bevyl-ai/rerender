@@ -1,12 +1,17 @@
 # Publishes to npm on every v* tag push, after re-running the fast verification gate.
 #
-# Auth, in order of preference:
-#  1. Trusted publishing (OIDC, zero secrets): configure this repo + workflow as a
-#     trusted publisher in the package's npmjs.com settings (available after the
-#     first publish). npm >=11.5 exchanges the id-token automatically; provenance
-#     is implied.
-#  2. NPM_TOKEN repo secret (granular automation token): used when set; required
-#     for the very first publish, before trusted publishing can be configured.
+# Auth is trusted publishing (OIDC), so there is no npm token anywhere in this repo.
+# Configure it once, in the package's settings on npmjs.com, as a GitHub Actions
+# trusted publisher:
+#
+#   Organization or user  bevyl-ai
+#   Repository            rerender
+#   Workflow filename     release.yml
+#   Allowed actions       npm publish
+#   Environment           (leave empty — this workflow uses none)
+#
+# npm exchanges the job's id-token for a short-lived credential and attaches
+# provenance. Requires npm >=11.5.1 and Node >=22.14, which the steps below pin.
 name: release
 
 on:
@@ -24,10 +29,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.14'  # OIDC exchange needs >=22.14
           cache: npm
           registry-url: 'https://registry.npmjs.org'
-      # setup-node's bundled npm predates OIDC trusted publishing.
+      # setup-node's bundled npm predates OIDC trusted publishing, which landed in 11.5.1.
       - run: npm install -g npm@latest
       - run: npm ci
       - name: Verify
@@ -39,7 +44,8 @@ jobs:
             echo "tag $GITHUB_REF_NAME does not match package version v$PKG_VERSION"
             exit 1
           fi
+      # No NODE_AUTH_TOKEN. setup-node writes _authToken=${NODE_AUTH_TOKEN} into .npmrc, and an
+      # unset secret expands to an empty string — npm then authenticates as nobody and gets a 401
+      # instead of falling through to OIDC. Absent is the working configuration; empty is not.
       - name: Publish (prepack builds dist + runs the license guard)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
