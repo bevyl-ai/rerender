@@ -204,7 +204,7 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
                   <span style={{ color: '#cfcfd8' }}>{results[engine]?.ms.toFixed(0)} ms</span> · {results[engine]?.frames}/{FRAMES} frames
                 </>
               ) : cannotRead === engine ? (
-                <span style={{ color: '#ff6b6b' }}>cannot read this file</span>
+                <span style={{ color: '#ff6b6b' }}>Not supported by remotion</span>
               ) : (
                 ''
               )}
