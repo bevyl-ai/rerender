@@ -65,13 +65,13 @@ function CodecSection({ id }: { id: CodecId }): JSX.Element {
 
       {!rendition && (
         <div style={{ ...card, padding: 18, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#8a8a99' }}>
-          Supported. No rendition here to race yet.
+          No rendition to race yet.
         </div>
       )}
       {rendition && support === 'yes' && <Race src={rendition.src} />}
       {rendition && (support === 'no' || support === 'no-webcodecs') && (
         <div style={{ ...card, padding: 18, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#8a8a99' }}>
-          {rendition.codecString} — no decoder in this browser. Nothing to race.
+          Not supported by your browser.
         </div>
       )}
     </section>
@@ -93,9 +93,7 @@ export function Codecs(): JSX.Element {
         >
           Codecs
         </h1>
-        <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: 0 }}>
-          Same film, same GOPs, every codec WebCodecs can decode. Hit run.
-        </p>
+        <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: 0 }}>Any codec your browser can decode.</p>
       </section>
 
       {CODECS.map((codec) => (
