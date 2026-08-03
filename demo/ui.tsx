@@ -64,4 +64,4 @@ export function useNarrow(maxWidth = 640): boolean {
 
 /** How the race is set up, stated once per page rather than once per race. */
 export const RACE_TERMS =
-  'Remotion runs in a web worker; ours runs on the main thread. It gets a fresh timestamp array, in-range timestamps only, and our index is rebuilt cold on every run.';
+  "Rigged in Remotion's favor: it gets a web worker, a fresh timestamp array, in-range timestamps only. Our index rebuilds cold on every run.";

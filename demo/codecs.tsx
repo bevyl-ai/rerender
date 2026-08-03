@@ -65,14 +65,13 @@ function CodecSection({ id }: { id: CodecId }): JSX.Element {
 
       {!rendition && (
         <div style={{ ...card, padding: 18, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#8a8a99' }}>
-          Supported by the extractor. No rendition on this page to race it against yet.
+          Supported. No rendition here to race yet.
         </div>
       )}
       {rendition && support === 'yes' && <Race src={rendition.src} />}
       {rendition && (support === 'no' || support === 'no-webcodecs') && (
         <div style={{ ...card, padding: 18, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#8a8a99' }}>
-          Nothing to race — this browser has no decoder for {rendition.codecString}. rerender reads the index either way; the frames are
-          what it cannot produce.
+          {rendition.codecString} — no decoder in this browser. Nothing to race.
         </div>
       )}
     </section>
@@ -95,7 +94,7 @@ export function Codecs(): JSX.Element {
           Codecs
         </h1>
         <p style={{ fontSize: 17, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: 0 }}>
-          The same film, the same 24-frame GOP, five codecs. Every codec WebCodecs can decode.
+          Same film, same GOPs, every codec WebCodecs can decode. Hit run.
         </p>
       </section>
 
@@ -109,9 +108,6 @@ export function Codecs(): JSX.Element {
           <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: ACCENT }}>moof, trun</code>
           <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#55555f' }}>mfra</code>
         </div>
-        <p style={{ fontSize: 16, color: '#9a9aa6', maxWidth: 680, lineHeight: 1.6, margin: '0 0 18px' }}>
-          The same media, remuxed the way HLS and DASH ship it.
-        </p>
         <Race src="/filmstrip-12min-frag.mp4" />
       </section>
 

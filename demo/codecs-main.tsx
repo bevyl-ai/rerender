@@ -54,6 +54,13 @@ createRoot(root).render(
           .
         </div>
         <div style={{ marginTop: 8 }}>
+          Built by the team at{' '}
+          <a href="https://www.bevyl.ai" style={{ color: '#6a6a76' }}>
+            Bevyl
+          </a>
+          .
+        </div>
+        <div style={{ marginTop: 8 }}>
           Independent open-source project. Not affiliated with, endorsed by, or sponsored by Remotion or Remotion Inc.
           &ldquo;Remotion&rdquo; is a trademark of its respective owner; used here only to describe API compatibility.
         </div>

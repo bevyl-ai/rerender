@@ -64,17 +64,6 @@ createRoot(root).render(
 
       <ExtractShowcase />
 
-      <p style={{ margin: '16px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
-        <a href="https://github.com/bevyl-ai/rerender#what-is-rerender" style={link}>
-          rerender/extract
-        </a>{' '}
-        runs in production in{' '}
-        <a href="https://bevyl.ai" style={link}>
-          Bevyl
-        </a>
-        's editor timeline, replacing @remotion/webcodecs.
-      </p>
-
       <section style={{ marginTop: 72 }}>
         <h2 style={{ fontSize: 'clamp(24px, 4.5vw, 32px)', fontWeight: 850, lineHeight: 1.15, margin: '0 0 14px', letterSpacing: -1 }}>
           Faster than <code style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 850 }}>@remotion/webcodecs</code>
@@ -82,9 +71,8 @@ createRoot(root).render(
         <Race />
         <p style={{ margin: '18px 0 0', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#55555f', lineHeight: 1.65 }}>
           <a href="/codecs" style={link}>
-            Same race per codec
-          </a>{' '}
-          — H.264, HEVC, VP9, AV1 and a fragmented remux, on renditions cut from one source with one GOP structure.
+            Same race, every codec →
+          </a>
           <br />
           {RACE_TERMS}
         </p>
@@ -120,6 +108,13 @@ createRoot(root).render(
           , © Blender Foundation,{' '}
           <a href="https://creativecommons.org/licenses/by/3.0/" style={{ color: '#6a6a76' }}>
             CC BY 3.0
+          </a>
+          .
+        </div>
+        <div style={{ marginTop: 8 }}>
+          Built by the team at{' '}
+          <a href="https://www.bevyl.ai" style={{ color: '#6a6a76' }}>
+            Bevyl
           </a>
           .
         </div>
