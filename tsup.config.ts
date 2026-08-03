@@ -7,11 +7,8 @@ import { defineConfig } from 'tsup';
 // which `npm run check:dist` enforces after every build.
 export default defineConfig({
   entry: {
-    index: 'src/index.ts',
     extract: 'src/extract/index.ts',
     'media-parser': 'src/media-parser/index.ts',
-    media: 'src/media/index.ts',
-    'audio-engine': 'src/core/audio-engine.ts',
   },
   format: ['esm'],
   dts: true,
