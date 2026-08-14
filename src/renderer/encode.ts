@@ -41,7 +41,16 @@ export async function startEncoder(opts: { exe: string; frameDir: string; frameF
   });
   return {
     encode: async (output, fps, codec, frameCount) => {
-      const b64 = await worker.page.evaluate((n, f, c) => must(window.__encode)(n, f, c), frameCount, fps, codec);
+      const b64 = await worker.page.evaluate(
+        (n, f, c) => {
+          const encode = window.__encode;
+          if (!encode) throw new Error('expected a value');
+          return encode(n, f, c);
+        },
+        frameCount,
+        fps,
+        codec,
+      );
       writeFileSync(output, Buffer.from(b64, 'base64'));
     },
     close: worker.close,

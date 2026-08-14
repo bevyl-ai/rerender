@@ -137,7 +137,8 @@ async function main(): Promise<void> {
       const c = document.createElement('canvas');
       c.width = 160;
       c.height = 90;
-      const ctx = must(c.getContext('2d'));
+      const ctx = c.getContext('2d');
+      if (!ctx) throw new Error('expected a value');
       ctx.drawImage(v, 0, 0, 160, 90);
       // grass band = lower third (forest floor) — the part of the footage that must read through.
       const gd = ctx.getImageData(30, 60, 120, 28).data;
@@ -145,9 +146,9 @@ async function main(): Promise<void> {
       let gg = 0;
       let gb = 0;
       for (let i = 0; i < gd.length; i += 4) {
-        gr += must(gd[i]);
-        gg += must(gd[i + 1]);
-        gb += must(gd[i + 2]);
+        gr += gd[i] ?? 0;
+        gg += gd[i + 1] ?? 0;
+        gb += gd[i + 2] ?? 0;
       }
       const gn = gd.length / 4;
       const wd = ctx.getImageData(0, 0, 160, 90).data;
@@ -155,9 +156,9 @@ async function main(): Promise<void> {
       let wg = 0;
       let wb = 0;
       for (let i = 0; i < wd.length; i += 4) {
-        wr += must(wd[i]);
-        wg += must(wd[i + 1]);
-        wb += must(wd[i + 2]);
+        wr += wd[i] ?? 0;
+        wg += wd[i + 1] ?? 0;
+        wb += wd[i + 2] ?? 0;
       }
       const wn = wd.length / 4;
       return {

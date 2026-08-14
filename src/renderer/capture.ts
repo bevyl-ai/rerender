@@ -8,7 +8,6 @@ import { join } from 'node:path';
 import puppeteer, { type Browser } from 'puppeteer-core';
 import type { CollectedAsset } from '../core/assets';
 import type { VideoConfig } from '../core/frame';
-import { must } from '../core/must';
 
 const RENDER_ARGS = [
   '--no-sandbox',
@@ -72,7 +71,11 @@ async function captureRange(
     await page.waitForFunction(() => window.__ready === true, { timeout: 60_000 });
     if (opts.collectAudio) await page.evaluate(() => window.remotion_collectAssets?.()); // drain initial-mount registrations
     for (let f = lo; f < hi; f++) {
-      await page.evaluate((fr) => must(window.__setFrame)(fr), f);
+      await page.evaluate((fr) => {
+        const setFrame = window.__setFrame;
+        if (!setFrame) throw new Error('expected a value');
+        return setFrame(fr);
+      }, f);
       // screenshot and asset-collection are independent CDP calls — issue them
       // concurrently (mirrors Remotion's Promise.all(takeFrame, collectAssets)).
       // Write to a .part file then rename, so a concurrent reader (the streaming

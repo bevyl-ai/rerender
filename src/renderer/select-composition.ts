@@ -2,7 +2,6 @@
 // a headless browser, let the registered Root populate the registry, read it back.
 
 import { chromeExecutable } from '../../render/browser';
-import { must } from '../core/must';
 import { launchBrowser } from './capture';
 import type { CompositionConfig } from './types';
 
@@ -22,7 +21,11 @@ export async function getCompositions(options: {
     page.on('pageerror', (e) => console.error('[rerender] composition page error:', String(e).slice(0, 300)));
     await page.goto(pageUrl(serveUrl, '', inputProps), { waitUntil: 'load' });
     await page.waitForFunction(() => window.__ready === true && Boolean(window.__getCompositions), { timeout: 120_000 });
-    const comps = await page.evaluate(() => must(window.__getCompositions)());
+    const comps = await page.evaluate(() => {
+      const get = window.__getCompositions;
+      if (!get) throw new Error('expected a value');
+      return get();
+    });
     return comps.map((c) => ({ ...c, props: { ...c.defaultProps, ...inputProps } }));
   } finally {
     await browser.close();

@@ -118,7 +118,11 @@ export async function muxAudio(
   });
   try {
     const b64 = await worker.page.evaluate(
-      (p, f, c, sr, d) => must(window.__mux)(p, f, c, sr, d),
+      (p, f, c, sr, d) => {
+        const mux = window.__mux;
+        if (!mux) throw new Error('expected a value');
+        return mux(p, f, c, sr, d);
+      },
       muxPositions,
       fps,
       codec,
