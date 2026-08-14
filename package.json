@@ -58,16 +58,16 @@
     "dev": "vite",
     "build": "vite build",
     "deploy": "bun run build && bunx wrangler deploy",
-    "test": "bun run test:extract && vite build && tsx test/export.test.ts",
-    "test:export": "tsx test/export.test.ts",
+    "test": "bun run test:extract && vite build && bun test/export.test.ts",
+    "test:export": "bun test/export.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",
     "format": "biome check --write .",
     "check": "biome check .",
     "knip": "knip",
     "publint": "publint",
-    "test:extract": "tsx test/extract-sample-table.test.ts && tsx test/extract-codecs.test.ts && tsx test/extract-fmp4.test.ts && tsx test/extract-hardening.test.ts && tsx test/extract-source.test.ts && tsx test/extract-gop-window.test.ts && tsx test/extract-abort.test.ts && tsx test/frame-store.test.ts",
-    "build:lib": "tsdown && node scripts/check-dist.mjs",
+    "test:extract": "bun test/extract-sample-table.test.ts && bun test/extract-abort.test.ts && bun test test/extract-codecs.test.ts test/extract-fmp4.test.ts test/extract-hardening.test.ts test/extract-source.test.ts test/extract-gop-window.test.ts test/frame-store.test.ts",
+    "build:lib": "tsdown && bun scripts/check-dist.mjs",
     "prepack": "bun run build:lib",
     "attw": "attw --pack . --profile esm-only"
   },
@@ -102,7 +102,7 @@
   "packageManager": "bun@1.3.14",
   "engines": {
     "node": ">=20.19",
-    "bun": ">=1.3.0"
+    "bun": ">=1.3.14"
   },
   "peerDependencies": {
     "mediabunny": "^1.49.0"
@@ -131,10 +131,6 @@
     ],
     "project": [
       "**/*.{ts,tsx,mjs}"
-    ],
-    "ignore": [
-      "demo/repro-*.tsx",
-      "test/*probe*"
     ],
     "rules": {
       "duplicates": "off"

@@ -2,7 +2,7 @@
 // by the templates studio page (studio-main) and by the renderer's in-process
 // bundle (which imports the user's entry, then calls bootStudio). The Root must
 // already be registered (via registerRoot) before this runs.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Stage } from './stage';
 import { getComposition, getCompositions, getRoot, type CompositionMeta } from '../src/core/registry';

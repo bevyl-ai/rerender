@@ -2,7 +2,7 @@
 // project's `src/index.ts` calls registerRoot(Root); the Root renders <Composition>
 // elements that register themselves here. rerender's studio + render read the
 // registry to enumerate and render compositions by id.
-import type { ComponentType, ReactNode } from 'react';
+import type { ComponentType, JSX, ReactNode } from 'react';
 
 export interface CompositionMeta {
   id: string;

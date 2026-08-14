@@ -18,6 +18,7 @@ out/
 !test/fixtures/*.mp4
 
 compat/out/
+.probe-out/
 
 .env
 .env.*

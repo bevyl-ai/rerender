@@ -1,5 +1,6 @@
 // A composition with audio — a beep on a timed Sequence, used to exercise rerender's
 // audio render pipeline (asset collection → mix → mux).
+import type { JSX } from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 
 function Pulse(): JSX.Element {

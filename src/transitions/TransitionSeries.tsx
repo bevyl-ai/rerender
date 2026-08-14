@@ -2,7 +2,7 @@
 // children back-to-back, but each <Transition> placed between two sequences pulls the
 // next one earlier by the transition's duration, overlapping the two scenes and
 // compositing them through a presentation for the length of the transition.
-import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, type JSX, type ReactElement, type ReactNode } from 'react';
 import { AbsoluteFill } from '../core/primitives';
 import { FrameContext, Sequence, useCurrentFrame, useVideoConfig } from '../core/frame';
 import { slide } from './presentations/slide';

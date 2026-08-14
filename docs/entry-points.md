@@ -1,21 +1,22 @@
 # Entry points
 
-One package, five entry points.
+The npm package ships two modules. The Remotion-compatible renderer lives in this
+repo and is not published.
 
 | import | what it is |
 | -- | -- |
-| `@bevyl-ai/rerender` | Remotion-compatible runtime, primitives, `<Player>` |
+| `@bevyl-ai/rerender` | same as `./extract` |
 | `@bevyl-ai/rerender/extract` | mp4 frame extraction + frame store. Zero dependencies |
 | `@bevyl-ai/rerender/media-parser` | `@remotion/media-parser`'s `parseMedia`, over mediabunny |
-| `@bevyl-ai/rerender/media` | `@remotion/media`'s `<Video>`/`<Audio>`, over mediabunny sinks |
-| `@bevyl-ai/rerender/audio-engine` | the Web Audio preview scheduler, for external players |
 
 ## Requirements
 
 `extract` is browser-only — fetch and WebCodecs, nothing else, no transitive dependencies.
 
-`react` and `react-dom` >=18 are peer dependencies for everything that renders. The CLI needs
-Node >=20.3.
+`parseMedia` needs [mediabunny](https://mediabunny.dev), declared as an optional peer.
+
+The CLI (`rerender render`, studio, cloud) is Node. It needs Node >=20.19. Install the
+repo with Bun >=1.3.14 (`packageManager` in `package.json`).
 
 ## `media-parser`
 
@@ -36,7 +37,14 @@ const { dimensions, videoCodec } = await parseMedia({
 
 See [frame extraction](./frame-extraction.md).
 
-## `media`, `audio-engine`, and the runtime
+## In this repo, not on npm
+
+| path | what it is |
+| -- | -- |
+| `src/index.ts` (tsconfig/vite alias: `remotion`) | Remotion-compatible runtime, primitives, `<Player>` |
+| `src/media` | `@remotion/media`'s `<Video>`/`<Audio>`, over mediabunny sinks |
+| `src/core/audio-engine.ts` | the Web Audio preview scheduler |
+| `src/renderer` + `bin/rerender.mjs` | headless Chrome CLI (always respawns Node) |
 
 See [rendering](./rendering.md) for the runtime and the two render paths, and
 [remotion-media-spec.md](./remotion-media-spec.md) for the `<Video>`/`<Audio>` surface.

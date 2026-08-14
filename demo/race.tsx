@@ -12,7 +12,7 @@
 //   - every timestamp is in range, so its past-end frame-dropping never comes into it.
 //   - rerender builds a fresh index each run rather than reusing a warm one, which is the whole
 //     advantage it has, given away.
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type JSX } from 'react';
 import { createFrameExtractor } from '../src/extract';
 import { nearestIndex, paintThumb, prepareStrip, STRIP_H, stripTimestamps } from './filmstrip';
 import { ACCENT, card } from './ui';

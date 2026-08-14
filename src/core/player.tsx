@@ -2,7 +2,17 @@
 // native resolution, scales it to fit, drives the frame clock, and exposes the imperative
 // PlayerRef (seekTo / play / pause / getCurrentFrame / addEventListener…) that an editor's
 // playback transport drives. What plays here is exactly what the recorder records.
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ComponentType, type CSSProperties } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type JSX,
+} from 'react';
 import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from './frame';
 import { beginPlayback, getAnchor, getCtx, resumeCtx, stopPlayback } from './audio-engine';
 import { injectRerenderCSS } from './default-css';

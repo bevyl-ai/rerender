@@ -5,7 +5,7 @@
 // audio track, no second element, no second fetch. Falls back to <OffthreadVideo> when the
 // source can't be decoded this way (unsupported codec/container, no WebCodecs, network
 // failure). See docs/remotion-media-spec.md for how this maps to the real implementation.
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react';
 import { Loop, Sequence, useCurrentFrame, useIsPlaying, useVideoConfig } from '../core/frame';
 import { continueRender, delayRender } from '../core/delay-render';
 import { getRemotionEnvironment } from '../core/env';

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { Composition } from 'remotion';
 import { AudioTest } from './AudioTest';
 

@@ -6,6 +6,7 @@
 #
 #   build context is the repo root (deploy.ts runs `docker build -f cloud/Dockerfile .`)
 #   the project dir is passed via   --build-arg PROJECT=<dir relative to repo root>
+FROM oven/bun:1.3.14 AS bun
 FROM public.ecr.aws/lambda/nodejs:20
 
 # unzip/tar/findutils for the chrome-headless-shell download + chrome's shared
@@ -23,8 +24,10 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Renderer runtime lives in devDependencies (the published package has none). Full
 # install — bun.lock records every platform so linux/amd64 CI and Lambda get natives.
+# Bun is only the installer; the Lambda runtime stays Node + tsx.
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 COPY package.json bun.lock ./
-RUN npm install -g bun@1.3.14 && bun install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 # rerender runtime: the renderer + the browser worker .ts files esbuild bundles at run
 # time + the bin. tsx loads the TS directly (same as everywhere else in rerender).

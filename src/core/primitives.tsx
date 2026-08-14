@@ -1,6 +1,17 @@
 // The primitive vocabulary — real DOM, Remotion-compatible. These are thin wrappers
 // over <div>/<img>/<video>/<audio>, so arbitrary CSS in a composition just works.
-import { memo, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import {
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type JSX,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { SequenceFromContext, useCurrentFrame, useIsPlaying, useTimelinePosition, useVideoConfig } from './frame';
 import { decode, register, unregister } from './audio-engine';
 import { registerRenderAsset } from './assets';

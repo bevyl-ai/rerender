@@ -3,7 +3,7 @@
 //              captured-frame N == composition-frame N exactly. This is the render path.
 //   realtime — plays from→to via rAF; the studio's in-browser preview uses this.
 // Used by the examples render page and the studio (registered-Root) page.
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useState, type ComponentType, type JSX } from 'react';
 import { flushSync } from 'react-dom';
 import { CompositionFrame, type VideoConfig } from '../src/core/frame';
 import { getPendingDelays } from '../src/core/delay-render';
