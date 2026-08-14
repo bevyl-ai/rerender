@@ -18,12 +18,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+          bun-version: 1.3.14
+      - run: bun ci
+      - run: bun run build
       # wranglerVersion must track the `wrangler` devDependency. Left to itself the action
       # installs its own build — it picked 3.90.0, which does not know `assets.run_worker_first`
       # and silently dropped it with only a warning ("Unexpected fields found in assets field").
@@ -32,4 +31,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.116.0'
+          wranglerVersion: '4.123.0'

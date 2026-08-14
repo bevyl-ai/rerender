@@ -1,7 +1,7 @@
 # Deploys the demo (demo/ → `vite build` → dist/) as a Cloudflare Worker over static assets.
 # Live: https://rerender.video  (also https://rerender-demo.noah-9fb.workers.dev)
 #
-# Deploy: push to main → .github/workflows/deploy.yml. Locally: `npm run deploy`.
+# Deploy: push to main → .github/workflows/deploy.yml. Locally: `bun run deploy`.
 # Auth (CI secrets / local env): CLOUDFLARE_API_TOKEN (Workers-scoped) + CLOUDFLARE_ACCOUNT_ID.
 name = "rerender-demo"
 main = "worker/index.ts"

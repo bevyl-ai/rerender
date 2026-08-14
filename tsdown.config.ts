@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsdown';
 
 // Builds the published extract + media-parser entries. Only true externals are
-// listed — everything else inlines from our own MIT src. `npm run build:lib`
+// listed — everything else inlines from our own MIT src. `bun run build:lib`
 // then runs check-dist to enforce that.
 export default defineConfig({
   entry: {

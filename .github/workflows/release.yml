@@ -34,12 +34,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
       - uses: actions/setup-node@v4
         with:
           # Latest 22.x: the OIDC exchange needs >=22.14 and npm@latest keeps raising its own
           # Node floor (12.0.2 wants >=22.22.2) — pinning the minimum is how the first live run died.
           node-version: '22'
-          cache: npm
           registry-url: 'https://registry.npmjs.org'
 
       # The registry decides. Before spending CI on the verify gate: if this version is already
@@ -61,10 +63,10 @@ jobs:
       - if: steps.gate.outputs.publish == 'true'
         run: npm install -g npm@latest
       - if: steps.gate.outputs.publish == 'true'
-        run: npm ci
+        run: bun ci
       - name: Verify
         if: steps.gate.outputs.publish == 'true'
-        run: npm run typecheck && npm run check && npm run test:extract && npm run build:lib && npm run publint && npm run attw
+        run: bun run typecheck && bun run check && bun run test:extract && bun run build:lib && bun run publint && bun run attw
 
       # No NODE_AUTH_TOKEN. setup-node writes _authToken=${NODE_AUTH_TOKEN} into .npmrc, and an
       # unset secret expands to an empty string — npm then authenticates as nobody and gets a 401

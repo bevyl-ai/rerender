@@ -6,7 +6,7 @@
 // each <Video> natively first and paints the DOM overlay (everything else) on top, so an OPAQUE
 // composition root paints over the footage and it vanishes from the export — the output goes
 // dark instead of showing the forest clip, with no error thrown. A pixel probe is the only thing
-// that catches it. Run with `npm test` (which builds dist/ first).
+// that catches it. Run with `bun run test` (which builds dist/ first).
 import { createServer, type Server } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
@@ -74,7 +74,7 @@ interface Probe {
 }
 
 async function main(): Promise<void> {
-  if (!existsSync(join(DIST, 'index.html'))) throw new Error('dist/ not built — run `npm run build` first (or `npm test`)');
+  if (!existsSync(join(DIST, 'index.html'))) throw new Error('dist/ not built — run `bun run build` first (or `bun run test`)');
 
   const server = serveDist(DIST);
   await new Promise<void>((resolve) => server.listen(0, resolve));
