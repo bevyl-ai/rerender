@@ -102,6 +102,16 @@
   "engines": {
     "node": ">=20.19"
   },
+  "supportedArchitectures": {
+    "os": [
+      "darwin",
+      "linux"
+    ],
+    "cpu": [
+      "x64",
+      "arm64"
+    ]
+  },
   "peerDependencies": {
     "mediabunny": "^1.49.0"
   },
@@ -139,6 +149,13 @@
     }
   },
   "optionalDependencies": {
-    "@typescript/typescript-linux-x64": "^7.0.2"
+    "@biomejs/cli-linux-x64": "^2.5.8",
+    "@oxc-parser/binding-linux-x64-gnu": "^0.143.0",
+    "@oxc-resolver/binding-linux-x64-gnu": "^11.24.2",
+    "@rolldown/binding-linux-x64-gnu": "^1.2.4",
+    "@typescript/typescript-linux-x64": "^7.0.2",
+    "@yuku-codegen/binding-linux-x64-gnu": "^0.8.7",
+    "@yuku-parser/binding-linux-x64-gnu": "^0.8.7",
+    "lightningcss-linux-x64-gnu": "^1.33.0"
   }
 }

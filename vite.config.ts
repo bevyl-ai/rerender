@@ -22,6 +22,8 @@ export default defineConfig({
   // .vite/deps. Its own error message asks for exactly this.
   optimizeDeps: { exclude: ['@remotion/media-parser/worker'] },
   // Two pages: the demo, and one section per supported codec.
-  build: { rollupOptions: { input: { main: resolve(import.meta.dirname, 'index.html'), codecs: resolve(import.meta.dirname, 'codecs.html') } } },
+  build: {
+    rollupOptions: { input: { main: resolve(import.meta.dirname, 'index.html'), codecs: resolve(import.meta.dirname, 'codecs.html') } },
+  },
   server: { open: false },
 });
