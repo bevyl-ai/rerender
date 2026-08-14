@@ -2,6 +2,7 @@
 // (which renders the segment to S3) and downloads the segment locally so the
 // coordinator (orchestrateRender) can concat. The Invoker seam keeps this swappable,
 // e.g. a firecracker/local backend could implement the same interface.
+
 import { writeFileSync } from 'node:fs';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -12,12 +13,13 @@ export interface AwsInvokerOptions {
   bucket: string;
   /** s3 key prefix for this render's segments, e.g. `renders/<id>` */
   keyPrefix: string;
-  region?: string;
+  region?: string | undefined;
 }
 
 export function awsInvoker(opts: AwsInvokerOptions): Invoker {
-  const lambda = new LambdaClient({ region: opts.region });
-  const s3 = new S3Client({ region: opts.region });
+  const aws = opts.region === undefined ? {} : { region: opts.region };
+  const lambda = new LambdaClient(aws);
+  const s3 = new S3Client(aws);
   return async (job, localSegmentPath) => {
     const key = `${opts.keyPrefix}/seg-${job.index}.mp4`;
     const res = await lambda.send(
@@ -38,6 +40,7 @@ export function awsInvoker(opts: AwsInvokerOptions): Invoker {
       throw new Error(`lambda worker ${job.index} failed: ${res.Payload ? Buffer.from(res.Payload).toString() : res.FunctionError}`);
     }
     const obj = await s3.send(new GetObjectCommand({ Bucket: opts.bucket, Key: key }));
-    writeFileSync(localSegmentPath, await obj.Body!.transformToByteArray());
+    if (!obj.Body) throw new Error(`s3 object ${key} has no body`);
+    writeFileSync(localSegmentPath, await obj.Body.transformToByteArray());
   };
 }

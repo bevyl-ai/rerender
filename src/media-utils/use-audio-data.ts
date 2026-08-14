@@ -4,8 +4,8 @@ import { getAudioData } from './get-audio-data';
 import type { AudioData } from './types';
 
 interface UseAudioDataOptions {
-  sampleRate?: number;
-  requestInit?: RequestInit;
+  sampleRate?: number | undefined;
+  requestInit?: RequestInit | undefined;
 }
 
 // useAudioData(src) — Remotion-compatible. Loads and decodes audio, returning null
@@ -39,8 +39,7 @@ export function useAudioData(src: string, options?: UseAudioDataOptions): AudioD
       cancelled = true;
       continueRender(handle);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, options?.sampleRate]);
+  }, [src, options?.sampleRate, requestInit]);
 
   return data;
 }

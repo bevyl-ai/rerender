@@ -4,6 +4,7 @@
 // codec string derived from a spec I read is worth less than one derived from bytes an encoder
 // actually wrote. The rest are synthetic: a fragmented mp4 and a codec nobody supports are easier
 // to construct than to obtain.
+
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -98,8 +99,11 @@ test('every registry entry produces a well-formed codec string', () => {
     av1: 'extract-av1.mp4',
   };
   for (const codec of CODECS) {
-    const table = parseSampleTable(new Uint8Array(readFileSync(fixture(files[codec.id]!))));
-    assert.match(table.codec, shapes[codec.id]!, `${codec.id} codec string`);
+    const file = files[codec.id];
+    const shape = shapes[codec.id];
+    assert.ok(file && shape, `no fixture/shape for ${codec.id}`);
+    const table = parseSampleTable(new Uint8Array(readFileSync(fixture(file))));
+    assert.match(table.codec, shape, `${codec.id} codec string`);
   }
 });
 

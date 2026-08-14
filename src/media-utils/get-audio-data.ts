@@ -1,8 +1,8 @@
 import type { AudioData } from './types';
 
 interface GetAudioDataOptions {
-  sampleRate?: number;
-  requestInit?: RequestInit;
+  sampleRate?: number | undefined;
+  requestInit?: RequestInit | undefined;
 }
 
 // Decoded results, keyed on src. Decoding is expensive and idempotent, so the

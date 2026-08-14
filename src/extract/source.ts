@@ -50,7 +50,11 @@ function readTopLevelBox(view: DataView, at: number): TopLevelBox | null {
 
 export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): RangeSource {
   const fetchRange = async (start: number, end: number, signal?: AbortSignal, cache?: RequestCache): Promise<Uint8Array> => {
-    const res = await fetchFn(src, { headers: { Range: `bytes=${start}-${end - 1}` }, signal, ...(cache ? { cache } : {}) });
+    const res = await fetchFn(src, {
+      headers: { Range: `bytes=${start}-${end - 1}` },
+      ...(signal === undefined ? {} : { signal }),
+      ...(cache ? { cache } : {}),
+    });
     if (res.status !== 206 && res.status !== 200) {
       throw new ExtractError('range-request-failed', `range request failed for ${src}: ${res.status}`, { src });
     }
@@ -77,7 +81,11 @@ export function createUrlSource(src: string, fetchFn: typeof fetch = fetch): Ran
 
   /** `Range: bytes=-N`, whose 206 reports where the tail actually began. */
   const readSuffix = async (length: number, signal?: AbortSignal): Promise<{ bytes: Uint8Array; start: number }> => {
-    const res = await fetchFn(src, { cache: 'no-store', headers: { Range: `bytes=-${length}` }, signal });
+    const res = await fetchFn(src, {
+      cache: 'no-store',
+      headers: { Range: `bytes=-${length}` },
+      ...(signal === undefined ? {} : { signal }),
+    });
     if (res.status !== 206 && res.status !== 200) {
       throw new ExtractError('range-request-failed', `suffix request failed for ${src}: ${res.status}`, { src });
     }

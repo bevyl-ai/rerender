@@ -6,13 +6,14 @@ import { exponent } from './exponent';
 // a power of two.
 export function fftAccurate(samples: ArrayLike<number>): Complex[] {
   const n = samples.length;
-  if (n === 1) return [[samples[0]!, 0]];
+  if (n === 1) return [[samples[0] ?? 0, 0]];
 
   const even: number[] = [];
   const odd: number[] = [];
   for (let i = 0; i < n; i++) {
-    if (i % 2 === 0) even.push(samples[i]!);
-    else odd.push(samples[i]!);
+    const sample = samples[i] ?? 0;
+    if (i % 2 === 0) even.push(sample);
+    else odd.push(sample);
   }
 
   const evenT = fftAccurate(even);
@@ -21,8 +22,8 @@ export function fftAccurate(samples: ArrayLike<number>): Complex[] {
   const out: Complex[] = new Array<Complex>(n);
   const half = n / 2;
   for (let k = 0; k < half; k++) {
-    const ek = evenT[k]!;
-    const ok = oddT[k]!;
+    const ek = evenT[k] ?? [0, 0];
+    const ok = oddT[k] ?? [0, 0];
     const [c, s] = exponent(k, n);
     // W_k = [cos(-2πk/N), sin(-2πk/N)] = [c, s] from exponent().
     const wk: Complex = [c, s];

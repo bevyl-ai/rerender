@@ -3,6 +3,7 @@
 // The fixtures are the same 120-sample clip as extract-faststart.mp4, remuxed into moof/mdat
 // fragments — so the fragmented reader's answers can be checked against the progressive reader's
 // answers about identical media, which is a stronger statement than "it parsed without throwing".
+
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,7 +32,14 @@ function localSource(path: string, reads: { start: number; end: number }[] = [])
       let at = 0;
       for (;;) {
         const size = view.getUint32(at);
-        const type = String.fromCharCode(file[at + 4]!, file[at + 5]!, file[at + 6]!, file[at + 7]!);
+        const b0 = file[at + 4];
+        const b1 = file[at + 5];
+        const b2 = file[at + 6];
+        const b3 = file[at + 7];
+        if (b0 === undefined || b1 === undefined || b2 === undefined || b3 === undefined) {
+          throw new Error('truncated box header');
+        }
+        const type = String.fromCharCode(b0, b1, b2, b3);
         if (type === 'moov') return file.subarray(0, at + size);
         at += size;
       }
@@ -54,13 +62,17 @@ test('the index comes out of mfra, not by walking the file', async () => {
   const progressive = parseSampleTable(new Uint8Array(readFileSync(PROGRESSIVE)));
   assert.equal(index.keyframeTicks.length, progressive.keySampleIndices.length, 'one fragment per GOP of the same media');
   assert.equal(index.moofOffsets.length, index.keyframeTicks.length);
-  assert.ok(index.mediaEnd > index.moofOffsets[index.moofOffsets.length - 1]!, 'the last fragment ends before mfra');
+  const lastMoof = index.moofOffsets[index.moofOffsets.length - 1];
+  assert.ok(lastMoof !== undefined, 'tfra indexes no fragments');
+  assert.ok(index.mediaEnd > lastMoof, 'the last fragment ends before mfra');
   // The index itself costs no body reads — two suffix reads for mfro and mfra, and that is the
   // point. The one body read setup does make is the last fragment, and only because this file
   // states no mehd, so its true end time is knowable nowhere else.
   assert.ok(reads.length <= 1, `index setup should not walk the file, made ${reads.length} body reads`);
   if (reads.length === 1) {
-    assert.equal(reads[0]!.start, index.moofOffsets[index.moofOffsets.length - 1], 'the only body read is the last fragment');
+    const onlyRead = reads[0];
+    assert.ok(onlyRead, 'expected the last-fragment read');
+    assert.equal(onlyRead.start, lastMoof, 'the only body read is the last fragment');
   }
 });
 
@@ -77,18 +89,29 @@ test('a fragment yields the same samples the progressive file states', async () 
 
   const progressive = parseSampleTable(new Uint8Array(readFileSync(PROGRESSIVE)));
   for (let gop = 0; gop < index.keyframeTicks.length; gop++) {
-    const start = index.moofOffsets[gop]!;
+    const start = index.moofOffsets[gop];
+    assert.ok(start !== undefined, `missing moof offset ${gop}`);
     const end = index.moofOffsets[gop + 1] ?? index.mediaEnd;
     const samples = parseFragment(file.subarray(start, end), start, index.defaults, config.editShiftTicks);
 
-    const first = progressive.keySampleIndices[gop]!;
+    const first = progressive.keySampleIndices[gop];
+    assert.ok(first !== undefined, `missing progressive key sample ${gop}`);
     const last = progressive.keySampleIndices[gop + 1] ?? progressive.sampleCount;
     assert.equal(samples.length, last - first, `fragment ${gop} sample count`);
+    const firstSample = samples[0];
+    const firstProgressive = progressive.presentationTicks[first];
+    if (!firstSample || firstProgressive === undefined) throw new Error(`missing first sample of GOP ${gop}`);
     for (let i = 0; i < samples.length; i++) {
-      assert.equal(samples[i]!.byteSize, progressive.byteSizes[first + i], `fragment ${gop} sample ${i} size`);
-      const fragmentOffset = samples[i]!.presentationTicks - samples[0]!.presentationTicks;
-      const progressiveOffset = progressive.presentationTicks[first + i]! - progressive.presentationTicks[first]!;
-      assert.equal(fragmentOffset, progressiveOffset, `fragment ${gop} sample ${i} pts spacing`);
+      const sample = samples[i];
+      if (!sample) throw new Error(`missing fragment sample ${i}`);
+      assert.equal(sample.byteSize, progressive.byteSizes[first + i], `fragment ${gop} sample ${i} size`);
+      const pts: number | undefined = progressive.presentationTicks[first + i];
+      if (pts === undefined) throw new Error(`missing progressive pts ${first + i}`);
+      assert.equal(
+        sample.presentationTicks - firstSample.presentationTicks,
+        pts - firstProgressive,
+        `fragment ${gop} sample ${i} pts spacing`,
+      );
     }
   }
 });
@@ -151,7 +174,8 @@ function fetchFor(path: string, reads: { start: number; end: number; suffix?: bo
     const [start, end] = suffix
       ? [file.byteLength - Number(suffix[1]), file.byteLength]
       : (() => {
-          const m = /bytes=(\d+)-(\d+)/.exec(header)!;
+          const m = /bytes=(\d+)-(\d+)/.exec(header);
+          if (!m) throw new Error(`unexpected Range: ${header}`);
           return [Number(m[1]), Math.min(Number(m[2]) + 1, file.byteLength)];
         })();
     reads.push({ start, end, ...(suffix ? { suffix: true } : {}) });
@@ -205,7 +229,9 @@ test('setup costs two suffix reads, and a seek costs one range read', async () =
     assert.equal(seekReads.length, 1, 'one fragment, one request');
     // and it is a fragment, not the file
     const file = readFileSync(FRAGMENTED);
-    assert.ok(seekReads[0]!.end - seekReads[0]!.start < file.byteLength / 2, 'the read is a fragment, not the file');
+    const seek = seekReads[0];
+    assert.ok(seek, 'expected a seek read');
+    assert.ok(seek.end - seek.start < file.byteLength / 2, 'the read is a fragment, not the file');
     extractor.dispose();
   } finally {
     restore();

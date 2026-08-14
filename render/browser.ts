@@ -2,8 +2,9 @@
 // managed chrome-headless-shell (the same engine family Remotion renders with, so
 // output is pixel-identical). Pinned to match Remotion's version; override with
 // RERENDER_CHROME (absolute path) or RERENDER_CHROME_BUILD (a Chrome-for-Testing id).
-import { Browser, computeExecutablePath, install } from '@puppeteer/browsers';
+
 import { join } from 'node:path';
+import { Browser, computeExecutablePath, install } from '@puppeteer/browsers';
 
 const BUILD_ID = process.env.RERENDER_CHROME_BUILD ?? '149.0.7790.0';
 const CACHE = join(process.cwd(), 'node_modules', '.rerender-chrome');

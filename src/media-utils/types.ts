@@ -20,8 +20,8 @@ export interface VisualizeAudioOptions {
   fps: number;
   numberOfSamples: number;
   /** Average across [frame-1, frame, frame+1] to steady the bars. Default true. */
-  smoothing?: boolean;
-  optimizeFor?: OptimizeFor;
+  smoothing?: boolean | undefined;
+  optimizeFor?: OptimizeFor | undefined;
   /** Shift the sampling window earlier in the track, in seconds. Default 0. */
-  dataOffsetInSeconds?: number;
+  dataOffsetInSeconds?: number | undefined;
 }

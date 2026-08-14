@@ -8,6 +8,7 @@
 // The decode path never runs in CI otherwise: Node has no WebCodecs, so the existing extract tests
 // exercise the sample table and the abort wiring and stop at the decoder. These stub VideoDecoder
 // and EncodedVideoChunk so the fed-sample window and the requested byte range are both assertable.
+
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -83,8 +84,13 @@ function rangeRecordingFetch(ranges: { start: number; end: number; whole?: boole
       } as unknown as Response);
     }
     const match = /bytes=(\d+)-(\d+)/.exec(header);
-    const start = Number(match![1]);
-    const end = Math.min(Number(match![2]) + 1, bytes.byteLength);
+    if (!match) return Promise.reject(new Error(`unexpected Range: ${header}`));
+    const start = Number(match[1]);
+    const inclusiveEnd = Number(match[2]);
+    if (!Number.isFinite(start) || !Number.isFinite(inclusiveEnd)) {
+      return Promise.reject(new Error(`bad Range: ${header}`));
+    }
+    const end = Math.min(inclusiveEnd + 1, bytes.byteLength);
     ranges.push({ start, end });
     const slice = bytes.subarray(start, end);
     return Promise.resolve({
@@ -96,7 +102,8 @@ function rangeRecordingFetch(ranges: { start: number; end: number; whole?: boole
 }
 
 const table = parseSampleTable(new Uint8Array(readFileSync(FIXTURE)));
-const gopStart = table.keySampleIndices[0]!;
+const gopStart = table.keySampleIndices[0];
+assert.ok(gopStart !== undefined, 'fixture has no key samples');
 const gopEnd = table.keySampleIndices[1] ?? table.sampleCount;
 
 test('a frame at the head of a GOP does not read or decode the whole GOP', async () => {
@@ -108,14 +115,22 @@ test('a frame at the head of a GOP does not read or decode the whole GOP', async
   try {
     const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(ranges) });
     const setupReads = ranges.length;
-    const firstFrameSeconds = table.presentationTicks[gopStart]! / table.timescale;
-    await extractor.extract([firstFrameSeconds], () => {});
+    const firstTicks = table.presentationTicks[gopStart];
+    assert.ok(firstTicks !== undefined, 'missing first GOP presentation tick');
+    await extractor.extract([firstTicks / table.timescale], () => {});
 
     assert.equal(fed.timestamps.length, 1, 'only the keyframe is needed for the keyframe');
-    const gopRead = ranges[setupReads]!;
-    const wholeGopEnd = table.byteOffsets[gopEnd - 1]! + table.byteSizes[gopEnd - 1]!;
+    const gopRead = ranges[setupReads];
+    assert.ok(gopRead, 'expected a GOP read after setup');
+    const gopLastOffset = table.byteOffsets[gopEnd - 1];
+    const gopLastSize = table.byteSizes[gopEnd - 1];
+    const keyOffset = table.byteOffsets[gopStart];
+    const keySize = table.byteSizes[gopStart];
+    assert.ok(gopLastOffset !== undefined && gopLastSize !== undefined, 'missing last GOP sample bytes');
+    assert.ok(keyOffset !== undefined && keySize !== undefined, 'missing keyframe bytes');
+    const wholeGopEnd = gopLastOffset + gopLastSize;
     assert.ok(gopRead.end < wholeGopEnd, `read ${gopRead.end} should stop short of the GOP end ${wholeGopEnd}`);
-    assert.equal(gopRead.end, table.byteOffsets[gopStart]! + table.byteSizes[gopStart]!);
+    assert.equal(gopRead.end, keyOffset + keySize);
     extractor.dispose();
   } finally {
     restore();
@@ -130,10 +145,17 @@ test('a frame deeper in the GOP pulls exactly the run up to it', async () => {
   try {
     const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(ranges) });
     const setupReads = ranges.length;
-    await extractor.extract([table.presentationTicks[target]! / table.timescale], () => {});
+    const targetTicks = table.presentationTicks[target];
+    assert.ok(targetTicks !== undefined, 'missing target presentation tick');
+    await extractor.extract([targetTicks / table.timescale], () => {});
 
     assert.equal(fed.timestamps.length, target - gopStart + 1, 'feeds the keyframe through the wanted sample and no further');
-    assert.equal(ranges[setupReads]!.end, table.byteOffsets[target]! + table.byteSizes[target]!);
+    const targetRead = ranges[setupReads];
+    const targetOffset = table.byteOffsets[target];
+    const targetSize = table.byteSizes[target];
+    assert.ok(targetRead, 'expected a GOP read after setup');
+    assert.ok(targetOffset !== undefined && targetSize !== undefined, 'missing target sample bytes');
+    assert.equal(targetRead.end, targetOffset + targetSize);
     extractor.dispose();
   } finally {
     restore();
@@ -170,7 +192,12 @@ test('neighbouring GOPs are fetched as one read', async () => {
     const extractor = await createFrameExtractor({ src: SRC, fetchFn: rangeRecordingFetch(requests, MANY_GOPS) });
     const setup = requests.length;
     // four consecutive GOPs — what a zoomed scrubber or a timeline fill asks for
-    const wanted = [0, 1, 2, 3].map((g) => table.presentationTicks[table.keySampleIndices[g]!]! / table.timescale);
+    const wanted = [0, 1, 2, 3].map((g) => {
+      const key = table.keySampleIndices[g];
+      const ticks = key === undefined ? undefined : table.presentationTicks[key];
+      assert.ok(ticks !== undefined, `missing GOP ${g} presentation tick`);
+      return ticks / table.timescale;
+    });
     const delivered: number[] = [];
     await extractor.extract(wanted, (_f, seconds) => delivered.push(seconds));
 
@@ -194,7 +221,12 @@ test('GOPs far apart stay separate reads', async () => {
     const setup = requests.length;
     // spread across the file, far enough apart that merging would pull most of it
     const picks = [0, Math.floor(gops * 0.4), Math.floor(gops * 0.8)];
-    const wanted = picks.map((g) => table.presentationTicks[table.keySampleIndices[g]!]! / table.timescale);
+    const wanted = picks.map((g) => {
+      const key = table.keySampleIndices[g];
+      const ticks = key === undefined ? undefined : table.presentationTicks[key];
+      assert.ok(ticks !== undefined, `missing GOP ${g} presentation tick`);
+      return ticks / table.timescale;
+    });
     await extractor.extract(wanted, () => {});
 
     const reads = requests.slice(setup);
@@ -219,7 +251,12 @@ test('a long chain of cheap merges is split before it swallows the file', async 
     const setup = requests.length;
     // every GOP in the file: each neighbour is within the gap cap, so the gap rule on its own
     // would chain all of them into a single read spanning the whole mdat
-    const wanted = Array.from({ length: gops }, (_, g) => table.presentationTicks[table.keySampleIndices[g]!]! / table.timescale);
+    const wanted = Array.from({ length: gops }, (_, g) => {
+      const key = table.keySampleIndices[g];
+      const ticks = key === undefined ? undefined : table.presentationTicks[key];
+      assert.ok(ticks !== undefined, `missing GOP ${g} presentation tick`);
+      return ticks / table.timescale;
+    });
     const delivered: number[] = [];
     await extractor.extract(wanted, (_f, seconds) => delivered.push(seconds));
 
@@ -230,7 +267,11 @@ test('a long chain of cheap merges is split before it swallows the file', async 
     // A request for every GOP legitimately touches most of the file, so the invariant worth
     // pinning is not how much was fetched but how much of it nobody asked for.
     const fetched = reads.reduce((sum, r) => sum + (r.end - r.start), 0);
-    const asked = table.keySampleIndices.reduce((sum, i) => sum + table.byteSizes[i]!, 0);
+    const asked = table.keySampleIndices.reduce((sum, i) => {
+      const size = table.byteSizes[i];
+      assert.ok(size !== undefined, `missing keyframe size ${i}`);
+      return sum + size;
+    }, 0);
     const wastePerRead = (fetched - asked) / reads.length;
     assert.ok(wastePerRead <= 384 * 1024, `${Math.round(wastePerRead / 1024)} KB wasted per read exceeds the budget`);
     extractor.dispose();

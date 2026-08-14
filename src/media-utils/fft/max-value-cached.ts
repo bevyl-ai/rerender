@@ -12,7 +12,8 @@ export function getMaxIntValue(audioData: AudioData): number {
   let max = 0;
   if (data) {
     for (let i = 0; i < data.length; i++) {
-      const v = data[i]!;
+      const v = data[i];
+      if (v === undefined) continue;
       if (v > max) max = v;
     }
   }

@@ -19,8 +19,8 @@ import {
   outputKey,
   progressKey,
   type RenderProgress,
-  s3PublicUrl,
   type StillEvent,
+  s3PublicUrl,
   signWebhookBody,
   timeToFinish,
   WEBHOOK_SIGNATURE_HEADER,
@@ -43,7 +43,7 @@ if (existsSync(BAKED_VITE_CACHE) && !existsSync('/tmp/.vite-cache')) {
 /** The original per-range silent worker (synchronous `rerender cloud render`). */
 export interface SegmentEvent {
   composition: import('../src/renderer/types').CompositionConfig;
-  props?: Record<string, unknown>;
+  props?: Record<string, unknown> | undefined;
   frameRange: [number, number];
   bucket: string;
   key: string;
@@ -59,7 +59,7 @@ export async function handler(event: Event): Promise<unknown> {
 
 function errorList(err: unknown): { message: string; stack?: string }[] {
   const e = err as { message?: string; stack?: string };
-  return [{ message: e?.message ?? String(err), stack: e?.stack }];
+  return [{ message: e?.message ?? String(err), ...(e?.stack === undefined ? {} : { stack: e.stack }) }];
 }
 
 // Callers pass Remotion's codec names (h264/h265); rerender's WebCodecs encoder speaks the

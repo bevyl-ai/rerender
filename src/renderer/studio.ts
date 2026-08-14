@@ -2,12 +2,13 @@
 // editor (sidebar + live preview + props editor) over the user's project, plus an
 // /api/render endpoint backing the render button (bundles + renders to an mp4 it
 // then serves at /renders/<file>).
-import { createServer } from 'vite';
-import react from '@vitejs/plugin-react';
+
 import { createReadStream, existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import react from '@vitejs/plugin-react';
+import { createServer } from 'vite';
 import { rerenderAliases } from '../../render/aliases';
 import { bundle } from './bundle';
 import { renderMedia } from './render-media';
@@ -18,7 +19,7 @@ const STUDIO_MAIN = fileURLToPath(new URL('../../studio/main.tsx', import.meta.u
 
 export async function studioServer(
   entryPoint: string,
-  options: { port?: number } = {},
+  options: { port?: number | undefined } = {},
 ): Promise<{ url: string; close: () => Promise<void> }> {
   const entry = resolve(entryPoint);
   let userRoot = dirname(entry);
@@ -44,7 +45,7 @@ export async function studioServer(
         configureServer(s) {
           s.middlewares.use((req, res, next) => {
             const url = req.url ?? '/';
-            const path = url.split('?')[0]!;
+            const path = url.split('?')[0] ?? url;
 
             if (path.startsWith('/renders/')) {
               const file = join(rendersDir, basename(path));

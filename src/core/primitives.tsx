@@ -1,21 +1,21 @@
 // The primitive vocabulary — real DOM, Remotion-compatible. These are thin wrappers
 // over <div>/<img>/<video>/<audio>, so arbitrary CSS in a composition just works.
 import {
+  type CSSProperties,
+  type JSX,
   memo,
+  type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
-  type JSX,
-  type ReactNode,
-  type RefObject,
 } from 'react';
-import { SequenceFromContext, useCurrentFrame, useIsPlaying, useTimelinePosition, useVideoConfig } from './frame';
-import { decode, register, unregister } from './audio-engine';
 import { registerRenderAsset } from './assets';
+import { decode, register, unregister } from './audio-engine';
 import { continueRender, delayRender } from './delay-render';
+import { SequenceFromContext, useCurrentFrame, useIsPlaying, useTimelinePosition, useVideoConfig } from './frame';
 
 /** Shared media props for <Video>/<OffthreadVideo>/<Audio>. trimBefore/trimAfter are
  *  Remotion's source-frame trim (trimBefore supersedes the older startFrom); playbackRate
@@ -23,16 +23,16 @@ import { continueRender, delayRender } from './delay-render';
 interface MediaProps {
   src: string;
   /** source-frame offset to start at (Remotion's newer name for startFrom). */
-  trimBefore?: number;
+  trimBefore?: number | undefined;
   /** legacy alias for trimBefore. */
-  startFrom?: number;
+  startFrom?: number | undefined;
   /** source frame to stop at (clamps the seek). */
-  trimAfter?: number;
-  playbackRate?: number;
-  volume?: number | ((frame: number) => number);
-  crossOrigin?: '' | 'anonymous' | 'use-credentials';
+  trimAfter?: number | undefined;
+  playbackRate?: number | undefined;
+  volume?: number | ((frame: number) => number) | undefined;
+  crossOrigin?: '' | 'anonymous' | 'use-credentials' | undefined;
   /** player-only: don't advance while the media is buffering (no-op during render). */
-  pauseWhenBuffering?: boolean;
+  pauseWhenBuffering?: boolean | undefined;
 }
 
 const resolveVolume = (volume: number | ((f: number) => number) | undefined, frame: number): number =>
@@ -91,7 +91,7 @@ export function useRenderAsset(type: 'audio' | 'video', src: string, opts: { off
   }
 }
 
-export function AbsoluteFill(props: { style?: CSSProperties; children?: ReactNode }): JSX.Element {
+export function AbsoluteFill(props: { style?: CSSProperties | undefined; children?: ReactNode | undefined }): JSX.Element {
   return (
     <div
       style={{
@@ -134,6 +134,7 @@ export function Img({ onLoad, onError, ...props }: React.ImgHTMLAttributes<HTMLI
   return (
     <img
       ref={ref}
+      alt=""
       {...props}
       onLoad={(e) => {
         release();
@@ -148,13 +149,13 @@ export function Img({ onLoad, onError, ...props }: React.ImgHTMLAttributes<HTMLI
 }
 
 export interface VideoProps extends MediaProps {
-  muted?: boolean;
-  className?: string;
-  style?: CSSProperties;
-  onCanPlay?: React.ReactEventHandler<HTMLVideoElement>;
-  onError?: React.ReactEventHandler<HTMLVideoElement>;
-  onSeeking?: React.ReactEventHandler<HTMLVideoElement>;
-  onSeeked?: React.ReactEventHandler<HTMLVideoElement>;
+  muted?: boolean | undefined;
+  className?: string | undefined;
+  style?: CSSProperties | undefined;
+  onCanPlay?: React.ReactEventHandler<HTMLVideoElement> | undefined;
+  onError?: React.ReactEventHandler<HTMLVideoElement> | undefined;
+  onSeeking?: React.ReactEventHandler<HTMLVideoElement> | undefined;
+  onSeeked?: React.ReactEventHandler<HTMLVideoElement> | undefined;
 }
 
 /** A frame-synced <video>: seeks while scrubbing, plays natively while playing, corrects
@@ -238,7 +239,7 @@ export const OffthreadVideo = Video;
 export interface AudioProps extends MediaProps {
   /** player-only: route through the Web Audio API. rerender renders audio via the muxer, so
    *  this is a no-op during render. */
-  useWebAudioApi?: boolean;
+  useWebAudioApi?: boolean | undefined;
 }
 
 // Preview playback goes through the Web Audio scheduler (audio-engine): decode each source

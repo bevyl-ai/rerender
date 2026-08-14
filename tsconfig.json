@@ -7,6 +7,11 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "types": ["node"],
@@ -24,5 +29,5 @@
     },
     "noEmit": true
   },
-  "include": ["src", "demo", "render", "compat", "templates", "studio", "cloud", "worker"]
+  "include": ["src", "demo", "render", "compat", "templates", "studio", "cloud", "worker", "test"]
 }

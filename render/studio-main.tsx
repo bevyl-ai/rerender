@@ -10,6 +10,8 @@ const loaders = import.meta.glob('../templates/*/src/index.{ts,tsx}');
 void (async (): Promise<void> => {
   const key = Object.keys(loaders).find((k) => k.includes(`/templates/${template}/src/index`));
   if (!key) throw new Error(`template not found: ${template}`);
-  await loaders[key]!(); // executes registerRoot(RemotionRoot)
+  const load = loaders[key];
+  if (!load) throw new Error(`template not found: ${template}`);
+  await load(); // executes registerRoot(RemotionRoot)
   bootStudio();
 })();

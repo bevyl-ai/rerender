@@ -73,15 +73,15 @@ export interface LaunchEvent {
   renderId: string;
   bucket: string;
   composition: string; // composition id; the worker resolves it against the baked project
-  inputProps?: Record<string, unknown>;
-  codec?: string;
-  muted?: boolean;
-  scale?: number;
-  imageFormat?: 'png' | 'jpeg';
-  jpegQuality?: number;
+  inputProps?: Record<string, unknown> | undefined;
+  codec?: string | undefined;
+  muted?: boolean | undefined;
+  scale?: number | undefined;
+  imageFormat?: 'png' | 'jpeg' | undefined;
+  jpegQuality?: number | undefined;
   memorySize: number;
   region: string;
-  webhook?: WebhookConfig | null;
+  webhook?: WebhookConfig | null | undefined;
 }
 
 export interface StillEvent {
@@ -91,17 +91,17 @@ export interface StillEvent {
   composition: string;
   frame: number;
   outName: string; // exact S3 key for the still
-  inputProps?: Record<string, unknown>;
-  imageFormat?: 'png' | 'jpeg';
-  jpegQuality?: number;
-  scale?: number;
+  inputProps?: Record<string, unknown> | undefined;
+  imageFormat?: 'png' | 'jpeg' | undefined;
+  jpegQuality?: number | undefined;
+  scale?: number | undefined;
   region: string;
 }
 
 export interface WebhookConfig {
   url: string;
   secret: string | null;
-  customData?: Record<string, unknown> | null;
+  customData?: Record<string, unknown> | null | undefined;
 }
 
 // -- Webhook signing: both ends are ours, so we just need to be self-consistent.

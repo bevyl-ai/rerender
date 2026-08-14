@@ -3,8 +3,8 @@
 // next one earlier by the transition's duration, overlapping the two scenes and
 // compositing them through a presentation for the length of the transition.
 import { Children, isValidElement, type JSX, type ReactElement, type ReactNode } from 'react';
-import { AbsoluteFill } from '../core/primitives';
 import { FrameContext, Sequence, useCurrentFrame, useVideoConfig } from '../core/frame';
+import { AbsoluteFill } from '../core/primitives';
 import { slide } from './presentations/slide';
 import type { TransitionPresentation, TransitionTiming } from './types';
 
@@ -12,8 +12,8 @@ type AnyPresentation = TransitionPresentation<unknown>;
 
 interface SequenceProps {
   durationInFrames: number;
-  offset?: number;
-  layout?: 'absolute-fill' | 'none';
+  offset?: number | undefined;
+  layout?: 'absolute-fill' | 'none' | undefined;
   children: ReactNode;
 }
 
@@ -21,7 +21,7 @@ interface TransitionProps {
   timing: TransitionTiming;
   // Accepts any concrete presentation (slide/fade/wipe). The marker only carries
   // props; TransitionSeries erases the generic to AnyPresentation when it reads them.
-  presentation?: AnyPresentation;
+  presentation?: AnyPresentation | undefined;
 }
 
 interface ResolvedEntry {
@@ -130,7 +130,7 @@ export function TransitionSeries({ children }: { children: ReactNode }): JSX.Ele
             const prev = entries[i - 1];
             const progress = transition.timing.getProgress({ frame: frame - entry.actualFrom, fps });
             return (
-              <AbsoluteFill key={i}>
+              <AbsoluteFill key={`t-${entry.actualFrom}-${entry.durationInFrames}`}>
                 {prev ? (
                   <PresentedScene
                     presentation={transition.presentation}
@@ -170,7 +170,12 @@ export function TransitionSeries({ children }: { children: ReactNode }): JSX.Ele
         // Outside every transition window: render the entry as a plain Sequence.
         // (Sequence is null outside [actualFrom, actualFrom+duration), AbsoluteFill inside.)
         return (
-          <Sequence key={i} from={entry.actualFrom} durationInFrames={entry.durationInFrames} layout={entry.layout}>
+          <Sequence
+            key={`s-${entry.actualFrom}-${entry.durationInFrames}`}
+            from={entry.actualFrom}
+            durationInFrames={entry.durationInFrames}
+            layout={entry.layout}
+          >
             {entry.children}
           </Sequence>
         );

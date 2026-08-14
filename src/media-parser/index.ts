@@ -25,8 +25,8 @@ export type ParseMediaResult<F extends ParseMediaFields = ParseMediaFields> = {
 
 export interface ParseMediaOptions<F extends ParseMediaFields = ParseMediaFields> {
   src: string | Blob | ArrayBuffer | Uint8Array;
-  fields?: F;
-  acknowledgeRemotionLicense?: boolean;
+  fields?: F | undefined;
+  acknowledgeRemotionLicense?: boolean | undefined;
 }
 
 // mediabunny codec ids -> Remotion's names where they differ. Most callers only check null vs

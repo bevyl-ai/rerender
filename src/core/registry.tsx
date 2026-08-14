@@ -32,10 +32,10 @@ export interface CompositionProps<P extends Record<string, unknown> = Record<str
   fps: number;
   width: number;
   height: number;
-  defaultProps?: P;
+  defaultProps?: P | undefined;
   // accepted for drop-in compatibility; not yet honored by rerender's renderer
-  calculateMetadata?: unknown;
-  schema?: unknown;
+  calculateMetadata?: unknown | undefined;
+  schema?: unknown | undefined;
 }
 
 // <Composition> registers itself when the Root renders, and draws nothing.

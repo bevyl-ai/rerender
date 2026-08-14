@@ -3,6 +3,7 @@
 // IIFE, serve it (plus some data routes) from a plain http server, drive a headless-shell
 // page that exposes a window.__* entry, and tear both down. This centralizes that dance;
 // callers supply only the data routes and the page.evaluate() call.
+
 import { createServer, type Server, type ServerResponse } from 'node:http';
 import type { Page } from 'puppeteer-core';
 import { launchBrowser } from './capture';
@@ -26,7 +27,7 @@ export async function spawnWorkerBrowser(
 ): Promise<WorkerBrowser> {
   const html = await bundleWorkerHtml(workerPath);
   const server: Server = createServer((req, res) => {
-    const pathname = (req.url ?? '/').split('?')[0]!;
+    const pathname = (req.url ?? '/').split('?')[0] ?? '/';
     if (pathname === '/') {
       res.setHeader('content-type', 'text/html');
       res.end(html);

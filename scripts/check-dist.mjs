@@ -2,7 +2,7 @@
 // be relative (our own MIT code) or one of the declared externals. In particular the
 // real `remotion` devDependency must never be inlined or imported — its license does
 // not permit redistribution.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ALLOWED = new Set(['react', 'react-dom', 'react/jsx-runtime', 'mediabunny', '@mediabunny/aac-encoder']);

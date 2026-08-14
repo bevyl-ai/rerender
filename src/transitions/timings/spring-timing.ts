@@ -1,4 +1,4 @@
-import { spring, type SpringConfig } from '../../core/spring';
+import { type SpringConfig, spring } from '../../core/spring';
 import type { TransitionTiming } from '../types';
 
 /** A spring-driven transition. Duration is derived from when the spring settles
@@ -9,10 +9,10 @@ export function springTiming({
   durationRestThreshold = 0.005,
   reverse = false,
 }: {
-  config?: SpringConfig;
-  durationInFrames?: number;
-  durationRestThreshold?: number;
-  reverse?: boolean;
+  config?: SpringConfig | undefined;
+  durationInFrames?: number | undefined;
+  durationRestThreshold?: number | undefined;
+  reverse?: boolean | undefined;
 } = {}): TransitionTiming {
   return {
     getDurationInFrames: ({ fps }): number => {

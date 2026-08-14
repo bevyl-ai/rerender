@@ -4,8 +4,8 @@
 // the clip's time-mapping actually changes. Volume/muted are read live via a ref instead of
 // being restart triggers, so a per-frame volume envelope doesn't glitch playback every frame.
 import { useEffect, useRef, useState } from 'react';
-import { acquireAudioSink, type AudioSinkResult, releaseAudioSink } from './audio-sink-cache';
 import { startAudioPlayback } from './audio-playback';
+import { type AudioSinkResult, acquireAudioSink, releaseAudioSink } from './audio-sink-cache';
 import { getSharedDurationSeconds } from './shared-input';
 
 export interface UseScheduledAudioOptions {

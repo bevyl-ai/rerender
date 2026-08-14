@@ -31,7 +31,7 @@ export type ExtractErrorCode =
 export class ExtractError extends Error {
   readonly code: ExtractErrorCode;
   /** The URL being read, when the failure knows it. */
-  readonly src?: string;
+  readonly src?: string | undefined;
 
   constructor(code: ExtractErrorCode, message: string, options?: { src?: string; cause?: unknown }) {
     super(message, options?.cause === undefined ? undefined : { cause: options.cause });

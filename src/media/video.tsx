@@ -5,10 +5,10 @@
 // audio track, no second element, no second fetch. Falls back to <OffthreadVideo> when the
 // source can't be decoded this way (unsupported codec/container, no WebCodecs, network
 // failure). See docs/remotion-media-spec.md for how this maps to the real implementation.
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react';
-import { Loop, Sequence, useCurrentFrame, useIsPlaying, useVideoConfig } from '../core/frame';
+import { type CSSProperties, type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { continueRender, delayRender } from '../core/delay-render';
 import { getRemotionEnvironment } from '../core/env';
+import { Loop, Sequence, useCurrentFrame, useIsPlaying, useVideoConfig } from '../core/frame';
 import { Video as OffthreadVideo, type VideoProps as OffthreadVideoProps, useRenderAsset } from '../core/primitives';
 import { getSharedDurationSeconds } from './shared-input';
 import { useScheduledAudio } from './use-scheduled-audio';
@@ -19,34 +19,34 @@ export interface MediaVideoProps {
    *  <OffthreadVideo> for anything mediabunny can't decode (container/codec/network). */
   src: string;
   /** frame this clip starts at, relative to the parent timeline. Default 0. */
-  from?: number;
+  from?: number | undefined;
   /** frames this clip stays mounted. Default Infinity. */
-  durationInFrames?: number;
+  durationInFrames?: number | undefined;
   /** source frame to start at. Default 0. */
-  trimBefore?: number;
+  trimBefore?: number | undefined;
   /** source frame to stop at. */
-  trimAfter?: number;
+  trimAfter?: number | undefined;
   volume?: number | ((frame: number) => number);
-  playbackRate?: number;
-  muted?: boolean;
+  playbackRate?: number | undefined;
+  muted?: boolean | undefined;
   /** repeats the (trimmed) clip indefinitely for as long as the tag stays mounted. */
-  loop?: boolean;
+  loop?: boolean | undefined;
   /** Accepted for API compat with @remotion/media; both values currently behave like
    *  'repeat' — a volume callback's frame argument resets to 0 every loop iteration. */
-  loopVolumeCurveBehavior?: 'repeat' | 'extend';
-  style?: CSSProperties;
-  className?: string;
-  objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  loopVolumeCurveBehavior?: 'repeat' | 'extend' | undefined;
+  style?: CSSProperties | undefined;
+  className?: string | undefined;
+  objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down' | undefined;
   /** Studio-timeline display hints; no-ops (no timeline UI in this build). */
-  name?: string;
-  showInTimeline?: boolean;
+  name?: string | undefined;
+  showInTimeline?: boolean | undefined;
   /** Return 'fallback' to render <OffthreadVideo> instead, or 'fail' to let the render fail.
    *  Not called for a failure that occurs *within* the OffthreadVideo fallback itself. */
   onError?: (error: Error) => 'fallback' | 'fail';
   /** Fail instead of ever falling back to <OffthreadVideo>. */
-  disallowFallbackToOffthreadVideo?: boolean;
+  disallowFallbackToOffthreadVideo?: boolean | undefined;
   /** Extra props forwarded to the fallback <OffthreadVideo>. */
-  fallbackOffthreadVideoProps?: Partial<OffthreadVideoProps>;
+  fallbackOffthreadVideoProps?: Partial<OffthreadVideoProps> | undefined;
 }
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));

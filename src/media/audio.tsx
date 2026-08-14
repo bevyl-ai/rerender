@@ -3,9 +3,9 @@
 // same mechanism <Video> uses for its own embedded audio track, just without a picture side.
 // Falls back to the native <Audio> (core/primitives, @remotion/media's <Html5Audio>
 // equivalent) when the source can't be decoded this way. See docs/remotion-media-spec.md.
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react';
-import { Loop, Sequence, useCurrentFrame, useIsPlaying, useVideoConfig } from '../core/frame';
+import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getRemotionEnvironment } from '../core/env';
+import { Loop, Sequence, useCurrentFrame, useIsPlaying, useVideoConfig } from '../core/frame';
 import { Audio as NativeAudio, type AudioProps as NativeAudioProps, useRenderAsset } from '../core/primitives';
 import { getSharedDurationSeconds } from './shared-input';
 import { useScheduledAudio } from './use-scheduled-audio';
@@ -14,27 +14,27 @@ export interface MediaAudioProps {
   /** URL of the audio (or video, for its audio track) file. Falls back to the native
    *  <Audio> for anything mediabunny can't decode (container/codec/network). */
   src: string;
-  from?: number;
-  durationInFrames?: number;
-  trimBefore?: number;
-  trimAfter?: number;
+  from?: number | undefined;
+  durationInFrames?: number | undefined;
+  trimBefore?: number | undefined;
+  trimAfter?: number | undefined;
   volume?: number | ((frame: number) => number);
-  playbackRate?: number;
-  muted?: boolean;
+  playbackRate?: number | undefined;
+  muted?: boolean | undefined;
   /** repeats the (trimmed) clip indefinitely for as long as the tag stays mounted. */
-  loop?: boolean;
+  loop?: boolean | undefined;
   /** Accepted for API compat with @remotion/media; both values currently behave like
    *  'repeat' — a volume callback's frame argument resets to 0 every loop iteration. */
-  loopVolumeCurveBehavior?: 'repeat' | 'extend';
+  loopVolumeCurveBehavior?: 'repeat' | 'extend' | undefined;
   /** Studio-timeline display hints; no-ops (no timeline UI in this build). */
-  name?: string;
-  showInTimeline?: boolean;
+  name?: string | undefined;
+  showInTimeline?: boolean | undefined;
   /** Return 'fallback' to render the native <Audio> instead, or 'fail' to let the render fail. */
   onError?: (error: Error) => 'fallback' | 'fail';
   /** Fail instead of ever falling back to the native <Audio>. */
-  disallowFallbackToHtml5Audio?: boolean;
+  disallowFallbackToHtml5Audio?: boolean | undefined;
   /** Extra props forwarded to the fallback native <Audio>. */
-  fallbackHtml5AudioProps?: Partial<NativeAudioProps>;
+  fallbackHtml5AudioProps?: Partial<NativeAudioProps> | undefined;
 }
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));

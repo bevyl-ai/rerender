@@ -66,7 +66,9 @@ export function lastAtOrBefore(sorted: ArrayLike<number>, target: number): numbe
   let hi = sorted.length - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
-    if (sorted[mid]! <= target) lo = mid;
+    const midVal = sorted[mid];
+    if (midVal === undefined) break;
+    if (midVal <= target) lo = mid;
     else hi = mid - 1;
   }
   return lo;

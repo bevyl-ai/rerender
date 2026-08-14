@@ -1,9 +1,9 @@
 // rerender Studio — the visual editor. Lists registered compositions, previews the
 // selected one in the <Player> (scrub/play), edits its inputProps live, and renders
 // to MP4 via the studio server's /api/render endpoint.
-import { useEffect, useMemo, useState, type JSX } from 'react';
+import { type JSX, useEffect, useMemo, useState } from 'react';
 import { Player } from '../src/core/player';
-import { getCompositions, getRoot, type CompositionMeta } from '../src/core/registry';
+import { type CompositionMeta, getCompositions, getRoot } from '../src/core/registry';
 
 const C = {
   bg: '#0a0a0c',
@@ -77,10 +77,18 @@ export function App(): JSX.Element {
             rerender <span style={{ color: C.accent }}>studio</span>
           </div>
           {comps.map((c) => (
-            <div
+            <button
+              type="button"
               key={c.id}
               onClick={() => select(c.id)}
               style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                appearance: 'none',
+                border: 'none',
+                color: 'inherit',
+                font: 'inherit',
                 padding: '10px 12px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -92,7 +100,7 @@ export function App(): JSX.Element {
               <div style={{ color: C.dim, fontSize: 12, marginTop: 2 }}>
                 {c.width}×{c.height} · {c.durationInFrames}f · {c.fps}fps
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -146,6 +154,7 @@ export function App(): JSX.Element {
           />
           {!propsObj && <div style={{ color: C.accent, fontSize: 12, marginTop: 6 }}>invalid JSON</div>}
           <button
+            type="button"
             onClick={render}
             disabled={rendering || !propsObj}
             style={{

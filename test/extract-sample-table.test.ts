@@ -7,12 +7,13 @@
 //   ffmpeg -f lavfi -i "testsrc2=size=228x128:rate=20:duration=6" -c:v libx264 -profile:v main \
 //     -g 60 -bf 2 -pix_fmt yuv420p [-movflags +faststart] test/fixtures/extract-<layout>.mp4
 //   ffprobe -select_streams v:0 -show_packets -show_entries packet=pts,size,pos,flags -of json …
+
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createUrlSource } from '../src/extract/source';
 import { parseSampleTable } from '../src/extract/mp4-sample-table';
+import { createUrlSource } from '../src/extract/source';
 
 const FIXTURES = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures');
 
@@ -51,22 +52,33 @@ for (const layout of ['faststart', 'moovend'] as const) {
 
   // Byte layout and keyframe flags must match ffprobe exactly, per sample in decode order.
   for (let i = 0; i < table.sampleCount; i++) {
-    assert.equal(table.byteOffsets[i], expected.packets[i].pos, `${layout}: sample ${i} offset`);
-    assert.equal(table.byteSizes[i], expected.packets[i].size, `${layout}: sample ${i} size`);
-    assert.equal(table.keySampleIndices.includes(i), expected.packets[i].key, `${layout}: sample ${i} keyflag`);
+    const packet = expected.packets[i];
+    assert.ok(packet, `${layout}: missing expected packet ${i}`);
+    assert.equal(table.byteOffsets[i], packet.pos, `${layout}: sample ${i} offset`);
+    assert.equal(table.byteSizes[i], packet.size, `${layout}: sample ${i} size`);
+    assert.equal(table.keySampleIndices.includes(i), packet.key, `${layout}: sample ${i} keyflag`);
   }
 
   // Presentation timestamps: ffprobe reports raw stream pts; the table applies the elst
   // shift so the first *presented* frame sits at 0. The two must differ by one constant.
-  const shift = expected.packets[0].pts - table.presentationTicks[0];
+  const firstPacket = expected.packets[0];
+  const firstTicks = table.presentationTicks[0];
+  assert.ok(firstPacket && firstTicks !== undefined, `${layout}: missing first packet/tick`);
+  const shift = firstPacket.pts - firstTicks;
   for (let i = 0; i < table.sampleCount; i++) {
-    assert.equal(table.presentationTicks[i], expected.packets[i].pts - shift, `${layout}: sample ${i} pts (shift ${shift})`);
+    const packet = expected.packets[i];
+    assert.ok(packet, `${layout}: missing expected packet ${i}`);
+    assert.equal(table.presentationTicks[i], packet.pts - shift, `${layout}: sample ${i} pts (shift ${shift})`);
   }
   assert.equal(Math.min(...table.presentationTicks), 0, `${layout}: first presented frame at t=0`);
 
   // GOP contiguity: every GOP must be one contiguous byte range (what the extractor fetches).
   for (let i = 1; i < table.sampleCount; i++) {
-    assert.equal(table.byteOffsets[i], table.byteOffsets[i - 1] + table.byteSizes[i - 1], `${layout}: contiguity at sample ${i}`);
+    assert.equal(
+      table.byteOffsets[i],
+      (table.byteOffsets[i - 1] ?? Number.NaN) + (table.byteSizes[i - 1] ?? Number.NaN),
+      `${layout}: contiguity at sample ${i}`,
+    );
   }
 
   console.log(`extract-sample-table [${layout}]: ${table.sampleCount} samples OK (codec ${table.codec}, shift ${shift})`);
@@ -82,7 +94,13 @@ console.log('extract-sample-table: PASS');
     src: 'https://fixture.test/faststart.mp4',
     fetchFn: fileFetch(join(FIXTURES, 'extract-faststart.mp4')),
   });
-  const lastMicros = Math.round((Math.max(...extractor.sampleTable!.presentationTicks) / extractor.sampleTable!.timescale) * 1_000_000);
+  const lastMicros = Math.round(
+    (() => {
+      const table = extractor.sampleTable;
+      assert.ok(table, 'expected a progressive sample table');
+      return (Math.max(...table.presentationTicks) / table.timescale) * 1_000_000;
+    })(),
+  );
 
   // 20 fps fixture: samples every 50_000 µs. Nearest-sample rounding in both directions.
   assert.equal(extractor.snapToSampleMicros(0), 0, 'snap: exact first sample');

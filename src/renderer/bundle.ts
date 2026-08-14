@@ -3,10 +3,11 @@
 // render page that imports the entry (firing registerRoot) and boots the studio.
 // rerender's `remotion`/`@remotion/*` aliases are applied, so the user's project
 // resolves to rerender exactly as the dev server does.
-import { createServer } from 'vite';
-import react from '@vitejs/plugin-react';
+
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import react from '@vitejs/plugin-react';
+import { createServer } from 'vite';
 import { rerenderAliases } from '../../render/aliases';
 
 const RERENDER_ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -17,7 +18,7 @@ export interface RerenderBundle {
   close: () => Promise<void>;
 }
 
-export async function bundle(entryPoint: string, options: { port?: number } = {}): Promise<RerenderBundle> {
+export async function bundle(entryPoint: string, options: { port?: number | undefined } = {}): Promise<RerenderBundle> {
   const entry = resolve(entryPoint);
   // Serve from the project root (parent of src/) so public/ assets resolve like Remotion.
   let userRoot = dirname(entry);
@@ -33,13 +34,19 @@ export async function bundle(entryPoint: string, options: { port?: number } = {}
     `import { bootStudio } from ${JSON.stringify(`/@fs/${STUDIO_CORE}`)};bootStudio();</script>` +
     `</body></html>`;
 
+  // Vite's InlineConfig intersects Required<> option bags; exactOptionalPropertyTypes
+  // rejects partial configs. The object is a valid Vite config at runtime.
   const server = await createServer({
     configFile: false,
     root: userRoot,
     // Vite's dep-optimizer cache defaults to <root>/node_modules/.vite, but on AWS Lambda
     // the image fs is read-only except /tmp. RERENDER_VITE_CACHE lets the image build
     // pre-populate the cache (so the worker doesn't pay the ~4s optimize on cold start).
-    cacheDir: process.env.RERENDER_VITE_CACHE ?? (process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp/.vite-cache' : undefined),
+    ...(process.env.RERENDER_VITE_CACHE
+      ? { cacheDir: process.env.RERENDER_VITE_CACHE }
+      : process.env.AWS_LAMBDA_FUNCTION_NAME
+        ? { cacheDir: '/tmp/.vite-cache' }
+        : {}),
     clearScreen: false,
     logLevel: 'silent',
     plugins: [
@@ -71,7 +78,7 @@ export async function bundle(entryPoint: string, options: { port?: number } = {}
     // optimized up front instead of discovered mid-page-load (which triggers a reload).
     optimizeDeps: { include: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime'], entries: [entry] },
     server: { port: options.port ?? 0, strictPort: Boolean(options.port), fs: { allow: [userRoot, RERENDER_ROOT] }, hmr: false },
-  });
+  } as import('vite').UserConfig);
 
   await server.listen();
   const local = server.resolvedUrls?.local?.[0];

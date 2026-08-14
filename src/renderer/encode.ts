@@ -4,6 +4,7 @@
 // browser side is render/encode-worker.ts (real, type-checked TS); spawnWorkerBrowser
 // bundles + serves it and the captured frames over http, and the page fetches each frame
 // and runs the WebCodecs pass via window.__encode.
+
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,7 +40,16 @@ export async function startEncoder(opts: { exe: string; frameDir: string; frameF
   });
   return {
     encode: async (output, fps, codec, frameCount) => {
-      const b64 = await worker.page.evaluate((n, f, c) => window.__encode!(n, f, c), frameCount, fps, codec);
+      const b64 = await worker.page.evaluate(
+        (n, f, c) => {
+          const encode = window.__encode;
+          if (!encode) throw new Error('expected a value');
+          return encode(n, f, c);
+        },
+        frameCount,
+        fps,
+        codec,
+      );
       writeFileSync(output, Buffer.from(b64, 'base64'));
     },
     close: worker.close,
@@ -54,7 +64,9 @@ export async function startEncoder(opts: { exe: string; frameDir: string; frameF
 export async function concatSegments(segmentPaths: string[], codec: VideoCodec, fps: number, output: string): Promise<void> {
   if (segmentPaths.length === 0) throw new Error('concatSegments: no segments');
   if (segmentPaths.length === 1) {
-    copyFileSync(segmentPaths[0]!, output);
+    const only = segmentPaths[0];
+    if (only === undefined) throw new Error('concatSegments: no segments');
+    copyFileSync(only, output);
     return;
   }
   const source = new EncodedVideoPacketSource(codec);
@@ -75,10 +87,7 @@ export async function concatSegments(segmentPaths: string[], codec: VideoCodec, 
     for await (const packet of sink.packets()) {
       if (count === 0 && packet.type !== 'key')
         throw new Error(`concatSegments: ${p} does not start on a keyframe — would corrupt the join`);
-      await source.add(
-        packet.clone({ timestamp: packet.timestamp + offset }),
-        firstAdd ? { decoderConfig: decoderConfig ?? undefined } : undefined,
-      );
+      await source.add(packet.clone({ timestamp: packet.timestamp + offset }), firstAdd && decoderConfig ? { decoderConfig } : undefined);
       firstAdd = false;
       segEnd = Math.max(segEnd, packet.timestamp + packet.duration);
       count += 1;

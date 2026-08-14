@@ -14,12 +14,12 @@ export function smooth(magnitudes: number[]): number[] {
     const next = new Array<number>(len);
     for (let i = 0; i < len; i++) {
       if (i < 1 || i >= len - 1) {
-        next[i] = last[i]!;
+        next[i] = last[i] ?? 0;
         continue;
       }
       let acc = 0;
       for (let n = -1; n <= 1; n++) {
-        acc += CN * last[i + n]! + n;
+        acc += CN * (last[i + n] ?? 0) + n;
       }
       next[i] = acc;
     }

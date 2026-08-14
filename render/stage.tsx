@@ -3,11 +3,11 @@
 //              captured-frame N == composition-frame N exactly. This is the render path.
 //   realtime — plays from→to via rAF; the studio's in-browser preview uses this.
 // Used by the examples render page and the studio (registered-Root) page.
-import { useEffect, useState, type ComponentType, type JSX } from 'react';
+import { type ComponentType, type JSX, useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { CompositionFrame, type VideoConfig } from '../src/core/frame';
-import { getPendingDelays } from '../src/core/delay-render';
 import { injectRerenderCSS } from '../src/core/default-css';
+import { getPendingDelays } from '../src/core/delay-render';
+import { CompositionFrame, type VideoConfig } from '../src/core/frame';
 
 // Module-load side effects (this module only ever executes in the render/studio browser):
 injectRerenderCSS(); // match Remotion's global reset (box-sizing: border-box)
@@ -15,7 +15,7 @@ if (typeof window !== 'undefined') window.__rerenderEnv = 'rendering';
 
 declare global {
   interface Window {
-    __ready?: boolean;
+    __ready?: boolean | undefined;
     __setFrame?: (f: number) => Promise<void>;
   }
 }
@@ -72,7 +72,7 @@ function RealtimeStage({ Component, props, config, from, to }: Omit<StageProps, 
     };
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
-  }, []);
+  }, [from, to, config.fps]);
   return <CompositionFrame Component={Component} props={props} config={config} playing frame={frame} />;
 }
 

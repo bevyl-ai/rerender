@@ -35,7 +35,7 @@ export function getVisualization(params: VisualizationParams): number[] {
   const windowed = new Int16Array(sampleSize);
   const slice = data.subarray(actualStart, actualStart + sampleSize);
   for (let i = 0; i < slice.length; i++) {
-    windowed[i] = toInt16(slice[i]!);
+    windowed[i] = toInt16(slice[i] ?? 0);
   }
 
   // 4. FFT.
@@ -45,7 +45,7 @@ export function getVisualization(params: VisualizationParams): number[] {
   const half = sampleSize / 2;
   const magnitudes = new Array<number>(half);
   for (let i = 0; i < half; i++) {
-    magnitudes[i] = mag(transform[i]!);
+    magnitudes[i] = mag(transform[i] ?? [0, 0]);
   }
 
   // 6. Spectral smoothing (always).
@@ -55,7 +55,7 @@ export function getVisualization(params: VisualizationParams): number[] {
   const maxInt = getMaxIntValue(audioData);
   const out = new Array<number>(numberOfSamples);
   for (let i = 0; i < numberOfSamples; i++) {
-    out[i] = smoothed[i]! / half / maxInt;
+    out[i] = (smoothed[i] ?? 0) / half / maxInt;
   }
   return out;
 }

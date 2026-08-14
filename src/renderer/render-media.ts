@@ -1,13 +1,14 @@
 // renderMedia — match @remotion/renderer. Frame-step capture across N parallel browsers,
 // each slice encoded to mp4 in-browser (WebCodecs + mediabunny, no ffmpeg), the segments
 // concatenated, then the composition's <Audio>/<Video> mixed + muxed in.
+
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { cpus, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { chromeExecutable } from '../../render/browser';
 import type { CollectedAsset } from '../core/assets';
 import { calculateAssetPositions, muxAudio } from './audio';
-import { captureFrames, type CaptureOptions } from './capture';
+import { type CaptureOptions, captureFrames } from './capture';
 import { concatSegments, startEncoder, type VideoCodec } from './encode';
 import type { CompositionConfig } from './types';
 
@@ -15,15 +16,15 @@ export interface RenderMediaOptions {
   composition: CompositionConfig;
   serveUrl: string;
   outputLocation: string;
-  inputProps?: Record<string, unknown>;
+  inputProps?: Record<string, unknown> | undefined;
   /** Video codec for the in-browser WebCodecs encoder (default avc/h264). */
-  videoCodec?: VideoCodec;
-  scale?: number;
-  concurrency?: number;
-  imageFormat?: 'png' | 'jpeg';
-  jpegQuality?: number;
-  muted?: boolean;
-  frameRange?: number | [number, number];
+  videoCodec?: VideoCodec | undefined;
+  scale?: number | undefined;
+  concurrency?: number | undefined;
+  imageFormat?: 'png' | 'jpeg' | undefined;
+  jpegQuality?: number | undefined;
+  muted?: boolean | undefined;
+  frameRange?: number | [number, number] | undefined;
   onProgress?: (p: { renderedFrames: number; progress: number }) => void;
 }
 
@@ -80,7 +81,14 @@ export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: n
     const encoders = await Promise.all(
       ranges.map(([a, b]) => startEncoder({ exe, frameDir: dir, frameFiles: frameFiles.slice(a - from, b - from) })),
     );
-    await Promise.all(encoders.map((enc, i) => enc.encode(segmentPaths[i]!, c.fps, codec, ranges[i]![1] - ranges[i]![0])));
+    await Promise.all(
+      encoders.map((enc, i) => {
+        const path = segmentPaths[i];
+        const range = ranges[i];
+        if (path === undefined || range === undefined) throw new Error(`renderMedia: missing slice ${i}`);
+        return enc.encode(path, c.fps, codec, range[1] - range[0]);
+      }),
+    );
     await Promise.all(encoders.map((enc) => enc.close()));
     opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.85 });
 
@@ -105,7 +113,11 @@ export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: n
       await muxAudio(
         silent,
         outputLocation,
-        positions.map((p) => ({ ...p, src: local.get(p.src)! })),
+        positions.map((p) => {
+          const src = local.get(p.src);
+          if (src === undefined) throw new Error(`renderMedia: asset ${p.src} was not downloaded`);
+          return { ...p, src };
+        }),
         c.fps,
         codec,
         c.durationInFrames / c.fps,

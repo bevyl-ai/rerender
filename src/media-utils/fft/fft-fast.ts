@@ -11,7 +11,7 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
   const im = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     const w = 0.8 - 0.46 * Math.cos((2 * Math.PI * i) / (n - 1));
-    re[i] = samples[i]! * w;
+    re[i] = (samples[i] ?? 0) * w;
   }
 
   // Bit-reversal permutation.
@@ -20,11 +20,11 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
     for (; j & bit; bit >>= 1) j ^= bit;
     j ^= bit;
     if (i < j) {
-      const tr = re[i]!;
-      re[i] = re[j]!;
+      const tr = re[i] ?? 0;
+      re[i] = re[j] ?? 0;
       re[j] = tr;
-      const ti = im[i]!;
-      im[i] = im[j]!;
+      const ti = im[i] ?? 0;
+      im[i] = im[j] ?? 0;
       im[j] = ti;
     }
   }
@@ -41,10 +41,10 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
       for (let k = 0; k < half; k++) {
         const a = start + k;
         const b = start + k + half;
-        const uRe = re[a]!;
-        const uIm = im[a]!;
-        const vRe = re[b]! * curRe - im[b]! * curIm;
-        const vIm = re[b]! * curIm + im[b]! * curRe;
+        const uRe = re[a] ?? 0;
+        const uIm = im[a] ?? 0;
+        const vRe = (re[b] ?? 0) * curRe - (im[b] ?? 0) * curIm;
+        const vIm = (re[b] ?? 0) * curIm + (im[b] ?? 0) * curRe;
         re[a] = uRe + vRe;
         im[a] = uIm + vIm;
         re[b] = uRe - vRe;
@@ -57,6 +57,6 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
   }
 
   const out: Complex[] = new Array<Complex>(n);
-  for (let i = 0; i < n; i++) out[i] = [re[i]!, im[i]!];
+  for (let i = 0; i < n; i++) out[i] = [re[i] ?? 0, im[i] ?? 0];
   return out;
 }

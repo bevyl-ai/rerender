@@ -2,13 +2,14 @@
 // The invoker is pluggable: the same orchestration drives AWS Lambda invocations in
 // production and local subprocesses in dev/test. Each worker renders ONE frame-range
 // segment (keyframe-started, silent); concatSegments stitches them with no re-encode.
+
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { concatSegments } from '../src/renderer/encode';
 import { bundle } from '../src/renderer/bundle';
+import { concatSegments } from '../src/renderer/encode';
 import { selectComposition } from '../src/renderer/select-composition';
-import type { VideoCodec, CompositionConfig } from '../src/renderer/types';
+import type { CompositionConfig, VideoCodec } from '../src/renderer/types';
 
 interface SegmentJob {
   /** the orchestrator-resolved composition, so the worker can skip selectComposition. */
@@ -24,12 +25,12 @@ export type Invoker = (job: SegmentJob, localSegmentPath: string) => Promise<voi
 export interface OrchestrateOptions {
   entry: string;
   comp: string;
-  props?: Record<string, unknown>;
+  props?: Record<string, unknown> | undefined;
   /** number of workers / segments to split the render into */
   workers: number;
   output: string;
   invoke: Invoker;
-  codec?: VideoCodec;
+  codec?: VideoCodec | undefined;
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -54,7 +55,9 @@ export async function orchestrateRender(opts: OrchestrateOptions): Promise<{ sli
     let done = 0;
     await Promise.all(
       slices.map(async (frameRange, index) => {
-        await opts.invoke({ composition, props: opts.props ?? {}, frameRange, index }, segmentPaths[index]!);
+        const path = segmentPaths[index];
+        if (path === undefined) throw new Error(`cloud render: missing segment path ${index}`);
+        await opts.invoke({ composition, props: opts.props ?? {}, frameRange, index }, path);
         opts.onProgress?.(++done, slices.length);
       }),
     );

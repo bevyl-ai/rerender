@@ -52,10 +52,12 @@ export async function decodeRun(
         const handed: { close(): void }[] = [];
         try {
           for (let i = 0; i < requesters.length; i++) {
+            const requested = requesters[i];
+            if (requested === undefined) continue;
             // Last requester gets the frame itself; earlier ones get clones. Receiver closes all.
             const forRequester = i === requesters.length - 1 ? frame : frame.clone();
             handed.push(forRequester);
-            onFrame(forRequester, requesters[i]!);
+            onFrame(forRequester, requested);
           }
         } catch (error) {
           // A callback that threw did not take ownership of what it was given. close() on an
@@ -91,7 +93,8 @@ export async function decodeRun(
     try {
       decoder.configure(config);
       for (let i = 0; i < samples.length; i++) {
-        const sample = samples[i]!;
+        const sample = samples[i];
+        if (!sample) continue;
         decoder.decode(
           new EncodedVideoChunk({
             type: i === 0 ? 'key' : 'delta',

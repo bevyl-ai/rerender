@@ -4,6 +4,7 @@
 // from S3: the same renderMediaOnLambda -> getRenderProgress contract a Remotion-Lambda
 // caller already expects, so swapping the import is the only change on the caller's side.
 // The deployed function (cloud/handler.ts) does the actual work.
+
 import { randomBytes } from 'node:crypto';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -12,9 +13,9 @@ import {
   type LaunchEvent,
   progressKey,
   type RenderProgress,
+  type StillEvent,
   s3PublicUrl,
   signWebhookBody,
-  type StillEvent,
   WEBHOOK_SIGNATURE_HEADER,
   type WebhookConfig,
   type WebhookPayload,
@@ -35,25 +36,25 @@ export interface RenderMediaOnLambdaInput {
   region: string;
   functionName: string;
   composition: string;
-  serveUrl?: string; // accepted for API-compat; the project is baked into the worker image
-  forceBucketName?: string;
-  codec?: string;
-  audioCodec?: string;
-  inputProps?: Record<string, unknown>;
-  imageFormat?: 'png' | 'jpeg';
-  jpegQuality?: number;
-  scale?: number;
-  colorSpace?: string;
-  logLevel?: string;
-  timeoutInMilliseconds?: number;
-  webhook?: WebhookConfig | null;
+  serveUrl?: string | undefined; // accepted for API-compat; the project is baked into the worker image
+  forceBucketName?: string | undefined;
+  codec?: string | undefined;
+  audioCodec?: string | undefined;
+  inputProps?: Record<string, unknown> | undefined;
+  imageFormat?: 'png' | 'jpeg' | undefined;
+  jpegQuality?: number | undefined;
+  scale?: number | undefined;
+  colorSpace?: string | undefined;
+  logLevel?: string | undefined;
+  timeoutInMilliseconds?: number | undefined;
+  webhook?: WebhookConfig | null | undefined;
   // codec/encoder tuning fields a caller might Pick into its own preset (accepted; forwarded where supported)
-  audioBitrate?: string | null;
-  videoBitrate?: string | null;
-  encodingBufferSize?: string | null;
-  encodingMaxRate?: string | null;
-  pixelFormat?: string;
-  x264Preset?: string | null;
+  audioBitrate?: string | null | undefined;
+  videoBitrate?: string | null | undefined;
+  encodingBufferSize?: string | null | undefined;
+  encodingMaxRate?: string | null | undefined;
+  pixelFormat?: string | undefined;
+  x264Preset?: string | null | undefined;
 }
 
 export interface RenderMediaOnLambdaOutput {
@@ -134,7 +135,8 @@ export async function getRenderProgress(params: {
   const s3 = new S3Client({ region: params.region });
   try {
     const obj = await s3.send(new GetObjectCommand({ Bucket: params.bucketName, Key: progressKey(params.renderId) }));
-    return JSON.parse(await obj.Body!.transformToString()) as RenderProgress;
+    if (!obj.Body) throw new Error(`s3 progress object ${progressKey(params.renderId)} has no body`);
+    return JSON.parse(await obj.Body.transformToString()) as RenderProgress;
   } catch (e) {
     if (isNoSuchKey(e)) {
       // Worker hasn't written progress yet: report in-progress, not failed.
@@ -163,17 +165,17 @@ export interface RenderStillOnLambdaInput {
   region: string;
   functionName: string;
   composition: string;
-  serveUrl?: string;
-  forceBucketName?: string;
-  frame?: number;
-  outName?: string;
-  privacy?: 'public' | 'private';
-  imageFormat?: 'png' | 'jpeg';
-  jpegQuality?: number;
-  scale?: number;
-  inputProps?: Record<string, unknown>;
-  logLevel?: string;
-  timeoutInMilliseconds?: number;
+  serveUrl?: string | undefined;
+  forceBucketName?: string | undefined;
+  frame?: number | undefined;
+  outName?: string | undefined;
+  privacy?: 'public' | 'private' | undefined;
+  imageFormat?: 'png' | 'jpeg' | undefined;
+  jpegQuality?: number | undefined;
+  scale?: number | undefined;
+  inputProps?: Record<string, unknown> | undefined;
+  logLevel?: string | undefined;
+  timeoutInMilliseconds?: number | undefined;
 }
 
 export interface RenderStillOnLambdaOutput {
@@ -211,7 +213,8 @@ export async function renderStillOnLambda(input: RenderStillOnLambdaInput): Prom
   if (res.FunctionError) {
     throw new Error(`renderStillOnLambda failed: ${res.Payload ? Buffer.from(res.Payload).toString() : res.FunctionError}`);
   }
-  const out = JSON.parse(Buffer.from(res.Payload!).toString()) as { sizeInBytes: number };
+  if (!res.Payload) throw new Error('renderStillOnLambda: empty payload');
+  const out = JSON.parse(Buffer.from(res.Payload).toString()) as { sizeInBytes: number };
   return { renderId: id, bucketName: bucket, url: s3PublicUrl(bucket, region, outName), outKey: outName, sizeInBytes: out.sizeInBytes };
 }
 
@@ -221,7 +224,7 @@ export async function renderStillOnLambda(input: RenderStillOnLambdaInput): Prom
 
 export interface AppRouterWebhookOptions {
   secret: string | null;
-  testing?: boolean;
+  testing?: boolean | undefined;
   onSuccess?: (payload: {
     renderId: string;
     outputUrl: string | null;

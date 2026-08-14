@@ -1,5 +1,6 @@
 // getCompositions / selectComposition — match @remotion/renderer. Open the bundle in
 // a headless browser, let the registered Root populate the registry, read it back.
+
 import { chromeExecutable } from '../../render/browser';
 import { launchBrowser } from './capture';
 import type { CompositionConfig } from './types';
@@ -9,7 +10,10 @@ function pageUrl(serveUrl: string, id: string, inputProps: Record<string, unknow
   return `${serveUrl}/?step=1&comp=${encodeURIComponent(id)}&props=${props}`;
 }
 
-export async function getCompositions(options: { serveUrl: string; inputProps?: Record<string, unknown> }): Promise<CompositionConfig[]> {
+export async function getCompositions(options: {
+  serveUrl: string;
+  inputProps?: Record<string, unknown> | undefined;
+}): Promise<CompositionConfig[]> {
   const { serveUrl, inputProps = {} } = options;
   const browser = await launchBrowser(await chromeExecutable());
   try {
@@ -17,7 +21,11 @@ export async function getCompositions(options: { serveUrl: string; inputProps?: 
     page.on('pageerror', (e) => console.error('[rerender] composition page error:', String(e).slice(0, 300)));
     await page.goto(pageUrl(serveUrl, '', inputProps), { waitUntil: 'load' });
     await page.waitForFunction(() => window.__ready === true && Boolean(window.__getCompositions), { timeout: 120_000 });
-    const comps = await page.evaluate(() => window.__getCompositions!());
+    const comps = await page.evaluate(() => {
+      const get = window.__getCompositions;
+      if (!get) throw new Error('expected a value');
+      return get();
+    });
     return comps.map((c) => ({ ...c, props: { ...c.defaultProps, ...inputProps } }));
   } finally {
     await browser.close();
@@ -27,7 +35,7 @@ export async function getCompositions(options: { serveUrl: string; inputProps?: 
 export async function selectComposition(options: {
   serveUrl: string;
   id: string;
-  inputProps?: Record<string, unknown>;
+  inputProps?: Record<string, unknown> | undefined;
 }): Promise<CompositionConfig> {
   const all = await getCompositions({ serveUrl: options.serveUrl, inputProps: options.inputProps });
   const found = all.find((c) => c.id === options.id);

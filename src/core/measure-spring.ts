@@ -1,9 +1,17 @@
 // measureSpring() — a faithful port of Remotion's measure-spring.js. Returns how
 // many frames a spring takes to settle within `threshold` AND stay settled for 20
 // frames. Uses springCalculation directly (no circular through spring()).
-import { springCalculation, type SpringConfig } from './spring';
+import { type SpringConfig, springCalculation } from './spring';
 
-export function measureSpring({ fps, config = {}, threshold = 0.005 }: { fps: number; config?: SpringConfig; threshold?: number }): number {
+export function measureSpring({
+  fps,
+  config = {},
+  threshold = 0.005,
+}: {
+  fps: number;
+  config?: SpringConfig | undefined;
+  threshold?: number | undefined;
+}): number {
   if (threshold === 0) return Number.POSITIVE_INFINITY;
   if (threshold === 1) return 0;
 

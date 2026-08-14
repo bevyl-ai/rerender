@@ -6,10 +6,10 @@
 import { measureSpring } from './measure-spring';
 
 export interface SpringConfig {
-  damping?: number;
-  mass?: number;
-  stiffness?: number;
-  overshootClamping?: boolean;
+  damping?: number | undefined;
+  mass?: number | undefined;
+  stiffness?: number | undefined;
+  overshootClamping?: boolean | undefined;
 }
 
 const DEFAULT = { damping: 10, mass: 1, stiffness: 100, overshootClamping: false };
@@ -51,7 +51,9 @@ function advance(a: State, now: number, c: number, m: number, k: number): State 
 
 /** The raw 0→1 spring value at `frame`, integrated step-by-step like Remotion. */
 export function springCalculation(frame: number, fps: number, config: SpringConfig = {}): number {
-  const { damping: c, mass: m, stiffness: k } = { ...DEFAULT, ...config };
+  const c = config.damping ?? DEFAULT.damping;
+  const m = config.mass ?? DEFAULT.mass;
+  const k = config.stiffness ?? DEFAULT.stiffness;
   let a: State = { lastTimestamp: 0, current: 0, toValue: 1, velocity: 0 };
   const frameClamped = Math.max(0, frame);
   const unevenRest = frameClamped % 1;
@@ -75,13 +77,13 @@ export function spring({
 }: {
   frame: number;
   fps: number;
-  config?: SpringConfig;
-  from?: number;
-  to?: number;
-  durationInFrames?: number;
-  durationRestThreshold?: number;
-  delay?: number;
-  reverse?: boolean;
+  config?: SpringConfig | undefined;
+  from?: number | undefined;
+  to?: number | undefined;
+  durationInFrames?: number | undefined;
+  durationRestThreshold?: number | undefined;
+  delay?: number | undefined;
+  reverse?: boolean | undefined;
 }): number {
   const { overshootClamping } = { ...DEFAULT, ...config };
   // When a duration is requested, scale time by the spring's natural duration.
