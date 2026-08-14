@@ -11,13 +11,13 @@ const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 export interface DeployOptions {
   /** project dir to bake into the image (must have src/index.ts) */
   project: string;
-  stackName?: string;
-  region?: string;
-  repo?: string;
-  memory?: number;
+  stackName?: string | undefined;
+  region?: string | undefined;
+  repo?: string | undefined;
+  memory?: number | undefined;
   /** false → reuse an already-built local tag (`localTag`) instead of building */
-  build?: boolean;
-  localTag?: string;
+  build?: boolean | undefined;
+  localTag?: string | undefined;
 }
 
 export interface DeployResult {

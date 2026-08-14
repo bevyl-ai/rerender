@@ -3,8 +3,8 @@
 // reflects whether we're playing or rendering.
 declare global {
   interface Window {
-    __rerenderInputProps?: Record<string, unknown>;
-    __rerenderEnv?: 'player' | 'rendering';
+    __rerenderInputProps?: Record<string, unknown> | undefined;
+    __rerenderEnv?: 'player' | 'rendering' | undefined;
   }
 }
 

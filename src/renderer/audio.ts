@@ -5,10 +5,12 @@
 // (the same stack the preview plays through) and scheduled through a gain node carrying
 // its per-frame volume envelope, all summed by an OfflineAudioContext; the mix is
 // AAC-encoded and muxed alongside the (packet-copied) video.
+
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { CollectedAsset } from '../core/assets';
 import { chromeExecutable } from '../../render/browser';
+import type { CollectedAsset } from '../core/assets';
+import { must } from '../core/must';
 import type { MuxPosition, VideoCodec } from './types';
 import { spawnWorkerBrowser } from './worker-browser';
 
@@ -31,17 +33,17 @@ export function calculateAssetPositions(frames: Map<number, CollectedAsset[]>): 
   for (const [f, list] of frames) {
     for (const a of list) {
       if (!byId.has(a.id)) byId.set(a.id, new Map());
-      byId.get(a.id)!.set(f, a);
+      must(byId.get(a.id)).set(f, a);
     }
   }
 
   const positions: AssetPosition[] = [];
   for (const perFrame of byId.values()) {
     const sorted = [...perFrame.keys()].sort((x, y) => x - y);
-    let runStart = sorted[0]!;
-    let prev = sorted[0]!;
+    let runStart = must(sorted[0]);
+    let prev = must(sorted[0]);
     const flush = (start: number, end: number): void => {
-      const a = perFrame.get(start)!;
+      const a = must(perFrame.get(start));
       positions.push({
         type: a.type,
         src: a.src,
@@ -56,9 +58,9 @@ export function calculateAssetPositions(frames: Map<number, CollectedAsset[]>): 
     for (let i = 1; i < sorted.length; i++) {
       if (sorted[i] !== prev + 1) {
         flush(runStart, prev);
-        runStart = sorted[i]!;
+        runStart = must(sorted[i]);
       }
-      prev = sorted[i]!;
+      prev = must(sorted[i]);
     }
     flush(runStart, prev);
   }
@@ -116,7 +118,7 @@ export async function muxAudio(
   });
   try {
     const b64 = await worker.page.evaluate(
-      (p, f, c, sr, d) => window.__mux!(p, f, c, sr, d),
+      (p, f, c, sr, d) => must(window.__mux)(p, f, c, sr, d),
       muxPositions,
       fps,
       codec,

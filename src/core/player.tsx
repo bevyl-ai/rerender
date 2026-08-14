@@ -3,19 +3,21 @@
 // PlayerRef (seekTo / play / pause / getCurrentFrame / addEventListener…) that an editor's
 // playback transport drives. What plays here is exactly what the recorder records.
 import {
+  type ComponentType,
+  type CSSProperties,
   forwardRef,
+  type JSX,
+  type RefObject,
   useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
   useState,
-  type ComponentType,
-  type CSSProperties,
-  type JSX,
 } from 'react';
-import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from './frame';
 import { beginPlayback, getAnchor, getCtx, resumeCtx, stopPlayback } from './audio-engine';
 import { injectRerenderCSS } from './default-css';
+import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from './frame';
+import { must } from './must';
 
 injectRerenderCSS(); // match Remotion's global reset so preview == render == Remotion
 
@@ -44,7 +46,7 @@ export interface PlayerRef {
   pauseAndReturnToPlayStart: () => void;
   toggle: (e?: unknown) => void;
   isPlaying: () => boolean;
-  getContainerNode: () => HTMLDivElement | null;
+  getContainerNode: () => HTMLElement | null;
   getScale: () => number;
   mute: () => void;
   unmute: () => void;
@@ -60,33 +62,33 @@ export interface PlayerRef {
 
 export interface PlayerProps {
   /** the composition component (Remotion's `component`; `composition` is the rerender alias). */
-  component?: ComponentType<Record<string, unknown>>;
-  composition?: ComponentType<Record<string, unknown>>;
-  compositionWidth?: number;
-  compositionHeight?: number;
+  component?: ComponentType<Record<string, unknown>> | undefined;
+  composition?: ComponentType<Record<string, unknown>> | undefined;
+  compositionWidth?: number | undefined;
+  compositionHeight?: number | undefined;
   /** rerender aliases for compositionWidth/Height. */
-  width?: number;
-  height?: number;
+  width?: number | undefined;
+  height?: number | undefined;
   fps: number;
   durationInFrames: number;
-  inputProps?: Record<string, unknown>;
-  controls?: boolean;
-  loop?: boolean;
-  playbackRate?: number;
-  initialFrame?: number;
-  moveToBeginningWhenEnded?: boolean;
+  inputProps?: Record<string, unknown> | undefined;
+  controls?: boolean | undefined;
+  loop?: boolean | undefined;
+  playbackRate?: number | undefined;
+  initialFrame?: number | undefined;
+  moveToBeginningWhenEnded?: boolean | undefined;
   /** display height in px; the composition is scaled to fit (rerender-specific). */
-  displayHeight?: number;
-  style?: CSSProperties;
+  displayHeight?: number | undefined;
+  style?: CSSProperties | undefined;
   // Accepted for @remotion/player API compatibility; not all affect rerender's preview.
-  clickToPlay?: boolean;
-  doubleClickToFullscreen?: boolean;
-  showVolumeControls?: boolean;
-  allowFullscreen?: boolean;
-  alwaysShowControls?: boolean;
-  overflowVisible?: boolean;
-  numberOfSharedAudioTags?: number;
-  acknowledgeRemotionLicense?: boolean;
+  clickToPlay?: boolean | undefined;
+  doubleClickToFullscreen?: boolean | undefined;
+  showVolumeControls?: boolean | undefined;
+  allowFullscreen?: boolean | undefined;
+  alwaysShowControls?: boolean | undefined;
+  overflowVisible?: boolean | undefined;
+  numberOfSharedAudioTags?: number | undefined;
+  acknowledgeRemotionLicense?: boolean | undefined;
 }
 
 const clampFrame = (f: number, durationInFrames: number): number => Math.max(0, Math.min(durationInFrames - 1, Math.round(f)));
@@ -112,7 +114,7 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
     style,
   } = props;
 
-  const Composition = (component ?? composition)!;
+  const Composition = must(component ?? composition);
   const compWidth = compositionWidth ?? width ?? 1920;
   const compHeight = compositionHeight ?? height ?? 1080;
   const config: VideoConfig = { width: compWidth, height: compHeight, fps, durationInFrames };
@@ -124,7 +126,7 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
   const volumeRef = useRef(1);
   const mutedRef = useRef(false);
   const rafRef = useRef(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
   const listeners = useRef(new Map<PlayerEventTypes, Set<CallbackListener<unknown>>>());
 
   const scale = displayHeight / compHeight;
@@ -237,7 +239,7 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
       isFullscreen: () => typeof document !== 'undefined' && document.fullscreenElement === containerRef.current,
       addEventListener: (name, cb) => {
         if (!listeners.current.has(name)) listeners.current.set(name, new Set());
-        listeners.current.get(name)!.add(cb as CallbackListener<unknown>);
+        must(listeners.current.get(name)).add(cb as CallbackListener<unknown>);
       },
       removeEventListener: (name, cb) => {
         listeners.current.get(name)?.delete(cb as CallbackListener<unknown>);
@@ -246,52 +248,72 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
     [scale, commitFrame, setPlaying, emit],
   );
 
+  const stage = (
+    <div
+      style={{
+        width: compWidth,
+        height: compHeight,
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        // Flatten the whole composition (incl. any <video>) into ONE rasterized layer before
+        // the fractional display down-scale is applied. A CSS filter forces the subtree to be
+        // rendered into an offscreen buffer as a unit, so a <video> is no longer its own
+        // compositor layer — and a separate video layer is what the GPU presents snapped to
+        // whole device pixels, making its position wobble frame-to-frame under the animated
+        // Ken Burns scale (the shake). Rasterized-then-down-scaled, the video is bilinearly
+        // sub-pixel sampled instead — exactly why the canvas-drawn export is smooth.
+        // (opacity(0.999) is visually imperceptible; its only job is to trigger the flatten.)
+        filter: 'opacity(0.999)',
+      }}
+    >
+      <ConfigContext.Provider value={config}>
+        <PlayingContext.Provider value={playing}>
+          <TimelineContext.Provider value={frame}>
+            <FrameContext.Provider value={frame}>
+              <Composition {...inputProps} />
+            </FrameContext.Provider>
+          </TimelineContext.Provider>
+        </PlayingContext.Provider>
+      </ConfigContext.Provider>
+    </div>
+  );
+  const frameStyle: CSSProperties = {
+    width: displayWidth,
+    height: displayHeight,
+    overflow: 'hidden',
+    background: '#000',
+    borderRadius: 12,
+    position: 'relative',
+  };
+
   return (
     <div style={{ width: displayWidth, ...style }}>
-      <div
-        ref={containerRef}
-        onClick={clickToPlay ? () => setPlaying(!playingRef.current) : undefined}
-        style={{
-          width: displayWidth,
-          height: displayHeight,
-          overflow: 'hidden',
-          background: '#000',
-          borderRadius: 12,
-          position: 'relative',
-          cursor: clickToPlay ? 'pointer' : 'default',
-        }}
-      >
-        <div
+      {clickToPlay ? (
+        <button
+          type="button"
+          ref={containerRef as RefObject<HTMLButtonElement>}
+          onClick={() => setPlaying(!playingRef.current)}
           style={{
-            width: compWidth,
-            height: compHeight,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            // Flatten the whole composition (incl. any <video>) into ONE rasterized layer before
-            // the fractional display down-scale is applied. A CSS filter forces the subtree to be
-            // rendered into an offscreen buffer as a unit, so a <video> is no longer its own
-            // compositor layer — and a separate video layer is what the GPU presents snapped to
-            // whole device pixels, making its position wobble frame-to-frame under the animated
-            // Ken Burns scale (the shake). Rasterized-then-down-scaled, the video is bilinearly
-            // sub-pixel sampled instead — exactly why the canvas-drawn export is smooth.
-            // (opacity(0.999) is visually imperceptible; its only job is to trigger the flatten.)
-            filter: 'opacity(0.999)',
+            appearance: 'none',
+            border: 'none',
+            padding: 0,
+            font: 'inherit',
+            textAlign: 'inherit',
+            color: 'inherit',
+            cursor: 'pointer',
+            ...frameStyle,
           }}
         >
-          <ConfigContext.Provider value={config}>
-            <PlayingContext.Provider value={playing}>
-              <TimelineContext.Provider value={frame}>
-                <FrameContext.Provider value={frame}>
-                  <Composition {...inputProps} />
-                </FrameContext.Provider>
-              </TimelineContext.Provider>
-            </PlayingContext.Provider>
-          </ConfigContext.Provider>
+          {stage}
+        </button>
+      ) : (
+        <div ref={containerRef as RefObject<HTMLDivElement>} style={frameStyle}>
+          {stage}
         </div>
-      </div>
+      )}
 
       {controls && (
         <div

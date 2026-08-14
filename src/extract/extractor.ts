@@ -3,10 +3,11 @@
 // requested timestamps by presentation time. Never mutates the caller's timestamp array;
 // out-of-range timestamps clamp; every requested timestamp gets exactly one frame callback.
 
+import { must } from '../core/must';
 import { decodeRun } from './decode';
 import { ExtractError } from './errors';
-import { type FrameIndex, lastAtOrBefore } from './frame-index';
 import { mfraIndexAdapter } from './fmp4';
+import { type FrameIndex, lastAtOrBefore } from './frame-index';
 import { moovIndexAdapter } from './moov-index';
 import { parseTrackConfig, type SampleTable } from './mp4-sample-table';
 import { createUrlSource, type RangeSource } from './source';
@@ -20,16 +21,16 @@ export interface FrameExtractorOptions {
    * after a successful setup) — abort a dedicated controller from a timer you
    * clear once createFrameExtractor settles.
    */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   /** Injectable for tests; defaults to global fetch. */
-  fetchFn?: typeof fetch;
+  fetchFn?: typeof fetch | undefined;
   /** Max GOP fetches in flight per extract() call. Default 16. */
-  maxParallelFetches?: number;
+  maxParallelFetches?: number | undefined;
 }
 
 export interface ExtractOptions {
   /** Cancels this call's fetches and decodes when aborted; the extractor stays usable. */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
 }
 
 export type OnFrame = (frame: VideoFrame, requestedSeconds: number) => void;
@@ -151,9 +152,9 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     // presentation µs → requested seconds still waiting on that frame
     const wanted = new Map<number, number[]>();
     job.targets.forEach((target, i) => {
-      const list = wanted.get(micros[i]!) ?? [];
+      const list = wanted.get(must(micros[i])) ?? [];
       list.push(target.requestedSeconds);
-      wanted.set(micros[i]!, list);
+      wanted.set(must(micros[i]), list);
     });
 
     // A codec with no out-of-band configuration gets no description; see CodecHandler.describes.

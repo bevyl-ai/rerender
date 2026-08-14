@@ -4,6 +4,7 @@
 // previews with sound exports with sound — and an OfflineAudioContext sums the spans
 // (each scheduled at its timeline position through a gain node); mediabunny packet-copies
 // the silent video and AAC-encodes the mix into one mp4. window.__mux() returns base64.
+
 import { registerAacEncoder } from '@mediabunny/aac-encoder';
 import {
   ALL_FORMATS,
@@ -19,6 +20,7 @@ import {
   Mp4OutputFormat,
   Output,
 } from 'mediabunny';
+import { must } from '../src/core/must';
 import type { MuxPosition, VideoCodec } from '../src/renderer/types';
 import { toBase64 } from './worker-util';
 
@@ -30,7 +32,7 @@ registerAacEncoder();
 declare global {
   interface Window {
     __mux?: (positions: MuxPosition[], fps: number, codec: VideoCodec, sampleRate: number, durationSec: number) => Promise<string>;
-    __ready?: boolean;
+    __ready?: boolean | undefined;
   }
 }
 
@@ -63,7 +65,7 @@ async function mux(positions: MuxPosition[], fps: number, codec: VideoCodec, sam
     const gain = ctx.createGain();
     // per-frame volume envelope (fades): schedule each frame's volume at its timeline time.
     const spanStart = p.startInVideo / fps;
-    for (let i = 0; i < p.volumes.length; i++) gain.gain.setValueAtTime(p.volumes[i]!, spanStart + i / fps);
+    for (let i = 0; i < p.volumes.length; i++) gain.gain.setValueAtTime(must(p.volumes[i]), spanStart + i / fps);
     gain.connect(ctx.destination);
 
     // The span plays `duration` composition-frames; at playbackRate that consumes
@@ -113,14 +115,14 @@ async function mux(positions: MuxPosition[], fps: number, codec: VideoCodec, sam
   const decoderConfig = await videoTrack.getDecoderConfig();
   let first = true;
   for await (const packet of videoSink.packets()) {
-    await videoSource.add(packet, first ? { decoderConfig: decoderConfig ?? undefined } : undefined);
+    await videoSource.add(packet, first && decoderConfig ? { decoderConfig } : undefined);
     first = false;
   }
   videoSource.close();
   await audioSource.add(mixed);
   audioSource.close();
   await out.finalize();
-  return toBase64((out.target as BufferTarget).buffer!);
+  return toBase64(must((out.target as BufferTarget).buffer));
 }
 
 window.__mux = mux;

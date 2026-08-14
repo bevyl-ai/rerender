@@ -14,6 +14,7 @@
 // Files without `mfra` are refused rather than crawled: chaining `moof` headers from the front is
 // one round trip per fragment, which is the thing this module exists to avoid.
 
+import { must } from '../core/must';
 import type { RunSample } from './decode';
 import { ExtractError } from './errors';
 import { type FrameIndex, type IndexAdapter, lastAtOrBefore } from './frame-index';
@@ -129,7 +130,7 @@ export async function readFragmentIndex(
     // inside the last fragment. Stopping at the last sync sample instead would put everything from
     // that keyframe to the end of the file out of reach: half the video on a two-fragment file.
     // One extra read at setup, once per extractor, buys back the tail.
-    const lastStart = moofOffsets[moofOffsets.length - 1]!;
+    const lastStart = must(moofOffsets[moofOffsets.length - 1]);
     const lastBytes = await source.read(lastStart, mediaEnd, signal);
     const lastSamples = parseFragment(lastBytes, lastStart, defaults, 0);
     totalTicks = lastSamples.reduce((max, sample) => Math.max(max, sample.presentationTicks), 0);
@@ -285,14 +286,14 @@ export const mfraIndexAdapter: IndexAdapter = {
     const { timescale, editShiftTicks } = config;
 
     const gopStartTicks = new Float64Array(keyframeTicks.length);
-    for (let i = 0; i < keyframeTicks.length; i++) gopStartTicks[i] = keyframeTicks[i]! - editShiftTicks;
-    const firstTicks = gopStartTicks[0]!;
+    for (let i = 0; i < keyframeTicks.length; i++) gopStartTicks[i] = must(keyframeTicks[i]) - editShiftTicks;
+    const firstTicks = must(gopStartTicks[0]);
     // mehd when the file states one; otherwise the last sync sample, short by a fragment.
-    const lastTicks = totalTicks > 0 ? totalTicks - editShiftTicks : gopStartTicks[gopStartTicks.length - 1]!;
+    const lastTicks = totalTicks > 0 ? totalTicks - editShiftTicks : must(gopStartTicks[gopStartTicks.length - 1]);
     const toMicros = (ticks: number) => Math.round((ticks / timescale) * MICROSECONDS_PER_SECOND);
 
     /** Fragments are contiguous, so the next one's moof bounds this one exactly. */
-    const range = (i: number) => ({ start: moofOffsets[i]!, end: i + 1 < moofOffsets.length ? moofOffsets[i + 1]! : mediaEnd });
+    const range = (i: number) => ({ start: must(moofOffsets[i]), end: i + 1 < moofOffsets.length ? must(moofOffsets[i + 1]) : mediaEnd });
 
     const index: FrameIndex = {
       kind: 'mfra',
@@ -303,7 +304,7 @@ export const mfraIndexAdapter: IndexAdapter = {
       gopStartTicks,
       clampTicks: (seconds) => Math.min(Math.max(Math.round(seconds * timescale), firstTicks), lastTicks),
       // Fragment granularity: the exact sample is inside bytes we have not fetched.
-      snapMicros: (targetTicks) => toMicros(gopStartTicks[lastAtOrBefore(gopStartTicks, targetTicks)]!),
+      snapMicros: (targetTicks) => toMicros(must(gopStartTicks[lastAtOrBefore(gopStartTicks, targetTicks)])),
       planRead: (gopIndex) => range(gopIndex),
       resolve: (gopIndex, targetTicks, bytes, bytesStart) => {
         const samples = parseFragment(bytes, bytesStart, defaults, editShiftTicks);
@@ -311,7 +312,7 @@ export const mfraIndexAdapter: IndexAdapter = {
         const nearest = targetTicks.map((ticks) => {
           let best = 0;
           for (let i = 1; i < samples.length; i++) {
-            if (Math.abs(samples[i]!.presentationTicks - ticks) < Math.abs(samples[best]!.presentationTicks - ticks)) best = i;
+            if (Math.abs(must(samples[i]).presentationTicks - ticks) < Math.abs(must(samples[best]).presentationTicks - ticks)) best = i;
           }
           return best;
         });
@@ -319,12 +320,12 @@ export const mfraIndexAdapter: IndexAdapter = {
         const run: RunSample[] = [];
         for (let i = 0; i <= deepest; i++) {
           run.push({
-            presentationMicros: toMicros(samples[i]!.presentationTicks),
-            byteOffset: samples[i]!.byteOffset,
-            byteSize: samples[i]!.byteSize,
+            presentationMicros: toMicros(must(samples[i]).presentationTicks),
+            byteOffset: must(samples[i]).byteOffset,
+            byteSize: must(samples[i]).byteSize,
           });
         }
-        return { run, micros: nearest.map((i) => toMicros(samples[i]!.presentationTicks)) };
+        return { run, micros: nearest.map((i) => toMicros(must(samples[i]).presentationTicks)) };
       },
     };
     return index;

@@ -7,7 +7,7 @@
 import { type ComponentType, type CSSProperties, type JSX, useEffect, useRef, useState } from 'react';
 import { Player, type PlayerRef } from '../src';
 import { exportToMp4 } from '../src/client/export';
-import { CodeToFilm, CODE_TO_FILM_DURATION } from './code-to-film';
+import { CODE_TO_FILM_DURATION, CodeToFilm } from './code-to-film';
 import { ACCENT, Badge, card, cardLabel, SMOKE_TEST, useNarrow } from './ui';
 
 const W = 1280;

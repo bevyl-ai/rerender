@@ -4,7 +4,7 @@
 // decodes, and fans each decoded frame out to every waiting subscriber. This is the
 // layer a timeline-filmstrip consumer would otherwise rebuild.
 
-import { type FrameExtractor, createFrameExtractor } from './extractor';
+import { createFrameExtractor, type FrameExtractor } from './extractor';
 import { type ClosestCachedFrame, FrameCache } from './frame-cache';
 
 const MICROSECONDS = 1_000_000;
@@ -50,7 +50,7 @@ export interface FrameStore {
 
 export interface FrameStoreOptions {
   /** Injectable for tests; defaults to the real createFrameExtractor factory. */
-  createExtractor?: typeof createFrameExtractor;
+  createExtractor?: typeof createFrameExtractor | undefined;
 }
 
 export const createFrameStore = (options?: FrameStoreOptions): FrameStore => {

@@ -12,7 +12,7 @@
 //   - every timestamp is in range, so its past-end frame-dropping never comes into it.
 //   - rerender builds a fresh index each run rather than reusing a warm one, which is the whole
 //     advantage it has, given away.
-import { useCallback, useRef, useState, type JSX } from 'react';
+import { type JSX, useCallback, useRef, useState } from 'react';
 import { createFrameExtractor } from '../src/extract';
 import { nearestIndex, paintThumb, prepareStrip, STRIP_H, stripTimestamps } from './filmstrip';
 import { ACCENT, card } from './ui';
@@ -31,7 +31,7 @@ const SRC = '/filmstrip-12min-128p.mp4';
 export interface RaceProps {
   /** Which rendition to race on. Defaults to the H.264 one the headline number is measured against;
    *  /codecs passes a per-codec rendition cut from the same source with the same GOP structure. */
-  src?: string;
+  src?: string | undefined;
 }
 /** Fixed so the numbers mean the same thing on every screen size. */
 const FRAMES = 12;
@@ -84,6 +84,7 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
     setCannotRead(null);
     setDone(false);
 
+    let oursFinished = false;
     try {
       // Warm the file into the browser's cache before either engine is timed. Otherwise the first
       // press measures a 5 MB download (~850 ms cold at the edge) and every press after it reads
@@ -112,6 +113,7 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
         frame.close();
       });
       extractor.dispose();
+      oursFinished = true;
       setResults((prev) => ({ ...prev, rerender: { ms: performance.now() - started, frames: painted } }));
 
       // ── remotion: same timestamps, same painting, its own worker ──
@@ -140,7 +142,7 @@ export function Race({ src: source = SRC }: RaceProps = {}): JSX.Element {
       // Reaching here after our own run means their parser refused the file — VP8 in mp4 is the
       // case that turned this up. Report it as a capability difference and keep our result, rather
       // than discarding both or dressing a refusal up as an enormous speed win.
-      if (results.rerender || oursCanvas) setCannotRead('remotion');
+      if (oursFinished || oursCanvas) setCannotRead('remotion');
       setErr(error instanceof Error ? error.message : String(error));
       setDone(true);
     } finally {

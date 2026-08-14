@@ -1,3 +1,4 @@
+import { must } from '../../core/must';
 import { add, type Complex, mul, sub } from './complex';
 import { exponent } from './exponent';
 
@@ -6,13 +7,13 @@ import { exponent } from './exponent';
 // a power of two.
 export function fftAccurate(samples: ArrayLike<number>): Complex[] {
   const n = samples.length;
-  if (n === 1) return [[samples[0]!, 0]];
+  if (n === 1) return [[must(samples[0]), 0]];
 
   const even: number[] = [];
   const odd: number[] = [];
   for (let i = 0; i < n; i++) {
-    if (i % 2 === 0) even.push(samples[i]!);
-    else odd.push(samples[i]!);
+    if (i % 2 === 0) even.push(must(samples[i]));
+    else odd.push(must(samples[i]));
   }
 
   const evenT = fftAccurate(even);
@@ -21,8 +22,8 @@ export function fftAccurate(samples: ArrayLike<number>): Complex[] {
   const out: Complex[] = new Array<Complex>(n);
   const half = n / 2;
   for (let k = 0; k < half; k++) {
-    const ek = evenT[k]!;
-    const ok = oddT[k]!;
+    const ek = must(evenT[k]);
+    const ok = must(oddT[k]);
     const [c, s] = exponent(k, n);
     // W_k = [cos(-2πk/N), sin(-2πk/N)] = [c, s] from exponent().
     const wk: Complex = [c, s];

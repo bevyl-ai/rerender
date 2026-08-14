@@ -6,9 +6,7 @@
 // user's tab. Works for inline-styled compositions (the Remotion/rerender convention).
 // <video> is handled by compositing it natively under the foreignObject (see paintFrame);
 // backdrop-filter and other compositor-only effects still aren't captured.
-import { type ComponentType, type ReactElement, useState } from 'react';
-import { flushSync } from 'react-dom';
-import { createRoot } from 'react-dom/client';
+
 import {
   ALL_FORMATS,
   BlobSource,
@@ -21,19 +19,23 @@ import {
   type VideoSample,
   VideoSampleSink,
 } from 'mediabunny';
+import { type ComponentType, type ReactElement, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { CompositionFrame, type VideoConfig } from '../core/frame';
+import { must } from '../core/must';
 import type { VideoCodec } from '../renderer/types';
 
 export interface ClientExportOptions {
   Component: ComponentType<Record<string, unknown>>;
-  props?: Record<string, unknown>;
+  props?: Record<string, unknown> | undefined;
   config: VideoConfig;
-  codec?: VideoCodec;
+  codec?: VideoCodec | undefined;
   onProgress?: (done: number, total: number) => void;
   /** Called after each frame is painted, with the live capture canvas — for a preview/filmstrip
    *  during export. The canvas is reused every frame, so snapshot it synchronously if needed. */
   onFrame?: (canvas: HTMLCanvasElement, frame: number) => void;
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
 }
 
 const loadImage = (url: string, w: number, h: number): Promise<HTMLImageElement> =>
@@ -222,7 +224,7 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext('2d', { alpha: false })!;
+  const ctx = must(canvas.getContext('2d', { alpha: false }));
   const target = new BufferTarget();
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
   const source = new CanvasSource(canvas, {

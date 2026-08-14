@@ -7,7 +7,8 @@
 // Every rendition is cut from the same 12-minute source with the same 24-frame GOP and a bitrate
 // chosen to land within ~5% of the others, so a difference between two sections is the codec and
 // not the encode.
-import { useEffect, useState, type JSX } from 'react';
+import { type JSX, useEffect, useState } from 'react';
+import { must } from '../src/core/must';
 import { CODECS, type CodecId } from '../src/extract/codecs';
 import { Race } from './race';
 import { ACCENT, card, RACE_TERMS } from './ui';
@@ -51,7 +52,7 @@ function useSupport(codecString: string): Support {
 }
 
 function CodecSection({ id }: { id: CodecId }): JSX.Element {
-  const handler = CODECS.find((codec) => codec.id === id)!;
+  const handler = must(CODECS.find((codec) => codec.id === id));
   const rendition = RENDITIONS[id];
   const support = useSupport(rendition?.codecString ?? '');
 

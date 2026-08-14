@@ -6,6 +6,7 @@
 // samples after it in decode order, and which presentation timestamps somebody is waiting for — so
 // that is the seam.
 
+import { must } from '../core/must';
 import { ExtractError } from './errors';
 import type { OnFrame } from './extractor';
 
@@ -55,7 +56,7 @@ export async function decodeRun(
             // Last requester gets the frame itself; earlier ones get clones. Receiver closes all.
             const forRequester = i === requesters.length - 1 ? frame : frame.clone();
             handed.push(forRequester);
-            onFrame(forRequester, requesters[i]!);
+            onFrame(forRequester, must(requesters[i]));
           }
         } catch (error) {
           // A callback that threw did not take ownership of what it was given. close() on an
@@ -91,7 +92,7 @@ export async function decodeRun(
     try {
       decoder.configure(config);
       for (let i = 0; i < samples.length; i++) {
-        const sample = samples[i]!;
+        const sample = must(samples[i]);
         decoder.decode(
           new EncodedVideoChunk({
             type: i === 0 ? 'key' : 'delta',

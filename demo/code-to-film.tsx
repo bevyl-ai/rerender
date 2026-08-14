@@ -5,7 +5,7 @@
 // <Video>, kept bottom-layer so the in-browser export composites it — rounded to the card via the
 // renderer's border-radius clipping.
 import type { JSX } from 'react';
-import { AbsoluteFill, Video, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from '../src';
+import { AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig, Video } from '../src';
 
 const SANS = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
 const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
@@ -67,10 +67,10 @@ interface Cell {
   label: string;
   bg: string;
   r: number | string;
-  clip?: string;
-  filter?: string;
-  border?: boolean;
-  mask?: boolean;
+  clip?: string | undefined;
+  filter?: string | undefined;
+  border?: boolean | undefined;
+  mask?: boolean | undefined;
 }
 const G = 182;
 const GRID: Cell[] = [
@@ -91,11 +91,16 @@ const BOKEH = [
 ];
 
 function highlight(text: string): JSX.Element[] {
-  return text.split(/('[^']*')/g).map((p, i) => (
-    <span key={`${p}-${i}`} style={p.startsWith("'") ? { color: STR } : undefined}>
-      {p}
-    </span>
-  ));
+  const seen = new Map<string, number>();
+  return text.split(/('[^']*')/g).map((p) => {
+    const n = seen.get(p) ?? 0;
+    seen.set(p, n + 1);
+    return (
+      <span key={`${p}:${n}`} style={p.startsWith("'") ? { color: STR } : undefined}>
+        {p}
+      </span>
+    );
+  });
 }
 
 interface CodeToFilmProps {
@@ -104,7 +109,7 @@ interface CodeToFilmProps {
   // (expensive, video-compositing-heavy) reveal act instead of the full ~18s timeline. Every
   // beat's own spring/interpolate math is relative to T.<beat>, so anything before the offset
   // just reads as "already settled" — no special-casing needed elsewhere in this file.
-  frameOffset?: number;
+  frameOffset?: number | undefined;
 }
 
 export function CodeToFilm({ frameOffset = 0 }: CodeToFilmProps = {}): JSX.Element {

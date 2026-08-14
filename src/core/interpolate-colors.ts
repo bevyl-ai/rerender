@@ -1,7 +1,9 @@
 // interpolateColors() — Remotion-compatible. Maps an input value across CSS color
 // stops, returning an `rgba(...)` string. Supports hex (#rgb/#rgba/#rrggbb/#rrggbbaa)
 // and rgb()/rgba(). Clamps at the ends (Remotion's default for colors).
+
 import { interpolate } from './interpolate';
+import { must } from './must';
 
 type RGBA = [number, number, number, number];
 
@@ -23,7 +25,9 @@ function parseColor(input: string): RGBA {
   }
   const m = c.match(/rgba?\(([^)]+)\)/i);
   if (m) {
-    const parts = m[1]!.split(/[,/]/).map((p) => p.trim());
+    const parts = must(m[1])
+      .split(/[,/]/)
+      .map((p) => p.trim());
     const r = Number(parts[0]);
     const g = Number(parts[1]);
     const b = Number(parts[2]);

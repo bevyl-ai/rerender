@@ -7,13 +7,15 @@
 // composition root paints over the footage and it vanishes from the export — the output goes
 // dark instead of showing the forest clip, with no error thrown. A pixel probe is the only thing
 // that catches it. Run with `bun run test` (which builds dist/ first).
-import { createServer, type Server } from 'node:http';
+
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Browser, computeExecutablePath, install } from '@puppeteer/browsers';
 import puppeteer from 'puppeteer-core';
+import { must } from '../src/core/must';
 
 const DIST = join(fileURLToPath(new URL('.', import.meta.url)), '../dist');
 
@@ -58,7 +60,7 @@ const MIME: Record<string, string> = {
 // on purpose — the export fetches whole clips via BlobSource, so this mirrors a Workers-assets host.
 function serveDist(dir: string): Server {
   return createServer((req, res) => {
-    const rel = decodeURIComponent((req.url ?? '/').split('?')[0]);
+    const rel = decodeURIComponent(must((req.url ?? '/').split('?')[0]));
     let file = join(dir, rel === '/' ? 'index.html' : rel);
     if (!existsSync(file) || statSync(file).isDirectory()) file = join(dir, 'index.html');
     res.setHeader('content-type', MIME[extname(file)] ?? 'application/octet-stream');
@@ -135,7 +137,7 @@ async function main(): Promise<void> {
       const c = document.createElement('canvas');
       c.width = 160;
       c.height = 90;
-      const ctx = c.getContext('2d')!;
+      const ctx = must(c.getContext('2d'));
       ctx.drawImage(v, 0, 0, 160, 90);
       // grass band = lower third (forest floor) — the part of the footage that must read through.
       const gd = ctx.getImageData(30, 60, 120, 28).data;
@@ -143,9 +145,9 @@ async function main(): Promise<void> {
       let gg = 0;
       let gb = 0;
       for (let i = 0; i < gd.length; i += 4) {
-        gr += gd[i];
-        gg += gd[i + 1];
-        gb += gd[i + 2];
+        gr += must(gd[i]);
+        gg += must(gd[i + 1]);
+        gb += must(gd[i + 2]);
       }
       const gn = gd.length / 4;
       const wd = ctx.getImageData(0, 0, 160, 90).data;
@@ -153,9 +155,9 @@ async function main(): Promise<void> {
       let wg = 0;
       let wb = 0;
       for (let i = 0; i < wd.length; i += 4) {
-        wr += wd[i];
-        wg += wd[i + 1];
-        wb += wd[i + 2];
+        wr += must(wd[i]);
+        wg += must(wd[i + 1]);
+        wb += must(wd[i + 2]);
       }
       const wn = wd.length / 4;
       return {

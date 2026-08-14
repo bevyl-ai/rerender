@@ -3,12 +3,14 @@
 //
 //   rerender render <entry> <comp-id> [output] [flags]
 //   rerender still  <entry> <comp-id> [output] [--frame N]
+
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { must } from './core/must';
 import { bundle } from './renderer/bundle';
-import { getCompositions, selectComposition } from './renderer/select-composition';
 import { renderMedia } from './renderer/render-media';
 import { renderStill } from './renderer/render-still';
+import { getCompositions, selectComposition } from './renderer/select-composition';
 
 type Flags = Record<string, string | boolean>;
 
@@ -16,7 +18,7 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
   const positional: string[] = [];
   const flags: Flags = {};
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
+    const a = must(argv[i]);
     if (a.startsWith('--')) {
       const key = a.slice(2);
       if (key.startsWith('no-')) {
@@ -192,7 +194,7 @@ async function main(): Promise<void> {
     const framesFlag = str(flags.frames);
     if (framesFlag) {
       const parts = framesFlag.split('-').map(Number);
-      frameRange = parts.length === 2 ? [parts[0]!, parts[1]!] : parts[0]!;
+      frameRange = parts.length === 2 ? [must(parts[0]), must(parts[1])] : must(parts[0]);
     }
 
     const t0 = Date.now();

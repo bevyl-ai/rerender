@@ -10,11 +10,11 @@ export async function renderStill(options: {
   composition: CompositionConfig;
   serveUrl: string;
   output: string;
-  frame?: number;
-  inputProps?: Record<string, unknown>;
-  scale?: number;
-  imageFormat?: 'png' | 'jpeg';
-  jpegQuality?: number;
+  frame?: number | undefined;
+  inputProps?: Record<string, unknown> | undefined;
+  scale?: number | undefined;
+  imageFormat?: 'png' | 'jpeg' | undefined;
+  jpegQuality?: number | undefined;
 }): Promise<{ buffer: null }> {
   const { composition: c, serveUrl, output } = options;
   const frame = options.frame ?? c.durationInFrames - 1;

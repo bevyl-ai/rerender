@@ -3,13 +3,13 @@
 // React re-render and the browser paints. That's the whole renderer.
 import {
   Children,
-  createContext,
-  isValidElement,
-  useContext,
   type ComponentType,
   type CSSProperties,
+  createContext,
+  isValidElement,
   type JSX,
   type ReactNode,
+  useContext,
 } from 'react';
 import { AbsoluteFill } from './primitives';
 
@@ -82,13 +82,13 @@ export function Sequence({
   showInTimeline: _showInTimeline,
   children,
 }: {
-  from?: number;
-  durationInFrames?: number;
+  from?: number | undefined;
+  durationInFrames?: number | undefined;
   /** mount the children this many frames before `from` (invisible) so media preloads. */
-  premountFor?: number;
-  layout?: 'absolute-fill' | 'none';
-  style?: CSSProperties;
-  showInTimeline?: boolean;
+  premountFor?: number | undefined;
+  layout?: 'absolute-fill' | 'none' | undefined;
+  style?: CSSProperties | undefined;
+  showInTimeline?: boolean | undefined;
   children: ReactNode;
 }): ReactNode {
   const parent = useCurrentFrame();
@@ -117,8 +117,8 @@ export function Sequence({
 
 interface SeriesSequenceProps {
   durationInFrames: number;
-  offset?: number;
-  layout?: 'absolute-fill' | 'none';
+  offset?: number | undefined;
+  layout?: 'absolute-fill' | 'none' | undefined;
   children: ReactNode;
 }
 
@@ -126,13 +126,13 @@ interface SeriesSequenceProps {
  *  the sum of the previous durations). Remotion-compatible. */
 export function Series({ children }: { children: ReactNode }): ReactNode {
   let offset = 0;
-  return Children.toArray(children).map((child, i) => {
+  return Children.toArray(children).map((child) => {
     if (!isValidElement<SeriesSequenceProps>(child)) return null;
     const { durationInFrames, offset: childOffset = 0, layout, children: seqChildren } = child.props;
     const from = offset + childOffset;
     offset = from + durationInFrames;
     return (
-      <Sequence key={i} from={from} durationInFrames={durationInFrames} layout={layout}>
+      <Sequence key={`seq-${from}-${durationInFrames}`} from={from} durationInFrames={durationInFrames} layout={layout}>
         {seqChildren}
       </Sequence>
     );
@@ -155,8 +155,8 @@ export function Loop({
   children,
 }: {
   durationInFrames: number;
-  times?: number;
-  layout?: 'absolute-fill' | 'none';
+  times?: number | undefined;
+  layout?: 'absolute-fill' | 'none' | undefined;
   children: ReactNode;
 }): JSX.Element | null {
   const frame = useCurrentFrame();

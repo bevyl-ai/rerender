@@ -15,17 +15,17 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
-      "a11y": { "preset": "none" },
+      "a11y": { "preset": "recommended" },
       "style": {
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "error"
       },
       "correctness": {
-        "useExhaustiveDependencies": "off"
+        "useExhaustiveDependencies": "error"
       },
       "suspicious": {
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "error"
       }
     }
   },
-  "assist": { "enabled": true, "actions": { "source": { "organizeImports": "off" } } }
+  "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } }
 }

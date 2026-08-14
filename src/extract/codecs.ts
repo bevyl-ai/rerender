@@ -9,6 +9,7 @@
 // So a codec is three facts and one function, and adding one is adding a row.
 
 /** Discriminant for a codec family. Sample entry types map many-to-one onto these. */
+import { must } from '../core/must';
 export type CodecId = 'avc' | 'hevc' | 'vp8' | 'vp9' | 'av1';
 
 export interface CodecHandler {
@@ -31,7 +32,7 @@ export interface CodecHandler {
    * carries parameter sets out of band; false for one that does not, where passing the record along
    * would be inventing a meaning for it. Defaults to true.
    */
-  readonly describes?: boolean;
+  readonly describes?: boolean | undefined;
 }
 
 const hex2 = (n: number) => n.toString(16).padStart(2, '0');
@@ -50,7 +51,7 @@ const avc: CodecHandler = {
   minConfigBytes: 4,
   sampleEntries: ['avc1', 'avc3'],
   configBox: 'avcC',
-  codecString: (config) => `avc1.${hex2(config[1]!)}${hex2(config[2]!)}${hex2(config[3]!)}`,
+  codecString: (config) => `avc1.${hex2(must(config[1]))}${hex2(must(config[2]))}${hex2(must(config[3]))}`,
 };
 
 /**
@@ -68,11 +69,11 @@ const av1: CodecHandler = {
   sampleEntries: ['av01'],
   configBox: 'av1C',
   codecString: (config) => {
-    const profile = (config[1]! >> 5) & 0b111;
-    const level = config[1]! & 0b11111;
-    const tier = (config[2]! >> 7) & 1 ? 'H' : 'M';
-    const highBitDepth = (config[2]! >> 6) & 1;
-    const twelveBit = (config[2]! >> 5) & 1;
+    const profile = (must(config[1]) >> 5) & 0b111;
+    const level = must(config[1]) & 0b11111;
+    const tier = (must(config[2]) >> 7) & 1 ? 'H' : 'M';
+    const highBitDepth = (must(config[2]) >> 6) & 1;
+    const twelveBit = (must(config[2]) >> 5) & 1;
     const bitDepth = twelveBit ? 12 : highBitDepth ? 10 : 8;
     return `av01.${profile}.${dec2(level)}${tier}.${dec2(bitDepth)}`;
   },
@@ -95,16 +96,18 @@ const hevc: CodecHandler = {
   sampleEntries: ['hvc1', 'hev1'],
   configBox: 'hvcC',
   codecString: (config) => {
-    const profileSpace = (config[1]! >> 6) & 0b11;
-    const tier = (config[1]! >> 5) & 1 ? 'H' : 'L';
-    const profileIdc = config[1]! & 0b11111;
-    const compatibility = reverseBits32(((config[2]! << 24) | (config[3]! << 16) | (config[4]! << 8) | config[5]!) >>> 0);
+    const profileSpace = (must(config[1]) >> 6) & 0b11;
+    const tier = (must(config[1]) >> 5) & 1 ? 'H' : 'L';
+    const profileIdc = must(config[1]) & 0b11111;
+    const compatibility = reverseBits32(
+      ((must(config[2]) << 24) | (must(config[3]) << 16) | (must(config[4]) << 8) | must(config[5])) >>> 0,
+    );
     const constraints = [...config.subarray(6, 12)];
     while (constraints.length > 0 && constraints[constraints.length - 1] === 0) constraints.pop();
     return [
       `hvc1.${['', 'A', 'B', 'C'][profileSpace]}${profileIdc}`,
       compatibility.toString(16),
-      `${tier}${config[12]!}`,
+      `${tier}${must(config[12])}`,
       ...constraints.map(hex2),
     ].join('.');
   },
@@ -127,7 +130,7 @@ const vp9: CodecHandler = {
   minConfigBytes: 7,
   sampleEntries: ['vp09'],
   configBox: 'vpcC',
-  codecString: (config) => `vp09.${dec2(config[4]!)}.${dec2(config[5]!)}.${dec2(config[6]! >> 4)}`,
+  codecString: (config) => `vp09.${dec2(must(config[4]))}.${dec2(must(config[5]))}.${dec2(must(config[6]) >> 4)}`,
 };
 
 /**

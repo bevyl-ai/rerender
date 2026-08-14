@@ -1,3 +1,4 @@
+import { must } from '../core/must';
 import { getVisualization } from './fft/get-visualization';
 import type { OptimizeFor, VisualizeAudioOptions } from './types';
 
@@ -54,7 +55,7 @@ export function visualizeAudio(options: VisualizeAudioOptions): number[] {
   const next = cachedFrame(resolved, frame + 1);
   const out = new Array<number>(numberOfSamples);
   for (let i = 0; i < numberOfSamples; i++) {
-    out[i] = (prev[i]! + cur[i]! + next[i]!) / 3;
+    out[i] = (must(prev[i]) + must(cur[i]) + must(next[i])) / 3;
   }
   return out;
 }

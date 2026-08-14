@@ -1,3 +1,4 @@
+import { must } from '../core/must';
 import { type CodecId, type CodecResolution, describeFailure, handlerFor } from './codecs';
 import { ExtractError } from './errors';
 
@@ -165,7 +166,7 @@ function resolveTrack(moovBytes: Uint8Array): ResolvedTrack {
         ? { ok: false, reason: 'unsupported-codec', sampleEntry: unknown.entry.type }
         : { ok: false, reason: 'no-video-track' };
     }
-    const handler = handlerFor(claimed.entry.type)!;
+    const handler = must(handlerFor(claimed.entry.type));
     // VisualSampleEntry is 78 bytes of fixed fields, then child boxes.
     const config = readBoxes(view, claimed.entry.start + 78, claimed.entry.end).find((box) => box.type === handler.configBox);
     if (!config) {
@@ -249,7 +250,7 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
   if (fragmented) throw new ExtractError('malformed', `mp4 sample table: ${describeFailure({ ok: false, reason: 'fragmented' })}`);
   if (!resolution.ok) throw failureToError(resolution);
   const { id: codecId, codec, description } = resolution;
-  const { trak, stbl } = track!;
+  const { trak, stbl } = must(track);
 
   const mdhd = expectBox(child(view, trak, 'mdia', 'mdhd'), 'mdhd');
   const timescale = readUint32Within(view, mdhd, view.getUint8(mdhd.start) === 1 ? 20 : 12, 'mdhd timescale');
@@ -302,11 +303,11 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
         // and the reads were undefined, so an entry claiming a run of four billion spun the main
         // thread for as long as the file asked, with no error and no allocation to trip an OOM.
         for (let j = 0; j < count && sample < sampleCount; j++, sample++) {
-          presentationTicks[sample] = decodeTicks[sample]! + offset - editShift;
+          presentationTicks[sample] = must(decodeTicks[sample]) + offset - editShift;
         }
       }
     }
-    for (; sample < sampleCount; sample++) presentationTicks[sample] = decodeTicks[sample]! - editShift;
+    for (; sample < sampleCount; sample++) presentationTicks[sample] = must(decodeTicks[sample]) - editShift;
   }
 
   // stss → sync samples (absent = every sample is sync)
@@ -356,7 +357,7 @@ export function parseSampleTable(moovBytes: Uint8Array): SampleTable {
       let offset = co64 ? Number(view.getBigUint64(stco.start + 8 + chunk * 8)) : view.getUint32(stco.start + 8 + chunk * 4);
       for (let i = 0; i < samplesPerChunk && sample < sampleCount; i++, sample++) {
         byteOffsets[sample] = offset;
-        offset += byteSizes[sample]!;
+        offset += must(byteSizes[sample]);
       }
     }
     if (sample !== sampleCount) {

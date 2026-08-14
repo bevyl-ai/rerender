@@ -1,9 +1,10 @@
 // interpolate(frame, [input], [output], opts) — Remotion-compatible animation math.
+import { must } from './must';
 export type Extrapolate = 'clamp' | 'extend';
 export interface InterpolateOptions {
-  extrapolateLeft?: Extrapolate;
-  extrapolateRight?: Extrapolate;
-  easing?: (t: number) => number;
+  extrapolateLeft?: Extrapolate | undefined;
+  extrapolateRight?: Extrapolate | undefined;
+  easing?: ((t: number) => number) | undefined;
 }
 
 export function interpolate(input: number, inputRange: number[], outputRange: number[], options: InterpolateOptions = {}): number {
@@ -13,14 +14,14 @@ export function interpolate(input: number, inputRange: number[], outputRange: nu
     throw new Error('interpolate: ranges must be equal length >= 2');
   }
   let x = input;
-  if (x < inputRange[0]! && extrapolateLeft === 'clamp') x = inputRange[0]!;
-  if (x > inputRange[n - 1]! && extrapolateRight === 'clamp') x = inputRange[n - 1]!;
+  if (x < must(inputRange[0]) && extrapolateLeft === 'clamp') x = must(inputRange[0]);
+  if (x > must(inputRange[n - 1]) && extrapolateRight === 'clamp') x = must(inputRange[n - 1]);
   let i = 0;
-  while (i < n - 2 && x > inputRange[i + 1]!) i++;
-  const inMin = inputRange[i]!;
-  const inMax = inputRange[i + 1]!;
-  const outMin = outputRange[i]!;
-  const outMax = outputRange[i + 1]!;
+  while (i < n - 2 && x > must(inputRange[i + 1])) i++;
+  const inMin = must(inputRange[i]);
+  const inMax = must(inputRange[i + 1]);
+  const outMin = must(outputRange[i]);
+  const outMax = must(outputRange[i + 1]);
   let t = inMax === inMin ? 0 : (x - inMin) / (inMax - inMin);
   if (easing) t = easing(t);
   return outMin + (outMax - outMin) * t;

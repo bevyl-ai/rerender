@@ -13,6 +13,7 @@ export const Atom: React.FC<{
 
   return (
     <svg
+      aria-hidden="true"
       viewBox={`0 0 ${config.width} ${config.height}`}
       style={{
         position: 'absolute',

@@ -1,3 +1,4 @@
+import { must } from '../../core/must';
 import type { AudioData } from '../types';
 import { toInt16 } from './to-int-16';
 
@@ -12,7 +13,7 @@ export function getMaxIntValue(audioData: AudioData): number {
   let max = 0;
   if (data) {
     for (let i = 0; i < data.length; i++) {
-      const v = data[i]!;
+      const v = must(data[i]);
       if (v > max) max = v;
     }
   }

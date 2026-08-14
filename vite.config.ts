@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 import { rerenderAliases } from './render/aliases.ts';
 
 // The demo runs the real @remotion/webcodecs next to rerender/extract, and that package needs the
