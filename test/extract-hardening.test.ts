@@ -10,7 +10,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { must } from '../src/core/must';
 import { decodeRun } from '../src/extract/decode';
 import { createFrameExtractor } from '../src/extract/extractor';
 
@@ -90,7 +89,8 @@ function fetchFor(path: string, reads: { start: number; end: number }[] = []) {
     const [start, end] = suffix
       ? [file.byteLength - Number(suffix[1]), file.byteLength]
       : (() => {
-          const match = must(/bytes=(\d+)-(\d+)/.exec(header));
+          const match = /bytes=(\d+)-(\d+)/.exec(header);
+          if (!match) throw new Error(`unexpected Range: ${header}`);
           return [Number(match[1]), Math.min(Number(match[2]) + 1, file.byteLength)];
         })();
     if (!suffix) reads.push({ start, end });
@@ -245,7 +245,8 @@ test('one failed read stops the rest of the call', async () => {
     const file = new Uint8Array(readFileSync(PROGRESSIVE));
     let bodyReads = 0;
     const fetchFn = ((_input: unknown, init?: { headers?: Record<string, string> }) => {
-      const match = must(/bytes=(\d+)-(\d+)/.exec(init?.headers?.Range ?? ''));
+      const match = /bytes=(\d+)-(\d+)/.exec(init?.headers?.Range ?? '');
+      if (!match) throw new Error(`unexpected Range: ${init?.headers?.Range ?? ''}`);
       const [start, end] = [Number(match[1]), Math.min(Number(match[2]) + 1, file.byteLength)];
       if (start > 1000) {
         bodyReads += 1;

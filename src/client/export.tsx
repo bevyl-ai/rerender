@@ -23,7 +23,6 @@ import { type ComponentType, type ReactElement, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { CompositionFrame, type VideoConfig } from '../core/frame';
-import { must } from '../core/must';
 import type { VideoCodec } from '../renderer/types';
 
 export interface ClientExportOptions {
@@ -224,7 +223,8 @@ export async function exportToMp4(opts: ClientExportOptions): Promise<Blob> {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const ctx = must(canvas.getContext('2d', { alpha: false }));
+  const ctx = canvas.getContext('2d', { alpha: false });
+  if (!ctx) throw new Error('export: 2d canvas context unavailable');
   const target = new BufferTarget();
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
   const source = new CanvasSource(canvas, {

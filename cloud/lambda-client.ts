@@ -8,7 +8,6 @@
 import { randomBytes } from 'node:crypto';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { must } from '../src/core/must';
 import {
   estimateCosts,
   type LaunchEvent,
@@ -136,7 +135,8 @@ export async function getRenderProgress(params: {
   const s3 = new S3Client({ region: params.region });
   try {
     const obj = await s3.send(new GetObjectCommand({ Bucket: params.bucketName, Key: progressKey(params.renderId) }));
-    return JSON.parse(await must(obj.Body).transformToString()) as RenderProgress;
+    if (!obj.Body) throw new Error(`s3 progress object ${progressKey(params.renderId)} has no body`);
+    return JSON.parse(await obj.Body.transformToString()) as RenderProgress;
   } catch (e) {
     if (isNoSuchKey(e)) {
       // Worker hasn't written progress yet: report in-progress, not failed.
@@ -213,7 +213,8 @@ export async function renderStillOnLambda(input: RenderStillOnLambdaInput): Prom
   if (res.FunctionError) {
     throw new Error(`renderStillOnLambda failed: ${res.Payload ? Buffer.from(res.Payload).toString() : res.FunctionError}`);
   }
-  const out = JSON.parse(Buffer.from(must(res.Payload)).toString()) as { sizeInBytes: number };
+  if (!res.Payload) throw new Error('renderStillOnLambda: empty payload');
+  const out = JSON.parse(Buffer.from(res.Payload).toString()) as { sizeInBytes: number };
   return { renderId: id, bucketName: bucket, url: s3PublicUrl(bucket, region, outName), outKey: outName, sizeInBytes: out.sizeInBytes };
 }
 

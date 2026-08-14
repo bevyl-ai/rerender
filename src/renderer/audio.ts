@@ -10,7 +10,6 @@ import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromeExecutable } from '../../render/browser';
 import type { CollectedAsset } from '../core/assets';
-import { must } from '../core/must';
 import type { MuxPosition, VideoCodec } from './types';
 import { spawnWorkerBrowser } from './worker-browser';
 
@@ -32,18 +31,25 @@ export function calculateAssetPositions(frames: Map<number, CollectedAsset[]>): 
   const byId = new Map<string, Map<number, CollectedAsset>>();
   for (const [f, list] of frames) {
     for (const a of list) {
-      if (!byId.has(a.id)) byId.set(a.id, new Map());
-      must(byId.get(a.id)).set(f, a);
+      let frames = byId.get(a.id);
+      if (!frames) {
+        frames = new Map();
+        byId.set(a.id, frames);
+      }
+      frames.set(f, a);
     }
   }
 
   const positions: AssetPosition[] = [];
   for (const perFrame of byId.values()) {
     const sorted = [...perFrame.keys()].sort((x, y) => x - y);
-    let runStart = must(sorted[0]);
-    let prev = must(sorted[0]);
+    const first = sorted[0];
+    if (first === undefined) continue;
+    let runStart = first;
+    let prev = first;
     const flush = (start: number, end: number): void => {
-      const a = must(perFrame.get(start));
+      const a = perFrame.get(start);
+      if (!a) return;
       positions.push({
         type: a.type,
         src: a.src,
@@ -56,11 +62,13 @@ export function calculateAssetPositions(frames: Map<number, CollectedAsset[]>): 
       });
     };
     for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i] !== prev + 1) {
+      const frame = sorted[i];
+      if (frame === undefined) continue;
+      if (frame !== prev + 1) {
         flush(runStart, prev);
-        runStart = must(sorted[i]);
+        runStart = frame;
       }
-      prev = must(sorted[i]);
+      prev = frame;
     }
     flush(runStart, prev);
   }

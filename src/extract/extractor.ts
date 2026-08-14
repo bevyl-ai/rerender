@@ -3,7 +3,6 @@
 // requested timestamps by presentation time. Never mutates the caller's timestamp array;
 // out-of-range timestamps clamp; every requested timestamp gets exactly one frame callback.
 
-import { must } from '../core/must';
 import { decodeRun } from './decode';
 import { ExtractError } from './errors';
 import { mfraIndexAdapter } from './fmp4';
@@ -152,9 +151,11 @@ export async function createFrameExtractor(options: FrameExtractorOptions): Prom
     // presentation µs → requested seconds still waiting on that frame
     const wanted = new Map<number, number[]>();
     job.targets.forEach((target, i) => {
-      const list = wanted.get(must(micros[i])) ?? [];
+      const ts = micros[i];
+      if (ts === undefined) return;
+      const list = wanted.get(ts) ?? [];
       list.push(target.requestedSeconds);
-      wanted.set(must(micros[i]), list);
+      wanted.set(ts, list);
     });
 
     // A codec with no out-of-band configuration gets no description; see CodecHandler.describes.

@@ -3,7 +3,6 @@
 // and rgb()/rgba(). Clamps at the ends (Remotion's default for colors).
 
 import { interpolate } from './interpolate';
-import { must } from './must';
 
 type RGBA = [number, number, number, number];
 
@@ -24,10 +23,9 @@ function parseColor(input: string): RGBA {
     return [r, g, b, a];
   }
   const m = c.match(/rgba?\(([^)]+)\)/i);
-  if (m) {
-    const parts = must(m[1])
-      .split(/[,/]/)
-      .map((p) => p.trim());
+  const inner = m?.[1];
+  if (inner !== undefined) {
+    const parts = inner.split(/[,/]/).map((p) => p.trim());
     const r = Number(parts[0]);
     const g = Number(parts[1]);
     const b = Number(parts[2]);

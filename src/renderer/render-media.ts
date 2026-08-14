@@ -7,7 +7,6 @@ import { cpus, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { chromeExecutable } from '../../render/browser';
 import type { CollectedAsset } from '../core/assets';
-import { must } from '../core/must';
 import { calculateAssetPositions, muxAudio } from './audio';
 import { type CaptureOptions, captureFrames } from './capture';
 import { concatSegments, startEncoder, type VideoCodec } from './encode';
@@ -82,7 +81,14 @@ export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: n
     const encoders = await Promise.all(
       ranges.map(([a, b]) => startEncoder({ exe, frameDir: dir, frameFiles: frameFiles.slice(a - from, b - from) })),
     );
-    await Promise.all(encoders.map((enc, i) => enc.encode(must(segmentPaths[i]), c.fps, codec, must(ranges[i])[1] - must(ranges[i])[0])));
+    await Promise.all(
+      encoders.map((enc, i) => {
+        const path = segmentPaths[i];
+        const range = ranges[i];
+        if (path === undefined || range === undefined) throw new Error(`renderMedia: missing slice ${i}`);
+        return enc.encode(path, c.fps, codec, range[1] - range[0]);
+      }),
+    );
     await Promise.all(encoders.map((enc) => enc.close()));
     opts.onProgress?.({ renderedFrames: totalFrames, progress: 0.85 });
 
@@ -107,7 +113,11 @@ export async function renderMedia(opts: RenderMediaOptions): Promise<{ buffer: n
       await muxAudio(
         silent,
         outputLocation,
-        positions.map((p) => ({ ...p, src: must(local.get(p.src)) })),
+        positions.map((p) => {
+          const src = local.get(p.src);
+          if (src === undefined) throw new Error(`renderMedia: asset ${p.src} was not downloaded`);
+          return { ...p, src };
+        }),
         c.fps,
         codec,
         c.durationInFrames / c.fps,

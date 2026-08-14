@@ -9,7 +9,6 @@ import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BufferSource, BufferTarget, EncodedPacketSink, EncodedVideoPacketSource, Input, MP4, Mp4OutputFormat, Output } from 'mediabunny';
-import { must } from '../core/must';
 import type { VideoCodec } from './types';
 import { spawnWorkerBrowser } from './worker-browser';
 
@@ -65,7 +64,9 @@ export async function startEncoder(opts: { exe: string; frameDir: string; frameF
 export async function concatSegments(segmentPaths: string[], codec: VideoCodec, fps: number, output: string): Promise<void> {
   if (segmentPaths.length === 0) throw new Error('concatSegments: no segments');
   if (segmentPaths.length === 1) {
-    copyFileSync(must(segmentPaths[0]), output);
+    const only = segmentPaths[0];
+    if (only === undefined) throw new Error('concatSegments: no segments');
+    copyFileSync(only, output);
     return;
   }
   const source = new EncodedVideoPacketSource(codec);

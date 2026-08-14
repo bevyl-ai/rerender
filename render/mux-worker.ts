@@ -20,7 +20,6 @@ import {
   Mp4OutputFormat,
   Output,
 } from 'mediabunny';
-import { must } from '../src/core/must';
 import type { MuxPosition, VideoCodec } from '../src/renderer/types';
 import { toBase64 } from './worker-util';
 
@@ -65,7 +64,11 @@ async function mux(positions: MuxPosition[], fps: number, codec: VideoCodec, sam
     const gain = ctx.createGain();
     // per-frame volume envelope (fades): schedule each frame's volume at its timeline time.
     const spanStart = p.startInVideo / fps;
-    for (let i = 0; i < p.volumes.length; i++) gain.gain.setValueAtTime(must(p.volumes[i]), spanStart + i / fps);
+    for (let i = 0; i < p.volumes.length; i++) {
+      const vol = p.volumes[i];
+      if (vol === undefined) continue;
+      gain.gain.setValueAtTime(vol, spanStart + i / fps);
+    }
     gain.connect(ctx.destination);
 
     // The span plays `duration` composition-frames; at playbackRate that consumes
@@ -122,7 +125,9 @@ async function mux(positions: MuxPosition[], fps: number, codec: VideoCodec, sam
   await audioSource.add(mixed);
   audioSource.close();
   await out.finalize();
-  return toBase64(must((out.target as BufferTarget).buffer));
+  const buffer = (out.target as BufferTarget).buffer;
+  if (!buffer) throw new Error('mux: muxer produced no output');
+  return toBase64(buffer);
 }
 
 window.__mux = mux;

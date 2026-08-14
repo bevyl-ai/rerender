@@ -6,7 +6,6 @@
 import { writeFileSync } from 'node:fs';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { must } from '../src/core/must';
 import type { Invoker } from './orchestrate';
 
 export interface AwsInvokerOptions {
@@ -41,6 +40,7 @@ export function awsInvoker(opts: AwsInvokerOptions): Invoker {
       throw new Error(`lambda worker ${job.index} failed: ${res.Payload ? Buffer.from(res.Payload).toString() : res.FunctionError}`);
     }
     const obj = await s3.send(new GetObjectCommand({ Bucket: opts.bucket, Key: key }));
-    writeFileSync(localSegmentPath, await must(obj.Body).transformToByteArray());
+    if (!obj.Body) throw new Error(`s3 object ${key} has no body`);
+    writeFileSync(localSegmentPath, await obj.Body.transformToByteArray());
   };
 }

@@ -12,7 +12,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { must } from '../src/core/must';
 import { parseSampleTable } from '../src/extract/mp4-sample-table';
 import { createUrlSource } from '../src/extract/source';
 
@@ -53,7 +52,8 @@ for (const layout of ['faststart', 'moovend'] as const) {
 
   // Byte layout and keyframe flags must match ffprobe exactly, per sample in decode order.
   for (let i = 0; i < table.sampleCount; i++) {
-    const packet = must(expected.packets[i]);
+    const packet = expected.packets[i];
+    assert.ok(packet, `${layout}: missing expected packet ${i}`);
     assert.equal(table.byteOffsets[i], packet.pos, `${layout}: sample ${i} offset`);
     assert.equal(table.byteSizes[i], packet.size, `${layout}: sample ${i} size`);
     assert.equal(table.keySampleIndices.includes(i), packet.key, `${layout}: sample ${i} keyflag`);
@@ -61,9 +61,14 @@ for (const layout of ['faststart', 'moovend'] as const) {
 
   // Presentation timestamps: ffprobe reports raw stream pts; the table applies the elst
   // shift so the first *presented* frame sits at 0. The two must differ by one constant.
-  const shift = must(expected.packets[0]).pts - must(table.presentationTicks[0]);
+  const firstPacket = expected.packets[0];
+  const firstTicks = table.presentationTicks[0];
+  assert.ok(firstPacket && firstTicks !== undefined, `${layout}: missing first packet/tick`);
+  const shift = firstPacket.pts - firstTicks;
   for (let i = 0; i < table.sampleCount; i++) {
-    assert.equal(table.presentationTicks[i], must(expected.packets[i]).pts - shift, `${layout}: sample ${i} pts (shift ${shift})`);
+    const packet = expected.packets[i];
+    assert.ok(packet, `${layout}: missing expected packet ${i}`);
+    assert.equal(table.presentationTicks[i], packet.pts - shift, `${layout}: sample ${i} pts (shift ${shift})`);
   }
   assert.equal(Math.min(...table.presentationTicks), 0, `${layout}: first presented frame at t=0`);
 
@@ -71,7 +76,7 @@ for (const layout of ['faststart', 'moovend'] as const) {
   for (let i = 1; i < table.sampleCount; i++) {
     assert.equal(
       table.byteOffsets[i],
-      must(table.byteOffsets[i - 1]) + must(table.byteSizes[i - 1]),
+      (table.byteOffsets[i - 1] ?? Number.NaN) + (table.byteSizes[i - 1] ?? Number.NaN),
       `${layout}: contiguity at sample ${i}`,
     );
   }
@@ -90,7 +95,11 @@ console.log('extract-sample-table: PASS');
     fetchFn: fileFetch(join(FIXTURES, 'extract-faststart.mp4')),
   });
   const lastMicros = Math.round(
-    (Math.max(...must(extractor.sampleTable).presentationTicks) / must(extractor.sampleTable).timescale) * 1_000_000,
+    (() => {
+      const table = extractor.sampleTable;
+      assert.ok(table, 'expected a progressive sample table');
+      return (Math.max(...table.presentationTicks) / table.timescale) * 1_000_000;
+    })(),
   );
 
   // 20 fps fixture: samples every 50_000 µs. Nearest-sample rounding in both directions.

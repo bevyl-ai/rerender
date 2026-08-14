@@ -1,5 +1,4 @@
 // interpolate(frame, [input], [output], opts) — Remotion-compatible animation math.
-import { must } from './must';
 export type Extrapolate = 'clamp' | 'extend';
 export interface InterpolateOptions {
   extrapolateLeft?: Extrapolate | undefined;
@@ -13,15 +12,27 @@ export function interpolate(input: number, inputRange: number[], outputRange: nu
   if (n < 2 || n !== outputRange.length) {
     throw new Error('interpolate: ranges must be equal length >= 2');
   }
+  const lo = inputRange[0];
+  const hi = inputRange[n - 1];
+  if (lo === undefined || hi === undefined) {
+    throw new Error('interpolate: inputRange has a hole');
+  }
   let x = input;
-  if (x < must(inputRange[0]) && extrapolateLeft === 'clamp') x = must(inputRange[0]);
-  if (x > must(inputRange[n - 1]) && extrapolateRight === 'clamp') x = must(inputRange[n - 1]);
+  if (x < lo && extrapolateLeft === 'clamp') x = lo;
+  if (x > hi && extrapolateRight === 'clamp') x = hi;
   let i = 0;
-  while (i < n - 2 && x > must(inputRange[i + 1])) i++;
-  const inMin = must(inputRange[i]);
-  const inMax = must(inputRange[i + 1]);
-  const outMin = must(outputRange[i]);
-  const outMax = must(outputRange[i + 1]);
+  while (i < n - 2) {
+    const next = inputRange[i + 1];
+    if (next === undefined || x <= next) break;
+    i++;
+  }
+  const inMin = inputRange[i];
+  const inMax = inputRange[i + 1];
+  const outMin = outputRange[i];
+  const outMax = outputRange[i + 1];
+  if (inMin === undefined || inMax === undefined || outMin === undefined || outMax === undefined) {
+    throw new Error('interpolate: range hole');
+  }
   let t = inMax === inMin ? 0 : (x - inMin) / (inMax - inMin);
   if (easing) t = easing(t);
   return outMin + (outMax - outMin) * t;

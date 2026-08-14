@@ -17,7 +17,6 @@ import {
 import { beginPlayback, getAnchor, getCtx, resumeCtx, stopPlayback } from './audio-engine';
 import { injectRerenderCSS } from './default-css';
 import { ConfigContext, FrameContext, PlayingContext, TimelineContext, type VideoConfig } from './frame';
-import { must } from './must';
 
 injectRerenderCSS(); // match Remotion's global reset so preview == render == Remotion
 
@@ -114,7 +113,7 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
     style,
   } = props;
 
-  const Composition = must(component ?? composition);
+  const Composition = component ?? composition;
   const compWidth = compositionWidth ?? width ?? 1920;
   const compHeight = compositionHeight ?? height ?? 1080;
   const config: VideoConfig = { width: compWidth, height: compHeight, fps, durationInFrames };
@@ -238,8 +237,12 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
       exitFullscreen: () => void document.exitFullscreen?.(),
       isFullscreen: () => typeof document !== 'undefined' && document.fullscreenElement === containerRef.current,
       addEventListener: (name, cb) => {
-        if (!listeners.current.has(name)) listeners.current.set(name, new Set());
-        must(listeners.current.get(name)).add(cb as CallbackListener<unknown>);
+        let set = listeners.current.get(name);
+        if (!set) {
+          set = new Set();
+          listeners.current.set(name, set);
+        }
+        set.add(cb as CallbackListener<unknown>);
       },
       removeEventListener: (name, cb) => {
         listeners.current.get(name)?.delete(cb as CallbackListener<unknown>);
@@ -272,9 +275,7 @@ export const Player = forwardRef<PlayerRef, PlayerProps>(function Player(props, 
       <ConfigContext.Provider value={config}>
         <PlayingContext.Provider value={playing}>
           <TimelineContext.Provider value={frame}>
-            <FrameContext.Provider value={frame}>
-              <Composition {...inputProps} />
-            </FrameContext.Provider>
+            <FrameContext.Provider value={frame}>{Composition ? <Composition {...inputProps} /> : null}</FrameContext.Provider>
           </TimelineContext.Provider>
         </PlayingContext.Provider>
       </ConfigContext.Provider>

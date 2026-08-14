@@ -8,7 +8,6 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { must } from '../src/core/must';
 import { createUrlSource } from '../src/extract/source';
 
 const SRC = 'https://fixture.test/synthetic.mp4';
@@ -43,10 +42,15 @@ interface Call {
 function serve(bytes: Uint8Array, calls: Call[], ignoreRange = false) {
   return ((_input: unknown, init?: { headers?: Record<string, string>; cache?: string }) => {
     const match = /bytes=(\d+)-(\d+)/.exec(init?.headers?.Range ?? '');
-    const start = Number(must(match)[1]);
-    const end = Math.min(Number(must(match)[2]) + 1, bytes.byteLength);
-    calls.push(init?.cache ? { start, end, cache: init.cache } : { start, end });
-    const body = ignoreRange ? bytes : bytes.subarray(start, end);
+    if (!match) return Promise.reject(new Error(`unexpected Range: ${init?.headers?.Range ?? ''}`));
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      return Promise.reject(new Error(`bad Range: ${init?.headers?.Range ?? ''}`));
+    }
+    const sliceEnd = Math.min(end + 1, bytes.byteLength);
+    calls.push(init?.cache ? { start, end: sliceEnd, cache: init.cache } : { start, end: sliceEnd });
+    const body = ignoreRange ? bytes : bytes.subarray(start, sliceEnd);
     return Promise.resolve({
       status: ignoreRange ? 200 : 206,
       arrayBuffer: async () => body.slice().buffer,
@@ -73,8 +77,10 @@ test('moov past the probe fetches only the remainder and rebuilds it exactly', a
   const moovEnd = 32 + 8 + moovPayload;
   assert.equal(calls.length, 2, 'probe, then the part the probe missed');
   assert.deepEqual(calls[0], { start: 0, end: PROBE });
-  assert.equal(must(calls[1]).start, PROBE, 'second read starts where the probe ended, not at 0');
-  assert.equal(must(calls[1]).end, moovEnd);
+  const second = calls[1];
+  assert.ok(second, 'expected a second read');
+  assert.equal(second.start, PROBE, 'second read starts where the probe ended, not at 0');
+  assert.equal(second.end, moovEnd);
   assert.equal(moov.byteLength, moovEnd);
   assert.deepEqual(moov, file.subarray(0, moovEnd), 'concatenated bytes match the file');
 });
@@ -125,7 +131,9 @@ test('media reads bypass the cache, index reads do not', async () => {
   const indexCalls = calls.length;
   await source.read(40, 104);
   assert.equal(calls.length, indexCalls + 1);
-  assert.equal(must(calls[indexCalls]).cache, 'no-store', 'media reads must not queue on the cache entry');
+  const media = calls[indexCalls];
+  assert.ok(media, 'expected a media read');
+  assert.equal(media.cache, 'no-store', 'media reads must not queue on the cache entry');
 });
 
 test('a moov past the probe still caches every one of its reads', async () => {

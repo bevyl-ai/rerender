@@ -6,7 +6,6 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { must } from '../src/core/must';
 import { bundle } from '../src/renderer/bundle';
 import { concatSegments } from '../src/renderer/encode';
 import { selectComposition } from '../src/renderer/select-composition';
@@ -56,7 +55,9 @@ export async function orchestrateRender(opts: OrchestrateOptions): Promise<{ sli
     let done = 0;
     await Promise.all(
       slices.map(async (frameRange, index) => {
-        await opts.invoke({ composition, props: opts.props ?? {}, frameRange, index }, must(segmentPaths[index]));
+        const path = segmentPaths[index];
+        if (path === undefined) throw new Error(`cloud render: missing segment path ${index}`);
+        await opts.invoke({ composition, props: opts.props ?? {}, frameRange, index }, path);
         opts.onProgress?.(++done, slices.length);
       }),
     );

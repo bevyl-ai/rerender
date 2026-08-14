@@ -6,7 +6,6 @@
 
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { must } from './core/must';
 import { bundle } from './renderer/bundle';
 import { renderMedia } from './renderer/render-media';
 import { renderStill } from './renderer/render-still';
@@ -18,7 +17,8 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
   const positional: string[] = [];
   const flags: Flags = {};
   for (let i = 0; i < argv.length; i++) {
-    const a = must(argv[i]);
+    const a = argv[i];
+    if (a === undefined) continue;
     if (a.startsWith('--')) {
       const key = a.slice(2);
       if (key.startsWith('no-')) {
@@ -194,7 +194,18 @@ async function main(): Promise<void> {
     const framesFlag = str(flags.frames);
     if (framesFlag) {
       const parts = framesFlag.split('-').map(Number);
-      frameRange = parts.length === 2 ? [must(parts[0]), must(parts[1])] : must(parts[0]);
+      const lo = parts[0];
+      const hi = parts[1];
+      if (parts.length === 2) {
+        if (lo === undefined || hi === undefined || !Number.isFinite(lo) || !Number.isFinite(hi)) {
+          throw new Error(`invalid --frames ${framesFlag}`);
+        }
+        frameRange = [lo, hi];
+      } else if (lo === undefined || !Number.isFinite(lo)) {
+        throw new Error(`invalid --frames ${framesFlag}`);
+      } else {
+        frameRange = lo;
+      }
     }
 
     const t0 = Date.now();

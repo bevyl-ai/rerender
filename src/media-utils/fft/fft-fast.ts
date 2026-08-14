@@ -1,4 +1,3 @@
-import { must } from '../../core/must';
 import type { Complex } from './complex';
 
 // Iterative radix-2 FFT (the speed path). The input is first multiplied by a
@@ -12,7 +11,7 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
   const im = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     const w = 0.8 - 0.46 * Math.cos((2 * Math.PI * i) / (n - 1));
-    re[i] = must(samples[i]) * w;
+    re[i] = (samples[i] ?? 0) * w;
   }
 
   // Bit-reversal permutation.
@@ -21,11 +20,11 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
     for (; j & bit; bit >>= 1) j ^= bit;
     j ^= bit;
     if (i < j) {
-      const tr = must(re[i]);
-      re[i] = must(re[j]);
+      const tr = re[i] ?? 0;
+      re[i] = re[j] ?? 0;
       re[j] = tr;
-      const ti = must(im[i]);
-      im[i] = must(im[j]);
+      const ti = im[i] ?? 0;
+      im[i] = im[j] ?? 0;
       im[j] = ti;
     }
   }
@@ -42,10 +41,10 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
       for (let k = 0; k < half; k++) {
         const a = start + k;
         const b = start + k + half;
-        const uRe = must(re[a]);
-        const uIm = must(im[a]);
-        const vRe = must(re[b]) * curRe - must(im[b]) * curIm;
-        const vIm = must(re[b]) * curIm + must(im[b]) * curRe;
+        const uRe = re[a] ?? 0;
+        const uIm = im[a] ?? 0;
+        const vRe = (re[b] ?? 0) * curRe - (im[b] ?? 0) * curIm;
+        const vIm = (re[b] ?? 0) * curIm + (im[b] ?? 0) * curRe;
         re[a] = uRe + vRe;
         im[a] = uIm + vIm;
         re[b] = uRe - vRe;
@@ -58,6 +57,6 @@ export function fftFast(samples: ArrayLike<number>): Complex[] {
   }
 
   const out: Complex[] = new Array<Complex>(n);
-  for (let i = 0; i < n; i++) out[i] = [must(re[i]), must(im[i])];
+  for (let i = 0; i < n; i++) out[i] = [re[i] ?? 0, im[i] ?? 0];
   return out;
 }

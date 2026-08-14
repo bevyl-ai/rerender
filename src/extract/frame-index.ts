@@ -11,7 +11,6 @@
 // splits planning a read from resolving what came back, rather than a single "give me the samples"
 // call that would force one shape to pretend to be the other.
 
-import { must } from '../core/must';
 import type { RunSample } from './decode';
 import type { SampleTable, TrackConfig } from './mp4-sample-table';
 import type { RangeSource } from './source';
@@ -67,7 +66,9 @@ export function lastAtOrBefore(sorted: ArrayLike<number>, target: number): numbe
   let hi = sorted.length - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
-    if (must(sorted[mid]) <= target) lo = mid;
+    const midVal = sorted[mid];
+    if (midVal === undefined) break;
+    if (midVal <= target) lo = mid;
     else hi = mid - 1;
   }
   return lo;

@@ -1,7 +1,6 @@
 // Shared filmstrip geometry and painting, so the scrubber and the two race strips are literally
 // the same rendering code and only the extraction engine differs.
 
-import { must } from '../src/core/must';
 export const STRIP_H = 76;
 /** Roughly how wide each thumbnail wants to be; the count falls out of the track's width. */
 const TARGET_SLOT_W = 88;
@@ -55,7 +54,10 @@ export function nearestIndex(times: readonly number[], micros: number, taken?: S
   let best = -1;
   for (let i = 0; i < times.length; i++) {
     if (taken?.has(i)) continue;
-    if (best < 0 || Math.abs(must(times[i]) * 1e6 - micros) < Math.abs(must(times[best]) * 1e6 - micros)) best = i;
+    const t = times[i];
+    if (t === undefined) continue;
+    const bestT = best < 0 ? undefined : times[best];
+    if (best < 0 || bestT === undefined || Math.abs(t * 1e6 - micros) < Math.abs(bestT * 1e6 - micros)) best = i;
   }
   // Every slot taken already: fall back to plain nearest rather than dropping the frame.
   if (best < 0) return nearestIndex(times, micros);

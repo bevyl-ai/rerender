@@ -10,7 +10,6 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { createServer } from 'vite';
 import { rerenderAliases } from '../../render/aliases';
-import { must } from '../core/must';
 import { bundle } from './bundle';
 import { renderMedia } from './render-media';
 import { selectComposition } from './select-composition';
@@ -46,7 +45,7 @@ export async function studioServer(
         configureServer(s) {
           s.middlewares.use((req, res, next) => {
             const url = req.url ?? '/';
-            const path = must(url.split('?')[0]);
+            const path = url.split('?')[0] ?? url;
 
             if (path.startsWith('/renders/')) {
               const file = join(rendersDir, basename(path));

@@ -8,7 +8,6 @@
 // chosen to land within ~5% of the others, so a difference between two sections is the codec and
 // not the encode.
 import { type JSX, useEffect, useState } from 'react';
-import { must } from '../src/core/must';
 import { CODECS, type CodecId } from '../src/extract/codecs';
 import { Race } from './race';
 import { ACCENT, card, RACE_TERMS } from './ui';
@@ -51,10 +50,11 @@ function useSupport(codecString: string): Support {
   return support;
 }
 
-function CodecSection({ id }: { id: CodecId }): JSX.Element {
-  const handler = must(CODECS.find((codec) => codec.id === id));
+function CodecSection({ id }: { id: CodecId }): JSX.Element | null {
+  const handler = CODECS.find((codec) => codec.id === id);
   const rendition = RENDITIONS[id];
   const support = useSupport(rendition?.codecString ?? '');
+  if (!handler) return null;
 
   return (
     <section style={{ marginTop: 56 }}>

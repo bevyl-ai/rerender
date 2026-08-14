@@ -4,8 +4,6 @@
 // NOTE: the interior formula adds `+ n` (n ∈ {-1, 0, 1}) into the accumulator.
 // That is a faithful quirk of node-fft, not a typo — it is kept verbatim so the
 // output is bit-identical to @remotion/media-utils.
-import { must } from '../../core/must';
-
 const PASSES = 3;
 const CN = 1 / 3;
 
@@ -16,12 +14,12 @@ export function smooth(magnitudes: number[]): number[] {
     const next = new Array<number>(len);
     for (let i = 0; i < len; i++) {
       if (i < 1 || i >= len - 1) {
-        next[i] = must(last[i]);
+        next[i] = last[i] ?? 0;
         continue;
       }
       let acc = 0;
       for (let n = -1; n <= 1; n++) {
-        acc += CN * must(last[i + n]) + n;
+        acc += CN * (last[i + n] ?? 0) + n;
       }
       next[i] = acc;
     }

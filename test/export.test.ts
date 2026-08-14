@@ -15,7 +15,6 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Browser, computeExecutablePath, install } from '@puppeteer/browsers';
 import puppeteer from 'puppeteer-core';
-import { must } from '../src/core/must';
 
 const DIST = join(fileURLToPath(new URL('.', import.meta.url)), '../dist');
 
@@ -60,7 +59,7 @@ const MIME: Record<string, string> = {
 // on purpose — the export fetches whole clips via BlobSource, so this mirrors a Workers-assets host.
 function serveDist(dir: string): Server {
   return createServer((req, res) => {
-    const rel = decodeURIComponent(must((req.url ?? '/').split('?')[0]));
+    const rel = decodeURIComponent((req.url ?? '/').split('?')[0] ?? '/');
     let file = join(dir, rel === '/' ? 'index.html' : rel);
     if (!existsSync(file) || statSync(file).isDirectory()) file = join(dir, 'index.html');
     res.setHeader('content-type', MIME[extname(file)] ?? 'application/octet-stream');

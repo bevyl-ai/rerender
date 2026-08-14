@@ -6,7 +6,6 @@
 
 import { createServer, type Server, type ServerResponse } from 'node:http';
 import type { Page } from 'puppeteer-core';
-import { must } from '../core/must';
 import { launchBrowser } from './capture';
 import { bundleWorkerHtml } from './worker-bundle';
 
@@ -28,7 +27,7 @@ export async function spawnWorkerBrowser(
 ): Promise<WorkerBrowser> {
   const html = await bundleWorkerHtml(workerPath);
   const server: Server = createServer((req, res) => {
-    const pathname = must((req.url ?? '/').split('?')[0]);
+    const pathname = (req.url ?? '/').split('?')[0] ?? '/';
     if (pathname === '/') {
       res.setHeader('content-type', 'text/html');
       res.end(html);

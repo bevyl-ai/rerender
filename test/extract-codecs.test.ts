@@ -10,7 +10,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { must } from '../src/core/must';
 import { CODECS, describeFailure, handlerFor } from '../src/extract/codecs';
 import { parseSampleTable } from '../src/extract/mp4-sample-table';
 
@@ -100,8 +99,11 @@ test('every registry entry produces a well-formed codec string', () => {
     av1: 'extract-av1.mp4',
   };
   for (const codec of CODECS) {
-    const table = parseSampleTable(new Uint8Array(readFileSync(fixture(must(files[codec.id])))));
-    assert.match(table.codec, must(shapes[codec.id]), `${codec.id} codec string`);
+    const file = files[codec.id];
+    const shape = shapes[codec.id];
+    assert.ok(file && shape, `no fixture/shape for ${codec.id}`);
+    const table = parseSampleTable(new Uint8Array(readFileSync(fixture(file))));
+    assert.match(table.codec, shape, `${codec.id} codec string`);
   }
 });
 
