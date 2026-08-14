@@ -1,7 +1,7 @@
 // staticFile() — Remotion-compatible. Resolves a public asset path to its URL.
 export function staticFile(path: string): string {
   if (path.startsWith('/') || path.startsWith('http')) return path;
-  return '/' + path;
+  return `/${path}`;
 }
 
 // random() — deterministic [0,1) keyed on a seed. Byte-for-byte Remotion's algorithm

@@ -10,7 +10,6 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3
 import {
   estimateCosts,
   type LaunchEvent,
-  outputKey,
   progressKey,
   type RenderProgress,
   s3PublicUrl,

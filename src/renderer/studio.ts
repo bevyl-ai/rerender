@@ -29,8 +29,8 @@ export async function studioServer(
     `<!doctype html><html><head><meta charset="utf-8"><title>rerender studio</title>` +
     `<style>html,body,#root{margin:0;height:100%;background:#0a0a0c}</style></head>` +
     `<body><div id="root"></div>` +
-    `<script type="module">import ${JSON.stringify('/@fs/' + entry)};` +
-    `import { bootStudioApp } from ${JSON.stringify('/@fs/' + STUDIO_MAIN)};bootStudioApp();</script></body></html>`;
+    `<script type="module">import ${JSON.stringify(`/@fs/${entry}`)};` +
+    `import { bootStudioApp } from ${JSON.stringify(`/@fs/${STUDIO_MAIN}`)};bootStudioApp();</script></body></html>`;
 
   const server = await createServer({
     configFile: false,

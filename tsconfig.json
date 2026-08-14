@@ -9,7 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "remotion": ["./src/remotion.ts"],
       "@remotion/transitions": ["./src/transitions/index.ts"],
