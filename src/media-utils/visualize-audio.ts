@@ -8,7 +8,7 @@ const cache = new Map<string, number[]>();
 
 function cachedFrame(options: VisualizeAudioOptions & { optimizeFor: OptimizeFor; dataOffsetInSeconds: number }, frame: number): number[] {
   const { audioData, fps, numberOfSamples, optimizeFor, dataOffsetInSeconds } = options;
-  const key = audioData.resultId + ':' + frame + ':' + fps + ':' + numberOfSamples + ':' + optimizeFor + ':' + dataOffsetInSeconds;
+  const key = `${audioData.resultId}:${frame}:${fps}:${numberOfSamples}:${optimizeFor}:${dataOffsetInSeconds}`;
   const cached = cache.get(key);
   if (cached) return cached;
   const result = getVisualization({

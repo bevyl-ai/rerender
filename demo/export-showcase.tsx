@@ -215,7 +215,7 @@ function VsTable(): JSX.Element {
 }
 
 /** The hero plays huge at the full content width; the exported file previews small underneath it. */
-function useHeroLayout(): { ref: React.RefObject<HTMLDivElement>; heroW: number; heroH: number; smallW: number; smallH: number } {
+function useHeroLayout(): { ref: React.RefObject<HTMLDivElement | null>; heroW: number; heroH: number; smallW: number; smallH: number } {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   useEffect(() => {

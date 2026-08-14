@@ -261,7 +261,7 @@ export function Audio({
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
 
-  const idRef = useRef<symbol>();
+  const idRef = useRef<symbol | undefined>(undefined);
   if (!idRef.current) idRef.current = Symbol('rerender-audio-clip');
 
   // Warm: decode the source the moment this clip mounts (including its premount window).

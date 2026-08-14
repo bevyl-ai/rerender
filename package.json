@@ -1,7 +1,7 @@
 {
   "name": "@bevyl-ai/rerender",
   "version": "0.4.1",
-  "description": "Random-access frame extraction from mp4 URLs \u2014 any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
+  "description": "Random-access frame extraction from mp4 URLs — any frame in one Range request and one decode, with no dependencies. Plus a drop-in MIT Remotion alternative that renders real DOM to MP4 with WebCodecs and mediabunny. No ffmpeg.",
   "license": "MIT",
   "author": "Noah Lindner",
   "homepage": "https://rerender.video",
@@ -67,41 +67,50 @@
     "knip": "knip",
     "publint": "publint",
     "test:extract": "tsx test/extract-sample-table.test.ts && tsx test/extract-codecs.test.ts && tsx test/extract-fmp4.test.ts && tsx test/extract-hardening.test.ts && tsx test/extract-source.test.ts && tsx test/extract-gop-window.test.ts && tsx test/extract-abort.test.ts && tsx test/frame-store.test.ts",
-    "build:lib": "tsup && node scripts/check-dist.mjs",
+    "build:lib": "tsdown && node scripts/check-dist.mjs",
     "prepack": "npm run build:lib",
     "attw": "attw --pack . --profile esm-only"
   },
-  "dependencies": {},
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@aws-sdk/client-lambda": "^3.1075.0",
-    "@aws-sdk/client-s3": "^3.1075.0",
-    "@biomejs/biome": "^2.5.1",
-    "@mediabunny/aac-encoder": "^1.49.0",
-    "@puppeteer/browsers": "^3.0.5",
-    "@remotion/webcodecs": "^4.0.501",
-    "@remotion/zod-types": "^4.0.484",
-    "@types/node": "^26.0.1",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.28.1",
-    "knip": "^6.23.0",
-    "mediabunny": "^1.49.0",
-    "publint": "^0.3.21",
-    "puppeteer-core": "^25.2.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "remotion": "^4.0.484",
-    "tsup": "^8.5.1",
-    "tsx": "^4.22.4",
-    "typescript": "^5.6.0",
-    "vite": "^6.4.3",
-    "wrangler": "^4.116.0",
+    "@aws-sdk/client-lambda": "^3.1110.0",
+    "@aws-sdk/client-s3": "^3.1110.0",
+    "@biomejs/biome": "^2.5.8",
+    "@mediabunny/aac-encoder": "^1.53.1",
+    "@puppeteer/browsers": "^3.2.0",
+    "@remotion/webcodecs": "^4.0.509",
+    "@remotion/zod-types": "^4.0.509",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "esbuild": "^0.28.2",
+    "knip": "^6.32.2",
+    "mediabunny": "^1.53.1",
+    "publint": "^0.3.23",
+    "puppeteer-core": "^25.7.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.509",
+    "tsdown": "^0.22.14",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1",
+    "wrangler": "^4.123.0",
     "zod": "^4.4.3"
   },
   "engines": {
-    "node": ">=20.3"
+    "node": ">=20.19"
+  },
+  "supportedArchitectures": {
+    "os": [
+      "darwin",
+      "linux"
+    ],
+    "cpu": [
+      "x64",
+      "arm64"
+    ]
   },
   "peerDependencies": {
     "mediabunny": "^1.49.0"
@@ -131,23 +140,22 @@
     "project": [
       "**/*.{ts,tsx,mjs}"
     ],
+    "ignore": [
+      "demo/repro-*.tsx",
+      "test/*probe*"
+    ],
     "rules": {
       "duplicates": "off"
     }
   },
-  "tsup": {
-    "entry": {
-      "extract": "src/extract/index.ts",
-      "media-parser": "src/media-parser/index.ts"
-    },
-    "format": [
-      "esm"
-    ],
-    "dts": true,
-    "clean": true,
-    "target": "es2022",
-    "external": [
-      "mediabunny"
-    ]
+  "optionalDependencies": {
+    "@biomejs/cli-linux-x64": "^2.5.8",
+    "@oxc-parser/binding-linux-x64-gnu": "^0.143.0",
+    "@oxc-resolver/binding-linux-x64-gnu": "^11.24.2",
+    "@rolldown/binding-linux-x64-gnu": "^1.2.4",
+    "@typescript/typescript-linux-x64": "^7.0.2",
+    "@yuku-codegen/binding-linux-x64-gnu": "^0.8.7",
+    "@yuku-parser/binding-linux-x64-gnu": "^0.8.7",
+    "lightningcss-linux-x64-gnu": "^1.33.0"
   }
 }

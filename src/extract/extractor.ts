@@ -80,8 +80,6 @@ export interface FrameExtractor {
   dispose(): void;
 }
 
-const MICROSECONDS = 1_000_000;
-
 /** Two wanted byte runs closer than this are fetched as one: the bytes in between cost less than
  *  the round trip they save. */
 const COALESCE_GAP_BYTES = 128 * 1024;

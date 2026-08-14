@@ -19,7 +19,7 @@ for (const file of readdirSync(DIST).filter((name) => name.endsWith('.js'))) {
 }
 
 if (violations.length > 0) {
-  console.error('dist imports outside the allowlist:\n' + violations.join('\n'));
+  console.error(`dist imports outside the allowlist:\n${violations.join('\n')}`);
   process.exit(1);
 }
 console.log('check-dist: all dist imports are relative or allowlisted externals');

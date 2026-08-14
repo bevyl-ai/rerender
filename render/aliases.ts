@@ -4,7 +4,7 @@
 // their base package; `remotion` is an exact regex so it never catches `@remotion/*`.
 import { fileURLToPath } from 'node:url';
 
-const abs = (p: string): string => fileURLToPath(new URL('../' + p, import.meta.url));
+const abs = (p: string): string => fileURLToPath(new URL(`../${p}`, import.meta.url));
 
 export const rerenderAliases = [
   { find: '@remotion/transitions/slide', replacement: abs('src/transitions/presentations/slide.tsx') },

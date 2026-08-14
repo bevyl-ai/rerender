@@ -29,8 +29,8 @@ export async function bundle(entryPoint: string, options: { port?: number } = {}
     `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#000;overflow:hidden}</style></head>` +
     `<body><div id="stage"></div>` +
     `<script>window.__rerenderInputProps={};window.__rerenderEnv='rendering';</script>` +
-    `<script type="module">import ${JSON.stringify('/@fs/' + entry)};` +
-    `import { bootStudio } from ${JSON.stringify('/@fs/' + STUDIO_CORE)};bootStudio();</script>` +
+    `<script type="module">import ${JSON.stringify(`/@fs/${entry}`)};` +
+    `import { bootStudio } from ${JSON.stringify(`/@fs/${STUDIO_CORE}`)};bootStudio();</script>` +
     `</body></html>`;
 
   const server = await createServer({
