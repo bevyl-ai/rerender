@@ -21,11 +21,10 @@ RUN dnf install -y \
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-# rerender's renderer runtime (puppeteer-core, vite, @vitejs/plugin-react, esbuild,
-# mediabunny, tsx) and the non-aliased packages compositions import (@remotion/google-
-# fonts, @remotion/zod-types, zod, react) are all in dependencies, so a plain prod install.
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Renderer runtime lives in devDependencies (the published package has none). Full
+# install — bun.lock records every platform so linux/amd64 CI and Lambda get natives.
+COPY package.json bun.lock ./
+RUN npm install -g bun@1.3.14 && bun install --frozen-lockfile
 
 # rerender runtime: the renderer + the browser worker .ts files esbuild bundles at run
 # time + the bin. tsx loads the TS directly (same as everywhere else in rerender).
