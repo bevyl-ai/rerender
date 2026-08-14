@@ -3,7 +3,7 @@
 // same mechanism <Video> uses for its own embedded audio track, just without a picture side.
 // Falls back to the native <Audio> (core/primitives, @remotion/media's <Html5Audio>
 // equivalent) when the source can't be decoded this way. See docs/remotion-media-spec.md.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { Loop, Sequence, useCurrentFrame, useIsPlaying, useVideoConfig } from '../core/frame';
 import { getRemotionEnvironment } from '../core/env';
 import { Audio as NativeAudio, type AudioProps as NativeAudioProps, useRenderAsset } from '../core/primitives';

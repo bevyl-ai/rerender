@@ -4,6 +4,7 @@
 // point: the polished video is the same DOM + CSS you watched assemble. The footage is the one
 // <Video>, kept bottom-layer so the in-browser export composites it — rounded to the card via the
 // renderer's border-radius clipping.
+import type { JSX } from 'react';
 import { AbsoluteFill, Video, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from '../src';
 
 const SANS = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';

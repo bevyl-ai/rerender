@@ -7,7 +7,7 @@
 // Every rendition is cut from the same 12-minute source with the same 24-frame GOP and a bitrate
 // chosen to land within ~5% of the others, so a difference between two sections is the codec and
 // not the encode.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import { CODECS, type CodecId } from '../src/extract/codecs';
 import { Race } from './race';
 import { ACCENT, card, RACE_TERMS } from './ui';

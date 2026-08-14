@@ -12,7 +12,7 @@
 // Pointer moves are coalesced latest-wins: one seek in flight at a time, and when it lands, if the
 // pointer has moved on, go again for wherever it is now. snapToSampleMicros means a move that stays
 // within the same frame costs nothing at all.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import { createFrameExtractor, type FrameExtractor } from '../src/extract';
 import { paintThumb, prepareStrip, STRIP_H, stripTimestamps } from './filmstrip';
 import { ACCENT, card, SMOKE_TEST } from './ui';

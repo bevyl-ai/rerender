@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { AbsoluteFill } from '../../core/primitives';
 import { makePresentation, type TransitionPresentation, type TransitionPresentationComponentProps } from '../types';
 

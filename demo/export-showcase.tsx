@@ -4,7 +4,7 @@
 // The exported file is shown side-by-side with the live preview: the same frame-counter HUD
 // ticks in both, one a React tree and one a decoded .mp4. A live filmstrip, a CSS reveal of how
 // the visuals are built, and a caniuse-style support matrix round it out.
-import { type ComponentType, type CSSProperties, useEffect, useRef, useState } from 'react';
+import { type ComponentType, type CSSProperties, type JSX, useEffect, useRef, useState } from 'react';
 import { Player, type PlayerRef } from '../src';
 import { exportToMp4 } from '../src/client/export';
 import { CodeToFilm, CODE_TO_FILM_DURATION } from './code-to-film';

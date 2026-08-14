@@ -1,7 +1,16 @@
 // The frame clock + composition config, as React context — Remotion-compatible.
 // Because compositions render to real DOM, useCurrentFrame() just drives a normal
 // React re-render and the browser paints. That's the whole renderer.
-import { Children, createContext, isValidElement, useContext, type ComponentType, type CSSProperties, type ReactNode } from 'react';
+import {
+  Children,
+  createContext,
+  isValidElement,
+  useContext,
+  type ComponentType,
+  type CSSProperties,
+  type JSX,
+  type ReactNode,
+} from 'react';
 import { AbsoluteFill } from './primitives';
 
 export interface VideoConfig {

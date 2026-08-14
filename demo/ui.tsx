@@ -1,5 +1,5 @@
 // Shared look for the demo page's two showcases (extraction, in-browser export).
-import { type CSSProperties, useEffect, useState } from 'react';
+import { type CSSProperties, type JSX, useEffect, useState } from 'react';
 
 /** One accent, not a gradient — also the keyword blue in the code snippets. */
 export const ACCENT = '#61afef';

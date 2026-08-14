@@ -3,6 +3,10 @@
 rerender is a drop-in replacement for Remotion. The same React API — same hooks, same components,
 same `<Sequence>` and `<AbsoluteFill>` semantics — so existing compositions run unchanged.
 
+The runtime is in this repo, not on npm (`@bevyl-ai/rerender` on the registry is
+[extract](./frame-extraction.md)). Compositions keep `import { … } from 'remotion'`;
+tsconfig and Vite alias that specifier to `src/remotion.ts`.
+
 ```tsx
 import {
   useCurrentFrame, useVideoConfig, useIsPlaying,
@@ -11,10 +15,8 @@ import {
   AbsoluteFill, Img, Video, OffthreadVideo, Audio,
   registerRoot, Composition, Still, Folder,
   Player,
-} from '@bevyl-ai/rerender';
+} from 'remotion';
 ```
-
-Point an existing Remotion entry point at these instead and it should run.
 
 ## How it renders
 

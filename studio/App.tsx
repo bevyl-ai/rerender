@@ -1,7 +1,7 @@
 // rerender Studio — the visual editor. Lists registered compositions, previews the
 // selected one in the <Player> (scrub/play), edits its inputProps live, and renders
 // to MP4 via the studio server's /api/render endpoint.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type JSX } from 'react';
 import { Player } from '../src/core/player';
 import { getCompositions, getRoot, type CompositionMeta } from '../src/core/registry';
 
