@@ -174,7 +174,7 @@ Correctness was checked alongside speed. Pixel-diff is 0.000 against Remotion's 
 at identical timestamps, and byte offset, size, PTS and keyframe flag match ffprobe's packet tables
 560/560.
 
-[rerender.video](https://rerender.video) runs the same head-to-head live, in your browser, on your
+The [live demo](https://rerender-demo.noah-9fb.workers.dev) runs the same head-to-head live, in your browser, on your
 connection.
 
 mediabunny was measured too. It is excellent on short files, but its lazy sample-table walk makes
@@ -230,7 +230,7 @@ production.
 2. Puppeteer E2E in rerender's own test suite (same pattern as `test/export.test.ts`).
 3. ~~Publish story~~ — shipped as `@bevyl-ai/rerender`. The bare `rerender` on npm is an
    unrelated package last published in 2018, so the package took the existing org scope.
-4. ~~Benchmark page~~ — superseded by something better: [rerender.video](https://rerender.video) is
+4. ~~Benchmark page~~ — superseded by something better: the [live demo](https://rerender-demo.noah-9fb.workers.dev) is
    a live scrubber (`demo/extract-showcase.tsx`). Drag the track and the frame under the playhead
    is fetched and decoded on the spot, with the measured latency and bytes printed underneath
    (7–10 ms and 20–50 KB per seek, warm, on a 52 s / 2 MB source). The vs-remotion table stays in

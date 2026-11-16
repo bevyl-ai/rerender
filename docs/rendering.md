@@ -28,7 +28,7 @@ rendered pixels, encode with WebCodecs, mux with [mediabunny](https://mediabunny
 A composition exports itself client-side. The live DOM is serialized into an SVG `<foreignObject>`,
 rasterized to canvas, encoded and muxed. One tab, zero infrastructure, an `.mp4` in your downloads.
 
-This is what runs at [rerender.video](https://rerender.video).
+This is what runs in the [live demo](https://rerender-demo.noah-9fb.workers.dev).
 
 ### Self-hosted, at scale
 

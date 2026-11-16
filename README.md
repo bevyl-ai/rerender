@@ -8,7 +8,7 @@
 </p>
 
 <div align="center">
-  <a href="https://rerender.video">Demo</a>
+  <a href="https://rerender-demo.noah-9fb.workers.dev">Demo</a>
   <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
   <a href="./docs/frame-extraction.md">Documentation</a>
   <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
@@ -16,7 +16,7 @@
   <br />
 </div>
 
-### [Scrub a 12-minute mp4 at rerender.video →](https://rerender.video)
+### [Scrub a 12-minute mp4 in the live demo →](https://rerender-demo.noah-9fb.workers.dev)
 
 ## What is rerender?
 
@@ -56,7 +56,7 @@ rerender reads it once into typed arrays, so time → bytes is a binary search a
 costing more the deeper it lands.
 
 Five seeks across a two-hour file: **125 ms**, against 15.9 s for `@remotion/webcodecs`.
-[Run it yourself.](https://rerender.video)
+[Run it yourself.](https://rerender-demo.noah-9fb.workers.dev)
 
 In production in Bevyl's editor timeline, where it replaced `@remotion/webcodecs` and
 `@remotion/media-parser`.

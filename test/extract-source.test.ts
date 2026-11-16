@@ -4,7 +4,7 @@
 //
 // The 200-instead-of-206 case is not hypothetical: Cloudflare's asset layer answers a Range
 // request with the whole body until the URL is warm at the edge, which is what broke
-// @remotion/media-parser on rerender.video while this module carried on working.
+// @remotion/media-parser on the live demo while this module carried on working.
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
