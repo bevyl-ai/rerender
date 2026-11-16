@@ -1,7 +1,7 @@
 name: deploy
 
 # Builds the demo (demo/ → vite build → dist/) and ships it to the rerender-demo
-# Cloudflare Worker — which serves https://rerender.video — on every push to main.
+# Cloudflare Worker — which serves https://rerender-demo.noah-9fb.workers.dev — on every push to main.
 # Requires repo secrets: CLOUDFLARE_API_TOKEN (Workers-scoped) + CLOUDFLARE_ACCOUNT_ID.
 on:
   push:
